@@ -1,0 +1,6 @@
+# Documentación de trabajo (no versionada)
+docs/
+framework-contex.md
+
+# macOS
+.DS_Store
