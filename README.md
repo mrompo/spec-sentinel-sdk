@@ -89,8 +89,8 @@ cambio de spec, una PR.
 ## 🚧 Estado
 
 **Fase de definición.** Existe la visión y el análisis; aún no hay código ni estructura de
-proyecto. Las decisiones abiertas (punto de partida, stack por defecto, alcance del enforcement,
-SDK vs. plantilla) están recogidas en el §7 del [análisis](docs/00-analisis-y-vision.md).
+proyecto. Quedan decisiones abiertas: punto de partida, stack por defecto, alcance del
+enforcement y si se distribuye como SDK instalable o como plantilla importable.
 
 ## 🙏 Agradecimientos
 
