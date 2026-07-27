@@ -1,67 +1,84 @@
 # sentinel/policy.yaml — LA política de escritura/ejecución (capa 2)
 #
-# EJEMPLO COMENTADO (fase 0). La implementación que consume este fichero es el hook
-# `sentinel-guard` (fase 1). Contrato: cada regla = patrón → modo. Modos:
-#   block    → exit 2 + motivo por stderr (el agente no puede)
-#   confirm  → exige confirmación humana explícita
-#   warn     → deja pasar avisando (periodo de adaptación; QA arranca así 1 semana)
-# Toda regla es saltable con SENTINEL_OVERRIDE=<motivo> → queda auditado en overrides.log
-# y doctor lo reporta (KPI "overrides break-glass").
+# Esquema v1 (plano, parseable con bash+sed — sin dependencias):
+#   sdd: true|false            → Tier 1 activo (habilita reglas con requires_sdd)
+#   rules:                     → lista ordenada; LA PRIMERA REGLA QUE MATCHEA DECIDE
+#     - id:            único y obligatorio (lo referencia overrides.log)
+#       tool:          regex sobre tool_name (Bash, Edit|Write, …)
+#       command_re:    regex sobre el comando (solo tool Bash)
+#       path_re:       regex sobre file_path (tools de fichero)
+#       content_re:    regex sobre el contenido escrito
+#       branch_re:     regex sobre la rama git actual
+#       only_if_no_active_change: true → solo aplica si NO hay cambio OpenSpec activo
+#       requires_sdd:  true → solo aplica con sdd: true
+#       mode:          block | confirm | warn
+#       reason:        motivo mostrado al denegar/avisar
+#
+# Modos: block → exit 2 con motivo · confirm → exige aprobación humana (SENTINEL_CONFIRM=1
+# tras aprobar) · warn → pasa dejando aviso.
+# Break-glass (block/confirm): SENTINEL_OVERRIDE="<motivo>" permite la acción y la registra
+# en sentinel/overrides.log (fichero versionado; doctor lo reporta — KPI de overrides).
 
-version: 0                     # esquema de este fichero; sentinel-guard valida compatibilidad
-
-tiers:
-  sdd: false                   # true = Tier 1+ (activa las reglas marcadas requires_sdd)
+version: 1
+sdd: true
 
 rules:
   # ── gitflow ────────────────────────────────────────────────────────────────
   - id: protected-branches
-    match: { tool: Bash, command: "git (commit|push)" }
-    when: "branch in [main, master, development, preproduction, production]"
+    tool: Bash
+    command_re: git (commit|merge|cherry-pick)( |$)
+    branch_re: ^(main|master|development|preproduction|production)$
     mode: block
-    reason: "Rama protegida: crea una rama feature/fix/hotfix (ver flujo §7 del plan)."
+    reason: Rama protegida — crea una rama feature/fix/hotfix (guía docs/guia-uso.md §ciclo)
 
   - id: no-force-push
-    match: { tool: Bash, command: "git push --force" }
+    tool: Bash
+    command_re: git push .*(--force|-f( |$))
     mode: block
+    reason: force-push prohibido en este repo (regla dura de AGENTS.md)
 
-  # ── ficheros gestionados ──────────────────────────────────────────────────
+  # ── ficheros gestionados por tooling ──────────────────────────────────────
   - id: managed-files
-    match: { tool: "Edit|Write", path: ["CHANGELOG.md", "*.lock", "openspec/specs/**"] }
+    tool: Edit|Write|MultiEdit
+    path_re: (CHANGELOG\.md$|package-lock\.json$|\.lock$|openspec/specs/)
     mode: block
-    reason: "Gestionado por tooling (semantic-release / lockfiles / specs archivadas)."
+    reason: Fichero gestionado por tooling (semantic-release / lockfiles / specs archivadas via openspec archive)
 
-  - id: design-ownership
-    match: { tool: "Edit|Write", path: "openspec/changes/*/design.md" }
-    unless: "agent == software-architect"
-    mode: block
-    reason: "El design.md es del arquitecto; desviación => stop-the-line, no edición."
-
-  # ── protección de tests (QA §7.1) ─────────────────────────────────────────
+  # ── QA: el agente no debilita la suite (plan §7.1) ─────────────────────────
   - id: protect-tests
-    match: { tool: "Edit|Write", content: ["\\.skip\\(", "\\.only\\(", "xdescribe|xit"] }
+    tool: Edit|Write|MultiEdit
+    path_re: (test|spec)
+    content_re: \.(skip|only)\(|xdescribe\(|xit\(
     mode: block
-  - id: no-test-deletion
-    match: { tool: Bash, command: "rm .*(test|spec)" }
-    mode: confirm
-  - id: coverage-thresholds
-    match: { tool: "Edit|Write", path: ["**/jest.config*", "**/phpunit.xml", "**/pint.json"] }
-    mode: warn
+    reason: No se debilita la suite (.skip/.only) — si un test sobra, su cambio OpenSpec debe ampararlo
 
-  # ── SDD (solo Tier 1: requires_sdd) ───────────────────────────────────────
+  - id: coverage-thresholds
+    tool: Edit|Write|MultiEdit
+    path_re: (jest\.config|vitest\.config|phpunit\.xml)
+    mode: warn
+    reason: Tocas configuración de tests/cobertura — asegúrate de que el cambio activo lo ampara
+
+  # ── SDD (solo con sdd: true) ───────────────────────────────────────────────
   - id: spec-guard
     requires_sdd: true
-    match: { tool: "Edit|Write", path: "src/**" }
-    when: "no hay cambio OpenSpec activo"
-    mode: warn                 # arranque en warn; block opt-in (decisión plan §11)
-    except: ["docs/**", "chore"]
+    only_if_no_active_change: true
+    tool: Edit|Write|MultiEdit
+    path_re: ^src/
+    mode: warn
+    reason: Edición de código sin cambio OpenSpec activo — abre el change antes (spec-guard en warn, decisión plan §11)
 
   # ── destructivos y aislamiento ────────────────────────────────────────────
   - id: destructive
-    match: { tool: Bash, command: ["rm -rf", "DROP (TABLE|DATABASE)", "migrate:fresh", "git reset --hard"] }
+    tool: Bash
+    command_re: rm -rf|DROP (TABLE|DATABASE)|migrate:fresh|git reset --hard|git clean -f
     mode: confirm
-    reason: "Comando destructivo: requiere confirmación humana explícita."
-  - id: isolation
-    match: { tool: "Read|Bash", path: [".env", ".env.*"], env_markers: ["PROD", "PRE"] }
+    reason: Comando destructivo — requiere confirmación humana explícita
+
+  - id: isolation-env
+    tool: Read|Edit|Write|Bash
+    path_re: \.env\.(prod|production|pre|preproduction)
     mode: block
-    reason: "Aislamiento: solo entorno local contenerizado (aplica también al MCP de Boost)."
+    reason: Aislamiento — el agente no toca entornos productivos (aplica también al MCP de Boost)
+
+# Regla pendiente de la fase 6 (necesita identidad de subagente, aún no disponible):
+#   design-ownership: solo el software-architect edita openspec/changes/*/design.md

@@ -9,7 +9,7 @@ implementación mínima → verde → commit atómico).
        copiada a temporal + `git init` (patrón acordado); se engancha a `verify.sh`
 - [x] 2. Esqueleto `sentinel-guard.sh`: parse stdin + carga de política + exit codes
        (SC-sentinel-guard-01, 02)
-- [ ] 3. Reglas block: ramas protegidas + ficheros gestionados (SC-03, SC-04)
+- [x] 3. Reglas block: ramas protegidas + ficheros gestionados (SC-03, SC-04)
 - [ ] 4. protect-tests + destructivos (confirm) + aislamiento (SC-05, SC-06)
 - [ ] 5. Modo warn + tier-awareness `requires_sdd` (SC-07, SC-10)
 - [ ] 6. Break-glass: `SENTINEL_OVERRIDE` + `overrides.log` versionado (SC-08, SC-09)
