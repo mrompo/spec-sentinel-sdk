@@ -16,7 +16,8 @@ implementación mínima → verde → commit atómico).
 - [ ] 7. `session-start.sh` + `post-edit.sh` (SC-11, SC-12)
 - [ ] 8. Cableado `.claude/settings.json` en este repo + instalación manual en duoclaude
        (evidencia del DoD: bloqueo real observado en ambos)
-- [ ] 9. STATUS.md actualizado → PR → revisión humana → archive
+- [ ] 9. STATUS.md + sección «Guardarraíles» de docs/guia-uso.md actualizados → PR →
+       revisión humana → archive
 
 ## Notas de diseño (para el design gate)
 

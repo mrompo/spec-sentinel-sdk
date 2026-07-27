@@ -28,3 +28,5 @@ agente debería seguir* en *reglas que el agente no puede violar*. Plan completo
 - Estado actual (roadmap + ciclo): **`STATUS.md`** en la raíz — se actualiza al abrir y al
   archivar cada cambio (desde fase 4 lo generará `doctor --status`).
 - Convención de proposals: cabeceras `## Why` y `## What Changes` (las espera `openspec validate`).
+- Convención de cierre de fase: antes de archivar, actualizar `STATUS.md` **y** la sección
+  correspondiente de `docs/guia-uso.md` (la guía crece con cada fase, en lenguaje simple).
