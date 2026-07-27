@@ -19,14 +19,16 @@ mk_workspace() {
 
 cleanup_workspace() { [ -n "$WS" ] && rm -rf "$WS"; WS=""; }
 
-# run_hook <hook.sh> <json> [VAR=valor ...] → deja RH_EXIT y RH_ERR
+# run_hook <hook.sh> <json> [VAR=valor ...] → deja RH_EXIT, RH_ERR y RH_OUT
+# Con RH_CWD=<dir> el hook se ejecuta desde ese directorio (p. ej. un workspace).
 run_hook() {
   local hook="$1" json="$2"; shift 2
-  local errf; errf="$(mktemp)"
-  printf '%s' "$json" | env "$@" bash "$hook" 2>"$errf" >/dev/null
+  local errf outf; errf="$(mktemp)"; outf="$(mktemp)"
+  ( cd "${RH_CWD:-$PWD}" && printf '%s' "$json" | env "$@" bash "$hook" ) 2>"$errf" >"$outf"
   RH_EXIT=$?
   RH_ERR="$(cat "$errf")"
-  rm -f "$errf"
+  RH_OUT="$(cat "$outf")"
+  rm -f "$errf" "$outf"
 }
 
 assert_exit() {
