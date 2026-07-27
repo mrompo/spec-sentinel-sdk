@@ -1,0 +1,16 @@
+name: fixture
+# Banco de pruebas del framework: toda regla dura tiene un test que la falsifica.
+# Fase 0: estructura + symlinks + cambio OpenSpec activo. Cada fase añade su job.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  phase-0:
+    name: Estructura y método (fase 0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar estructura, symlinks y cambio activo
+        run: bash fixture/verify.sh
