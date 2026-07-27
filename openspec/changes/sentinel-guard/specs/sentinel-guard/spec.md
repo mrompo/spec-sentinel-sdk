@@ -59,22 +59,63 @@ Una regla con `mode: warn` SHALL dejar pasar la acción registrando un aviso vis
 
 ### Requirement: Break-glass auditado
 
-Con `SENTINEL_OVERRIDE=<motivo>` el hook SHALL permitir la acción bloqueada y registrar
-`timestamp · id de regla · acción · motivo` en `sentinel/overrides.log` (fichero versionado).
+El hook SHALL permitir una acción bloqueada cuando exista un motivo de excepción —token de un
+solo uso `sentinel/.override` (vía recomendada, no creable por el agente) o `SENTINEL_OVERRIDE`
+en el entorno de la sesión— y SHALL registrar `timestamp · id de regla · acción · motivo` en
+`sentinel/overrides.log`. Si el registro no puede escribirse, la excepción SHALL denegarse.
 
 #### Scenario: Override con motivo (SC-sentinel-guard-08)
 
-- **WHEN** una acción bloqueada se relanza con `SENTINEL_OVERRIDE="hotfix INC-123"`
+- **WHEN** una acción bloqueada se reintenta con un motivo de excepción presente
 - **THEN** la acción se ejecuta y `overrides.log` gana una línea con regla, acción y motivo
 
 #### Scenario: Override sin motivo — sigue bloqueado (SC-sentinel-guard-09)
 
-- **WHEN** `SENTINEL_OVERRIDE` está vacío o no definido
+- **WHEN** no hay motivo (variable vacía y sin token)
 - **THEN** la acción bloqueada sigue bloqueada
+
+### Requirement: El enforcement se protege a sí mismo
+
+La política SHALL bloquear toda modificación o borrado del propio enforcement (hooks, política,
+log de overrides, cableado de la herramienta) y todo intento de desactivar los gates
+(`--no-verify`, `core.hooksPath`, auto-concesión de variables de override).
+
+#### Scenario: Desarmar el guard — bloqueado (SC-sentinel-guard-13)
+
+- **WHEN** el agente intenta escribir o borrar `sentinel/hooks/*`, `sentinel/policy.yaml`,
+  `sentinel/overrides.log` o `.claude/settings.json`, o ejecutar `git commit --no-verify`
+- **THEN** el hook deniega la acción
+
+### Requirement: Robustez de la política
+
+Una política malformada SHALL producir un error explícito, nunca permiso silencioso: sin
+reglas, con una regla sin `mode:` o con una regex inválida, el hook deniega explicando el
+arreglo. Los comentarios no SHALL alterar las reglas.
+
+#### Scenario: Política degradada — fail-closed (SC-sentinel-guard-14)
+
+- **WHEN** la política tiene `rules:` vacío, una regla sin `mode:`, una regex inválida, o un
+  comentario indentado que menciona una clave
+- **THEN** el hook deniega con el motivo concreto (o ignora el comentario), nunca pasa en silencio
+
+### Requirement: Alcance del matching
+
+Las reglas de ruta SHALL alcanzar también a los comandos de shell (que tocan ficheros sin
+declarar `file_path`), y las reglas de contenido SHALL evaluarse solo sobre lo que se escribe.
+
+#### Scenario: Ruta protegida vía shell (SC-sentinel-guard-15)
+
+- **WHEN** el agente ejecuta `sed -i ... CHANGELOG.md` o `cat .env.production`
+- **THEN** el hook deniega igual que si usara Edit
+
+#### Scenario: Reparar un test no se bloquea (SC-sentinel-guard-16)
+
+- **WHEN** el agente edita un test para **quitar** un `.skip(` existente
+- **THEN** la acción se permite (solo se vigila lo que se escribe, no lo que se elimina)
 
 ### Requirement: Tier-awareness
 
-Las reglas marcadas `requires_sdd` SHALL aplicarse solo cuando `tiers.sdd: true` en la política.
+Las reglas marcadas `requires_sdd` SHALL aplicarse solo cuando la política declara `sdd: true`.
 
 #### Scenario: Tier 0 — spec-guard inactivo (SC-sentinel-guard-10)
 

@@ -45,9 +45,13 @@ else
   ok "todos los Scenarios llevan id SC-*"
 fi
 
-# Runner de hooks (fase 1+): un caso falsable por escenario del guard
-if [ -d fixture/hooks/cases ]; then
-  bash fixture/hooks/run.sh || fail=1
+# Runner de hooks: si el guard existe, sus casos son obligatorios (nunca skip silencioso)
+if [ -f sentinel/hooks/sentinel-guard.sh ]; then
+  if [ -d fixture/hooks/cases ] && ls fixture/hooks/cases/*.sh >/dev/null 2>&1; then
+    bash fixture/hooks/run.sh || fail=1
+  else
+    err "existe sentinel-guard.sh pero no hay casos en fixture/hooks/cases — sin test, la regla no entra"
+  fi
 fi
 
 [ "$fail" -eq 0 ] && echo "— fixture: OK" || { echo "— fixture: FALLOS" >&2; exit 1; }
