@@ -1,0 +1,67 @@
+# sentinel/policy.yaml — LA política de escritura/ejecución (capa 2)
+#
+# EJEMPLO COMENTADO (fase 0). La implementación que consume este fichero es el hook
+# `sentinel-guard` (fase 1). Contrato: cada regla = patrón → modo. Modos:
+#   block    → exit 2 + motivo por stderr (el agente no puede)
+#   confirm  → exige confirmación humana explícita
+#   warn     → deja pasar avisando (periodo de adaptación; QA arranca así 1 semana)
+# Toda regla es saltable con SENTINEL_OVERRIDE=<motivo> → queda auditado en overrides.log
+# y doctor lo reporta (KPI "overrides break-glass").
+
+version: 0                     # esquema de este fichero; sentinel-guard valida compatibilidad
+
+tiers:
+  sdd: false                   # true = Tier 1+ (activa las reglas marcadas requires_sdd)
+
+rules:
+  # ── gitflow ────────────────────────────────────────────────────────────────
+  - id: protected-branches
+    match: { tool: Bash, command: "git (commit|push)" }
+    when: "branch in [main, master, development, preproduction, production]"
+    mode: block
+    reason: "Rama protegida: crea una rama feature/fix/hotfix (ver flujo §7 del plan)."
+
+  - id: no-force-push
+    match: { tool: Bash, command: "git push --force" }
+    mode: block
+
+  # ── ficheros gestionados ──────────────────────────────────────────────────
+  - id: managed-files
+    match: { tool: "Edit|Write", path: ["CHANGELOG.md", "*.lock", "openspec/specs/**"] }
+    mode: block
+    reason: "Gestionado por tooling (semantic-release / lockfiles / specs archivadas)."
+
+  - id: design-ownership
+    match: { tool: "Edit|Write", path: "openspec/changes/*/design.md" }
+    unless: "agent == software-architect"
+    mode: block
+    reason: "El design.md es del arquitecto; desviación => stop-the-line, no edición."
+
+  # ── protección de tests (QA §7.1) ─────────────────────────────────────────
+  - id: protect-tests
+    match: { tool: "Edit|Write", content: ["\\.skip\\(", "\\.only\\(", "xdescribe|xit"] }
+    mode: block
+  - id: no-test-deletion
+    match: { tool: Bash, command: "rm .*(test|spec)" }
+    mode: confirm
+  - id: coverage-thresholds
+    match: { tool: "Edit|Write", path: ["**/jest.config*", "**/phpunit.xml", "**/pint.json"] }
+    mode: warn
+
+  # ── SDD (solo Tier 1: requires_sdd) ───────────────────────────────────────
+  - id: spec-guard
+    requires_sdd: true
+    match: { tool: "Edit|Write", path: "src/**" }
+    when: "no hay cambio OpenSpec activo"
+    mode: warn                 # arranque en warn; block opt-in (decisión plan §11)
+    except: ["docs/**", "chore"]
+
+  # ── destructivos y aislamiento ────────────────────────────────────────────
+  - id: destructive
+    match: { tool: Bash, command: ["rm -rf", "DROP (TABLE|DATABASE)", "migrate:fresh", "git reset --hard"] }
+    mode: confirm
+    reason: "Comando destructivo: requiere confirmación humana explícita."
+  - id: isolation
+    match: { tool: "Read|Bash", path: [".env", ".env.*"], env_markers: ["PROD", "PRE"] }
+    mode: block
+    reason: "Aislamiento: solo entorno local contenerizado (aplica también al MCP de Boost)."
