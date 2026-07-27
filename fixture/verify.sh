@@ -45,4 +45,9 @@ else
   ok "todos los Scenarios llevan id SC-*"
 fi
 
-[ "$fail" -eq 0 ] && echo "— fixture fase 0: OK" || { echo "— fixture fase 0: FALLOS" >&2; exit 1; }
+# Runner de hooks (fase 1+): un caso falsable por escenario del guard
+if [ -d fixture/hooks/cases ]; then
+  bash fixture/hooks/run.sh || fail=1
+fi
+
+[ "$fail" -eq 0 ] && echo "— fixture: OK" || { echo "— fixture: FALLOS" >&2; exit 1; }
