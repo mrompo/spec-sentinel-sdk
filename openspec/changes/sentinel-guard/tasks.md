@@ -14,8 +14,13 @@ implementación mínima → verde → commit atómico).
 - [x] 5. Modo warn + tier-awareness `requires_sdd` (SC-07, SC-10)
 - [x] 6. Break-glass: `SENTINEL_OVERRIDE` + `overrides.log` versionado (SC-08, SC-09)
 - [x] 7. `session-start.sh` + `post-edit.sh` (SC-11, SC-12)
-- [x] 8. Cableado `.claude/settings.json` en este repo + instalación manual en duoclaude
-       (evidencia del DoD: bloqueo real observado en ambos)
+- [x] 8. Cableado `.claude/settings.json` en este repo + smoke test en duoclaude
+       **Evidencia DoD (2026-07-27, ejecutado desde `~/Development-MacBook/duoclaude`,
+       repo Laravel, sin modificarlo)**: commit en rama feature → `exit 0`; editar
+       `CHANGELOG.md` → `exit 2 [managed-files]`; `rm -rf storage/` → `exit 2 [destructive]`
+       con instrucción de `SENTINEL_CONFIRM=1`. El hook es portable a un stack distinto sin
+       tocar una línea. *(Cableado permanente en duoclaude: cuando exista el instalador,
+       fase 2 — hoy tiene sus propios hooks y no procede pisarlos.)*
 - [ ] 9. STATUS.md + sección «Guardarraíles» de docs/guia-uso.md actualizados → PR →
        revisión humana → archive
 

@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-07-27 · abierto el cambio `sentinel-guard`
+**Última actualización**: 2026-07-27 · slices 1-8a implementados, en code-review
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fase 0 ✅ → **fase 1 `sentinel-guard` en curso** (rama `feature/sentinel-guard`) |
-| **Ciclo (§7)** | **Propose** — [proposal](openspec/changes/sentinel-guard/proposal.md) + [tasks](openspec/changes/sentinel-guard/tasks.md) + [delta spec](openspec/changes/sentinel-guard/specs/sentinel-guard/spec.md) (12 escenarios) escritos y validados. **Pendiente: design gate (revisión humana)** antes de implementar el slice 1 |
+| **Ciclo (§7)** | **Review** — 8 de 9 tareas hechas; los 12 escenarios de la delta spec tienen caso en el fixture y están **en verde**. En marcha el panel adversarial (Auditor · Adversary · Pragmatist). Pendiente: aplicar hallazgos → instalar en duoclaude (8b) → archive |
 | **Tiers entregados** | Ninguno aún — el Tier 0 se completa con las fases 1-3 |
 
 ## Roadmap
@@ -19,7 +19,7 @@
 | Fase | Cambio | Tier | Estado |
 |---|---|---|---|
 | 0 | `bootstrap-method` | — | ✅ Archivada (`2026-07-27`) — [change](openspec/changes/archive/2026-07-27-bootstrap-method/proposal.md) |
-| 1 | `sentinel-guard` | 0 | 🔄 **En curso — Propose** (contrato en [sentinel/policy.yaml](sentinel/policy.yaml); delta spec con 12 escenarios) |
+| 1 | `sentinel-guard` | 0 | 🔄 **En curso — Review** (hook + 12 casos en verde; panel adversarial en marcha) |
 | 2 | `git-gates` | 0 | Pendiente |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |

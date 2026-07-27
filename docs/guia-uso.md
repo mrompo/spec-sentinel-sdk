@@ -18,7 +18,7 @@ sistema (la *spec*), y el código se valida contra ella.
 | Desarrollar con el método SDD (cambios OpenSpec) | ✅ | Sección «El ciclo de trabajo» |
 | Saber en qué punto está el proyecto | ✅ | Abre [`STATUS.md`](../STATUS.md) |
 | Verificar la salud del framework | ✅ | Sección «Verificar que todo está bien» |
-| Guardarraíles que bloquean al agente | 🔜 fase 1 (en curso) | Sección «Guardarraíles» |
+| Guardarraíles que bloquean al agente | 🔄 fase 1 (implementada, en revisión) | Sección «Guardarraíles» |
 | Instalarlo en tu propio proyecto | 🔜 fase 2 | — |
 | Gate de PR en CI + spec-coverage | 🔜 fase 3 | — |
 | Skills del ciclo completo + doctor | 🔜 fase 4 | — |
@@ -80,18 +80,39 @@ openspec validate --all --strict  # las specs y cambios están bien formados
 Si ambos están en verde, el repo está sano. Esto mismo corre en CI en cada PR
 (cuando el repo tenga remote).
 
-## Guardarraíles 🔜 *(fase 1 — en construcción)*
+## Guardarraíles *(fase 1 — implementada, pendiente de cerrar)*
 
-Lo que hará cuando la fase 1 se archive:
+Las reglas viven en un solo sitio: [`sentinel/policy.yaml`](../sentinel/policy.yaml). Cada
+regla vigila una acción y decide en uno de tres modos:
 
-- Las reglas viven en un solo sitio: [`sentinel/policy.yaml`](../sentinel/policy.yaml).
-  Cada regla dice qué acción vigila y qué hace: **block** (imposible), **confirm**
-  (pide permiso humano) o **warn** (avisa y deja pasar).
-- Ejemplos: no se puede commitear en `main`; no se puede tocar el CHANGELOG ni las specs
-  archivadas; no se puede meter `.skip()` en un test; `rm -rf` pide confirmación.
-- **Vía de emergencia (break-glass)**: si un bloqueo te impide algo legítimo y urgente,
-  `SENTINEL_OVERRIDE="motivo" <tu acción>` lo permite **dejando registro auditado** en
-  `sentinel/overrides.log`. Sin motivo, no hay override.
+| Modo | Qué pasa |
+|---|---|
+| **block** | El agente no puede: la acción se deniega con el motivo explicado |
+| **confirm** | No se ejecuta sin aprobación humana explícita |
+| **warn** | Pasa, pero deja un aviso visible |
+
+**Reglas activas hoy**: no commitear en ramas protegidas (`main`, `development`,
+`preproduction`, `production`) · no force-push · no editar CHANGELOG, lockfiles ni specs
+archivadas · no meter `.skip()`/`.only()` en tests · aviso al tocar config de cobertura ·
+aviso al editar `src/` sin cambio activo (solo Tier 1) · `rm -rf`/`DROP`/`reset --hard` piden
+confirmación · nada de `.env` de producción.
+
+**Cómo añadir una regla**: edita `policy.yaml` (id único + qué vigila + `mode` + `reason`) y
+añade su caso en `fixture/hooks/cases/`. Sin test, la regla no entra.
+
+**Si un bloqueo te frena** (vía de emergencia auditada):
+
+```bash
+SENTINEL_OVERRIDE="motivo real" <tu acción>     # permite y registra en sentinel/overrides.log
+SENTINEL_CONFIRM=1 <tu acción>                  # para los 'confirm', tras aprobarlo un humano
+```
+
+Sin motivo no hay override, y cada uso queda con fecha, regla, acción y motivo en el log
+(que se versiona: es el primer KPI del framework).
+
+**Qué más hacen los hooks**: al arrancar sesión el agente recibe la rama y el cambio activo
+sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto declara un comando
+`format` en `sentinel.yaml` (si no, no pasa nada).
 
 ## Glosario mínimo
 
