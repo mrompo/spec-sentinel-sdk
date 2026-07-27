@@ -1,0 +1,10 @@
+schema: spec-driven
+rules:
+  specs:
+    - Cada delta spec abre con una línea de orden de implementación
+      ("> **Orden de implementación: NN/MM** — ...") enlazada a su sección de tasks.
+      El orden va DENTRO del fichero, nunca como prefijo del nombre de la carpeta;
+      el nombre de carpeta es el id de la capability (patrón spec-order-markers de duoclaude).
+    - Todo Requirement usa SHALL y todo Scenario cubre happy path y casos de error.
+    - Todo Scenario lleva un id estable (`SC-<capability>-NN`) — es la clave de la
+      matriz escenario↔test de spec-coverage.

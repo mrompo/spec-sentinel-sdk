@@ -66,8 +66,10 @@ flowchart LR
   templates listos para importar.
 - 🤖 **Subagentes especializados** — Spec-Agent (orquestador), Backend-Agent, Ops-Agent,
   Tooling-Agent, con contexto acotado para evitar alucinaciones.
-- 🧰 **Skills portables** — intake de specs (ticket/PDF → spec), ciclo de PR, breakdown de
-  tareas, sincronización de repos.
+- 🧰 **Skills portables y verificables** — intake de specs (ticket/PDF → spec), ciclo de PR,
+  breakdown de tareas, sincronización de repos. Toda skill sigue una anatomía estándar
+  (*process, not prose*): pasos con checkpoints, tabla de anti-racionalizaciones y
+  verificación con evidencia medible — "parece correcto" nunca basta.
 - 📦 **Distribución multi-copilot** — zero-config, compatible con Claude, Gemini, Codex y
   otros asistentes vía instrucciones versionadas.
 - 🚢 **Ciclo de release** — versionado semántico con ramas de mantenimiento y perfil opcional
@@ -75,28 +77,32 @@ flowchart LR
 
 ## 🗺️ Roadmap
 
-El framework se construirá con su propio método (*dogfooding* sobre OpenSpec): cada fase ≈ un
-cambio de spec, una PR.
+El framework se construye con su propio método (*dogfooding* sobre OpenSpec): cada fase = un
+cambio en `openspec/changes/`. Se adopta por **tiers**: Tier 0 (solo guardarraíles, sin exigir
+OpenSpec) → Tier 1 (ciclo SDD + `spec-coverage`) → Tier 2 (equipo de subagentes).
 
-- [ ] **1. Base portable** — multi-copilot + estándares + flujo OpenSpec
-- [ ] **2. Gobernanza del agente** — hooks que bloquean acciones *(arranque recomendado: máximo valor, menor coste)*
-- [ ] **3. git hooks + commitlint + gitleaks** — template + instalador
-- [ ] **4. CI gate de PR** — template Node; perfil PHP
-- [ ] **5. Fronteras de arquitectura** — dependency-cruiser + spec-order-markers + tabla de decisiones
-- [ ] **6. Skills portables** — intake de specs, PR lifecycle
-- [ ] **7. Perfil de despliegue** *(opcional)* — deploy + rollback
+- [~] **0. bootstrap-method** — decisiones cerradas, esqueleto, OpenSpec operativo, fixture *(en marcha)*
+- [ ] **1. sentinel-guard** — hook único de política + break-glass auditado *(Tier 0)*
+- [ ] **2. git-gates** — git hooks + commitlint + gitleaks + instalador *(Tier 0)*
+- [ ] **3. ci-gate + spec-coverage CLI** — gate de PR + la matriz escenario↔test como CLI standalone *(Tier 0/1)*
+- [ ] **4. sdd-cycle** — skills del ciclo + doctor + brownfield "spec on first touch" *(Tier 1)*
+- [ ] **5. release-hotfix** — release multicanal por entorno + carril hotfix *(Tier 1)*
+- [ ] **6. team** — subagentes con manifiestos de contexto + panel adversarial *(Tier 2)*
+- [ ] **7. agent-run-audit** *(opcional)* — auditoría de ejecuciones de agente
 
 ## 🚧 Estado
 
-**Fase de definición.** Existe la visión y el análisis; aún no hay código ni estructura de
-proyecto. Quedan decisiones abiertas: punto de partida, stack por defecto, alcance del
-enforcement y si se distribuye como SDK instalable o como plantilla importable.
+**Fase 0 en marcha.** El plan v2 está cerrado ([docs/01-plan-maestro.md](docs/01-plan-maestro.md))
+con las decisiones tomadas, y el repo ya se desarrolla con su propio método: el primer cambio
+OpenSpec es [`openspec/changes/bootstrap-method/`](openspec/changes/bootstrap-method/proposal.md).
 
 ## 🙏 Agradecimientos
 
 - [OpenSpec](https://github.com/Fission-AI/OpenSpec) — el método SDD sobre el que se apoya todo.
 - [LIDR Academy · specboot](https://github.com/LIDR-academy/lidr-specboot) — referencia de
   distribución portable multi-copilot.
+- [Addy Osmani · agent-skills](https://github.com/addyosmani/agent-skills) — referencia del
+  estándar de autoría de skills verificables para agentes de código.
 
 ## 📄 Licencia
 
