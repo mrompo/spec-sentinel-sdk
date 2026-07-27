@@ -31,3 +31,19 @@ implementación mínima → verde → commit atómico).
   overrides referencia el id).
 - `confirm` se materializa con el mecanismo de permisos del harness (permissionDecision ask);
   si el harness no lo soporta, degrada a block con instrucción de re-lanzar tras aprobación.
+
+## Code-review adversarial (fase 4 del ciclo) — 2026-07-27
+
+Panel de 3 lentes ortogonales con contexto limpio (patrón `adverse`): Auditor (corrección),
+Adversary (bypasses), Pragmatist (mantenibilidad/portabilidad). ~60 hallazgos; los
+cross-validados por ≥2 lentes se trataron como confirmados.
+
+- [x] 10. Aplicar hallazgos confirmados: autoprotección del enforcement · alcance de reglas a
+      Bash · content_re solo sobre lo escrito · parser robusto (comentarios/claves/regex
+      inválida/regla sin mode/política sin reglas = fail-closed) · break-glass usable y
+      auditado con token de un solo uso · confirm vía permissionDecision del harness ·
+      warn visible para el agente (JSON) · anclaje por CLAUDE_PROJECT_DIR · regex endurecidas ·
+      CI con matriz macOS+Linux · fixture sin skip silencioso · sc-11 no autorreferencial
+- [x] 11. Documentar limitaciones honestas de la capa 2 (sentinel/README.md §Limitaciones):
+      TOCTOU, regex evadibles, fail-open si falta el hook, entorno de sesión, superficie de tools
+- [x] 12. Ampliar la delta spec con los requirements que faltaban (SC-13..16) y sus casos

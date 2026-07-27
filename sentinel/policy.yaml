@@ -23,38 +23,66 @@ version: 1
 sdd: true
 
 rules:
+  # ── autoprotección: el guardarraíl no se desarma a sí mismo ────────────────
+  # (hallazgo #1 del panel adversarial: sin esto, una sola escritura anula la capa 2)
+  - id: self-protection
+    tool: Bash|Edit|Write|MultiEdit|NotebookEdit
+    path_re: (sentinel/(hooks/|policy\.yaml|overrides\.log)|\.claude/settings|AGENTS\.md$)
+    mode: block
+    reason: No se modifica ni borra el propio enforcement (hooks, política, log de overrides, cableado) — hazlo en un cambio OpenSpec revisado por un humano
+
+  - id: no-hook-disabling
+    tool: Bash
+    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_(OVERRIDE|CONFIRM|POLICY|OVERRIDES_LOG)=)
+    mode: block
+    reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
+
   # ── gitflow ────────────────────────────────────────────────────────────────
   - id: protected-branches
     tool: Bash
-    command_re: git (commit|merge|cherry-pick)( |$)
+    command_re: (^|[;&|(]|&&)[[:space:]]*git([[:space:]]+(-[^[:space:]]+|[a-zA-Z-]+=[^[:space:]]+))*[[:space:]]+(commit|merge|cherry-pick|rebase|revert|am|apply)([[:space:]]|$)
     branch_re: ^(main|master|development|preproduction|production)$
     mode: block
     reason: Rama protegida — crea una rama feature/fix/hotfix (guía docs/guia-uso.md §ciclo)
 
+  - id: branch-switch-and-commit
+    tool: Bash
+    command_re: git[[:space:]]+(checkout|switch)[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(main|master|development|preproduction|production)([[:space:]]|$)
+    mode: confirm
+    reason: Cambio a rama protegida en el mismo comando (el guard evalúa la rama ANTES de ejecutar — ver limitaciones en sentinel/README.md)
+
   - id: no-force-push
     tool: Bash
-    command_re: git push .*(--force|-f( |$))
+    command_re: git([[:space:]]+(-[^[:space:]]+|[a-zA-Z-]+=[^[:space:]]+))*[[:space:]]+push([[:space:]]+.*)?([[:space:]](--force|--force-with-lease|--mirror|--delete|-f|-d)([[:space:]]|$)|[[:space:]]\+[^[:space:]]*:|[[:space:]]:[^[:space:]]+)
     mode: block
-    reason: force-push prohibido en este repo (regla dura de AGENTS.md)
+    reason: Reescritura o borrado de rama remota (force, mirror, delete o refspec con '+'/':') — prohibido
 
   # ── ficheros gestionados por tooling ──────────────────────────────────────
+  # path_re matchea también contra el comando Bash (hallazgo #4: sed/tee/cp tocan
+  # ficheros protegidos sin traer file_path)
   - id: managed-files
-    tool: Edit|Write|MultiEdit
-    path_re: (CHANGELOG\.md$|package-lock\.json$|\.lock$|openspec/specs/)
+    tool: Bash|Edit|Write|MultiEdit|NotebookEdit
+    path_re: (CHANGELOG\.md|package-lock\.json|[^[:space:]]+\.lock|openspec/specs/)
     mode: block
     reason: Fichero gestionado por tooling (semantic-release / lockfiles / specs archivadas via openspec archive)
 
   # ── QA: el agente no debilita la suite (plan §7.1) ─────────────────────────
   - id: protect-tests
-    tool: Edit|Write|MultiEdit
-    path_re: (test|spec)
-    content_re: \.(skip|only)\(|xdescribe\(|xit\(
+    tool: Edit|Write|MultiEdit|NotebookEdit
+    path_re: ((^|/)(tests?|spec|specs|e2e|cypress|__tests__)/|\.(test|spec|cy)\.[a-z]+|Test\.php$)
+    content_re: \.[[:space:]\\n]*(skip|only|todo|skipIf)[[:space:]\\n]*\(|x(describe|it|test)[[:space:]\\n]*\(
     mode: block
-    reason: No se debilita la suite (.skip/.only) — si un test sobra, su cambio OpenSpec debe ampararlo
+    reason: No se debilita la suite (.skip/.only/.todo) — si un test sobra, su cambio OpenSpec debe ampararlo
+
+  - id: protect-tests-bash
+    tool: Bash
+    command_re: (rm|mv)[[:space:]]+[^|;&]*((^|/)(tests?|spec|specs|e2e|cypress)/|\.(test|spec|cy)\.[a-z]+|Test\.php)|sed[[:space:]]+.*(skip|only)\(
+    mode: block
+    reason: No se borran, renombran ni desactivan tests desde shell — su cambio OpenSpec debe ampararlo
 
   - id: coverage-thresholds
-    tool: Edit|Write|MultiEdit
-    path_re: (jest\.config|vitest\.config|phpunit\.xml)
+    tool: Bash|Edit|Write|MultiEdit
+    path_re: (jest\.config|vitest\.config|phpunit\.xml|\.nycrc|codecov\.ya?ml)
     mode: warn
     reason: Tocas configuración de tests/cobertura — asegúrate de que el cambio activo lo ampara
 
@@ -70,13 +98,13 @@ rules:
   # ── destructivos y aislamiento ────────────────────────────────────────────
   - id: destructive
     tool: Bash
-    command_re: rm -rf|DROP (TABLE|DATABASE)|migrate:fresh|git reset --hard|git clean -f
+    command_re: (^|[;&|])[[:space:]]*rm[[:space:]]+([^|;&]*[[:space:]])?-[a-zA-Z-]*([rR]|-recursive)|rm[[:space:]]+.*--force|find[[:space:]]+.*-delete|[Dd][Rr][Oo][Pp][[:space:]]+([Tt][Aa][Bb][Ll][Ee]|[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee])|[Tt][Rr][Uu][Nn][Cc][Aa][Tt][Ee][[:space:]]+[Tt][Aa][Bb][Ll][Ee]|[Dd][Ee][Ll][Ee][Tt][Ee][[:space:]]+[Ff][Rr][Oo][Mm]|migrate:(fresh|reset)|git[[:space:]]+reset[[:space:]]+--(hard|keep)|git[[:space:]]+clean[[:space:]]+-[a-zA-Z]*[fdx]
     mode: confirm
     reason: Comando destructivo — requiere confirmación humana explícita
 
   - id: isolation-env
-    tool: Read|Edit|Write|Bash
-    path_re: \.env\.(prod|production|pre|preproduction)
+    tool: Bash|Read|Grep|Edit|Write|MultiEdit
+    path_re: \.env\.?(prod|production|pre|preproduction|staging)
     mode: block
     reason: Aislamiento — el agente no toca entornos productivos (aplica también al MCP de Boost)
 

@@ -58,8 +58,13 @@ git add -A && git commit -m "feat(<área>): <qué>"
 
 Marca la tarea con `- [x]` en el `tasks.md`. El progreso real vive ahí.
 
-**4. Pide revisión y mergea** (con remote: PR con `gh pr create`; sin remote:
-`git checkout main && git merge --no-ff feature/<nombre>`).
+**4. Pide revisión y mergea.** Con remote: `gh pr create`. Sin remote, el merge a `main` lo
+hace **una persona en su terminal** (el agente tiene bloqueadas las ramas protegidas — es la
+regla funcionando, no un fallo):
+
+```bash
+git checkout main && git merge --no-ff feature/<nombre>
+```
 
 **5. Archívalo.** Al terminar, la spec del cambio pasa a ser contrato vigente:
 
@@ -100,15 +105,22 @@ confirmación · nada de `.env` de producción.
 **Cómo añadir una regla**: edita `policy.yaml` (id único + qué vigila + `mode` + `reason`) y
 añade su caso en `fixture/hooks/cases/`. Sin test, la regla no entra.
 
-**Si un bloqueo te frena** (vía de emergencia auditada):
+**Si un bloqueo te frena** (vía de emergencia auditada). Escribe el motivo en un fichero
+**desde tu terminal** (el agente no puede crearlo: está protegido):
 
 ```bash
-SENTINEL_OVERRIDE="motivo real" <tu acción>     # permite y registra en sentinel/overrides.log
-SENTINEL_CONFIRM=1 <tu acción>                  # para los 'confirm', tras aprobarlo un humano
+echo "hotfix INC-123 aprobado por tech lead" > sentinel/.override
 ```
 
-Sin motivo no hay override, y cada uso queda con fecha, regla, acción y motivo en el log
-(que se versiona: es el primer KPI del framework).
+El siguiente bloqueo se permite, se consume el token (**un solo uso**) y queda la línea en
+`sentinel/overrides.log` con fecha, regla, acción y motivo. Si el registro no se puede
+escribir, la excepción **se deniega**: sin auditoría no hay excepción.
+
+Para toda una sesión (úsalo con cuidado, afecta a todas las reglas):
+`SENTINEL_OVERRIDE="motivo" claude` al arrancar.
+
+Los modos `confirm` no necesitan override: el propio Claude Code te pide la aprobación de
+**esa** acción concreta.
 
 **Qué más hacen los hooks**: al arrancar sesión el agente recibe la rama y el cambio activo
 sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto declara un comando

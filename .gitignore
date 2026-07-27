@@ -5,3 +5,4 @@ fixture/.tmp/
 
 # macOS
 .DS_Store
+sentinel/.override

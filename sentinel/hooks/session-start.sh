@@ -7,9 +7,13 @@ cat >/dev/null 2>&1 || true   # el payload de SessionStart no se usa
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "sin repo git")"
 
+# Anclaje en la raíz del proyecto (no en el cwd): en subdirectorios el contexto sería falso
+ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+[ -d "$ROOT/openspec" ] || ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
 ACTIVE="entre fases (sin cambio OpenSpec activo)"
-if [ -d openspec/changes ]; then
-  names="$(find openspec/changes -mindepth 1 -maxdepth 1 -type d ! -name archive -exec basename {} \; 2>/dev/null | tr '\n' ' ')"
+if [ -d "$ROOT/openspec/changes" ]; then
+  names="$(find "$ROOT/openspec/changes" -mindepth 1 -maxdepth 1 -type d ! -name archive -exec basename {} \; 2>/dev/null | tr '\n' ' ')"
   [ -n "${names% }" ] && ACTIVE="cambio(s) activo(s): ${names% } — trabaja dentro y marca tasks.md"
 fi
 
