@@ -13,8 +13,8 @@ implementación mínima → verde → commit atómico).
 - [x] 4. protect-tests + destructivos (confirm) + aislamiento (SC-05, SC-06)
 - [x] 5. Modo warn + tier-awareness `requires_sdd` (SC-07, SC-10)
 - [x] 6. Break-glass: `SENTINEL_OVERRIDE` + `overrides.log` versionado (SC-08, SC-09)
-- [ ] 7. `session-start.sh` + `post-edit.sh` (SC-11, SC-12)
-- [ ] 8. Cableado `.claude/settings.json` en este repo + instalación manual en duoclaude
+- [x] 7. `session-start.sh` + `post-edit.sh` (SC-11, SC-12)
+- [x] 8. Cableado `.claude/settings.json` en este repo + instalación manual en duoclaude
        (evidencia del DoD: bloqueo real observado en ambos)
 - [ ] 9. STATUS.md + sección «Guardarraíles» de docs/guia-uso.md actualizados → PR →
        revisión humana → archive
