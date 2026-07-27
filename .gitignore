@@ -1,6 +1,7 @@
-# Documentación de trabajo (no versionada)
-docs/
-framework-contex.md
+# La investigación vive fuera del repo: ../spec-sentinel-research/ (ver docs/01 §13)
+
+# Productos de ejecución del fixture (fase 1+)
+fixture/.tmp/
 
 # macOS
 .DS_Store
