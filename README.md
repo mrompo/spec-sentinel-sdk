@@ -81,7 +81,7 @@ El framework se construye con su propio método (*dogfooding* sobre OpenSpec): c
 cambio en `openspec/changes/`. Se adopta por **tiers**: Tier 0 (solo guardarraíles, sin exigir
 OpenSpec) → Tier 1 (ciclo SDD + `spec-coverage`) → Tier 2 (equipo de subagentes).
 
-- [~] **0. bootstrap-method** — decisiones cerradas, esqueleto, OpenSpec operativo, fixture *(en marcha)*
+- [x] **0. bootstrap-method** — decisiones cerradas, esqueleto, OpenSpec operativo, fixture
 - [ ] **1. sentinel-guard** — hook único de política + break-glass auditado *(Tier 0)*
 - [ ] **2. git-gates** — git hooks + commitlint + gitleaks + instalador *(Tier 0)*
 - [ ] **3. ci-gate + spec-coverage CLI** — gate de PR + la matriz escenario↔test como CLI standalone *(Tier 0/1)*
@@ -92,9 +92,10 @@ OpenSpec) → Tier 1 (ciclo SDD + `spec-coverage`) → Tier 2 (equipo de subagen
 
 ## 🚧 Estado
 
-**Fase 0 en marcha.** El plan v2 está cerrado ([docs/01-plan-maestro.md](docs/01-plan-maestro.md))
-con las decisiones tomadas, y el repo ya se desarrolla con su propio método: el primer cambio
-OpenSpec es [`openspec/changes/bootstrap-method/`](openspec/changes/bootstrap-method/proposal.md).
+**Fase 0 completada y archivada** — el repo se desarrolla con su propio método y ya existe la
+primera spec viva ([`openspec/specs/sdk-method/`](openspec/specs/sdk-method/spec.md)). La foto
+actual (roadmap + ciclo + salud) vive siempre en **[STATUS.md](STATUS.md)**; el plan completo,
+en [docs/01-plan-maestro.md](docs/01-plan-maestro.md).
 
 ## 🙏 Agradecimientos
 
