@@ -7,7 +7,7 @@ implementación mínima → verde → commit atómico).
 
 - [x] 1. Runner de hooks en el fixture: simula tool calls (JSON → hook) sobre `demo-app/`
        copiada a temporal + `git init` (patrón acordado); se engancha a `verify.sh`
-- [ ] 2. Esqueleto `sentinel-guard.sh`: parse stdin + carga de política + exit codes
+- [x] 2. Esqueleto `sentinel-guard.sh`: parse stdin + carga de política + exit codes
        (SC-sentinel-guard-01, 02)
 - [ ] 3. Reglas block: ramas protegidas + ficheros gestionados (SC-03, SC-04)
 - [ ] 4. protect-tests + destructivos (confirm) + aislamiento (SC-05, SC-06)
