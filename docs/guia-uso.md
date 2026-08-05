@@ -122,6 +122,10 @@ Para toda una sesión (úsalo con cuidado, afecta a todas las reglas):
 Los modos `confirm` no necesitan override: el propio Claude Code te pide la aprobación de
 **esa** acción concreta.
 
+> **Importante al instalar**: los hooks se cargan **al arrancar la sesión** del agente. Si
+> acabas de instalarlos (o de cambiar `.claude/settings.json`), reinicia la sesión: hasta
+> entonces las reglas no se aplican, aunque los ficheros ya estén ahí.
+
 **Qué más hacen los hooks**: al arrancar sesión el agente recibe la rama y el cambio activo
 sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto declara un comando
 `format` en `sentinel.yaml` (si no, no pasa nada).
