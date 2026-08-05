@@ -4,23 +4,23 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-07-27 · slices 1-8a implementados, en code-review
+**Última actualización**: 2026-08-05 · fase 1 archivada; fase 2 abierta
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
-| **Roadmap** | Fase 0 ✅ → **fase 1 `sentinel-guard` en curso** (rama `feature/sentinel-guard`) |
-| **Ciclo (§7)** | **Review** — 8 de 9 tareas hechas; los 12 escenarios de la delta spec tienen caso en el fixture y están **en verde**. En marcha el panel adversarial (Auditor · Adversary · Pragmatist). Pendiente: aplicar hallazgos → instalar en duoclaude (8b) → archive |
-| **Tiers entregados** | Ninguno aún — el Tier 0 se completa con las fases 1-3 |
+| **Roadmap** | Fases 0 y 1 ✅ archivadas → **fase 2 `git-gates`** |
+| **Ciclo (§7)** | **Propose** (fase 2) — capa 3 (git hooks) + instalador `setup` |
+| **Tiers entregados** | Tier 0 al 50%: capa 2 (guardarraíles de agente) operativa; faltan capa 3 (fase 2) y capa 4 (fase 3) |
 
 ## Roadmap
 
 | Fase | Cambio | Tier | Estado |
 |---|---|---|---|
 | 0 | `bootstrap-method` | — | ✅ Archivada (`2026-07-27`) — [change](openspec/changes/archive/2026-07-27-bootstrap-method/proposal.md) |
-| 1 | `sentinel-guard` | 0 | 🔄 **En curso — Review** (hook + 12 casos en verde; panel adversarial en marcha) |
-| 2 | `git-gates` | 0 | Pendiente |
+| 1 | `sentinel-guard` | 0 | ✅ Archivada (`2026-08-05`) — hook único + política + break-glass auditado; 15 casos en el fixture; endurecida tras panel adversarial |
+| 2 | `git-gates` | 0 | 🔄 **En curso — Propose** |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |
 | 5 | `release-hotfix` | 1 | Pendiente |
@@ -39,11 +39,11 @@
 
 | Check | Estado |
 |---|---|
-| `fixture/verify.sh` | ✅ verde (local) |
-| `openspec validate --all --strict` | ✅ verde (CLI instalado vía brew) |
-| CI (`.github/workflows/fixture.yml`) | ⚠️ **inactivo — el repo no tiene remote**; se activa con `gh repo create … --push` |
-| KPIs activos (docs/04) | Ninguno — el primero (`overrides break-glass`) llega con la fase 1 |
-| Enforcement real | Solo el fixture; los gates del ciclo son aún disciplina manual (por diseño: cada fase convierte uno en duro) |
+| `fixture/verify.sh` | ✅ verde — 15 casos de guardarraíles + estructura |
+| `openspec validate --all --strict` | ✅ verde (2 specs vivas: `sdk-method`, `sentinel-guard`) |
+| CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
+| KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log` (vacío: ninguna excepción usada) |
+| Enforcement real | **Capa 2 activa en este repo** (`.claude/settings.json`): el agente no puede commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests ni desarmar el propio guard. Capas 3-4 llegan en fases 2-3 |
 
 ## Deudas / pendientes conscientes
 
