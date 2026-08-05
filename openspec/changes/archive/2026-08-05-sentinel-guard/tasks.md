@@ -21,7 +21,7 @@ implementación mínima → verde → commit atómico).
        con instrucción de `SENTINEL_CONFIRM=1`. El hook es portable a un stack distinto sin
        tocar una línea. *(Cableado permanente en duoclaude: cuando exista el instalador,
        fase 2 — hoy tiene sus propios hooks y no procede pisarlos.)*
-- [ ] 9. STATUS.md + sección «Guardarraíles» de docs/guia-uso.md actualizados → PR →
+- [x] 9. STATUS.md + sección «Guardarraíles» de docs/guia-uso.md actualizados → PR →
        revisión humana → archive
 
 ## Notas de diseño (para el design gate)

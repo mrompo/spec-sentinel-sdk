@@ -18,8 +18,8 @@ sistema (la *spec*), y el código se valida contra ella.
 | Desarrollar con el método SDD (cambios OpenSpec) | ✅ | Sección «El ciclo de trabajo» |
 | Saber en qué punto está el proyecto | ✅ | Abre [`STATUS.md`](../STATUS.md) |
 | Verificar la salud del framework | ✅ | Sección «Verificar que todo está bien» |
-| Guardarraíles que bloquean al agente | 🔄 fase 1 (implementada, en revisión) | Sección «Guardarraíles» |
-| Instalarlo en tu propio proyecto | 🔜 fase 2 | — |
+| Guardarraíles que bloquean al agente | ✅ | Sección «Guardarraíles» |
+| Instalarlo en tu propio proyecto | 🔄 fase 2 (en curso) | — |
 | Gate de PR en CI + spec-coverage | 🔜 fase 3 | — |
 | Skills del ciclo completo + doctor | 🔜 fase 4 | — |
 | Release por entornos + carril hotfix | 🔜 fase 5 | — |
@@ -85,7 +85,7 @@ openspec validate --all --strict  # las specs y cambios están bien formados
 Si ambos están en verde, el repo está sano. Esto mismo corre en CI en cada PR
 (cuando el repo tenga remote).
 
-## Guardarraíles *(fase 1 — implementada, pendiente de cerrar)*
+## Guardarraíles
 
 Las reglas viven en un solo sitio: [`sentinel/policy.yaml`](../sentinel/policy.yaml). Cada
 regla vigila una acción y decide en uno de tres modos:
