@@ -7,10 +7,15 @@ on:
   pull_request:
 
 jobs:
-  phase-0:
-    name: Estructura y método (fase 0)
-    runs-on: ubuntu-latest
+  fixture:
+    name: Fixture (${{ matrix.os }})
+    # macOS trae bash 3.2 + BSD sed/grep; Linux bash 5 + GNU. El SDK promete ambos.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Verificar estructura, symlinks y cambio activo
+      - name: Estructura, symlinks, cambio activo y guardarraíles
         run: bash fixture/verify.sh

@@ -25,6 +25,8 @@ agente debería seguir* en *reglas que el agente no puede violar*. Plan completo
 - Investigación (repo hermano, no versionada aquí): `../spec-sentinel-research/` —
   00 (fuentes A/B/C) · 02 (D·Osmani) · 03 (gitflow B)
 - Estructura objetivo del SDK: plan §3 · Equipo: §4 · Skills: §5 · Guardarraíles: §6
-- Roadmap y fase actual: plan §10 — fase 0 archivada (`changes/archive/2026-07-27-bootstrap-method/`);
-  siguiente: fase 1 · `sentinel-guard` (abrir su change antes de tocar nada).
+- Estado actual (roadmap + ciclo): **`STATUS.md`** en la raíz — se actualiza al abrir y al
+  archivar cada cambio (desde fase 4 lo generará `doctor --status`).
 - Convención de proposals: cabeceras `## Why` y `## What Changes` (las espera `openspec validate`).
+- Convención de cierre de fase: antes de archivar, actualizar `STATUS.md` **y** la sección
+  correspondiente de `docs/guia-uso.md` (la guía crece con cada fase, en lenguaje simple).
