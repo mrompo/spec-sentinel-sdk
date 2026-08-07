@@ -4,15 +4,15 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-08-05 · fase 1 archivada; fase 2 abierta
+**Última actualización**: 2026-08-07 · semántica del framework en curso; `git-gates` aparcado
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
-| **Roadmap** | Fases 0 y 1 ✅ archivadas → **fase 2 `git-gates`** |
-| **Ciclo (§7)** | **Propose** (fase 2) — capa 3 (git hooks) + instalador `setup` |
-| **Tiers entregados** | Tier 0 al 50%: capa 2 (guardarraíles de agente) operativa; faltan capa 3 (fase 2) y capa 4 (fase 3) |
+| **Roadmap** | Fases 0 y 1 ✅ archivadas · **fase 2 `git-gates` APARCADA en Propose** (rama `feature/git-gates`, sin trabajo a medias) · en curso: **`framework-semantics`** (fuera de roadmap: fija el vocabulario antes de seguir construyendo) |
+| **Loop** | Stage **Engine**, step `apply` — el expediente `framework-semantics` está implementado y pendiente de Tribunal |
+| **Niveles entregados** | **Guardia** al 50%: el puesto Centinela operativo; faltan Esclusa (fase 2) y Aduana (fase 3) |
 
 ## Roadmap
 
@@ -20,7 +20,7 @@
 |---|---|---|---|
 | 0 | `bootstrap-method` | — | ✅ Archivada (`2026-07-27`) — [change](openspec/changes/archive/2026-07-27-bootstrap-method/proposal.md) |
 | 1 | `sentinel-guard` | 0 | ✅ Archivada (`2026-08-05`) — hook único + política + break-glass auditado; 15 casos en el fixture; endurecida tras panel adversarial |
-| 2 | `git-gates` | 0 | 🔄 **En curso — Propose** |
+| 2 | `git-gates` | 0 | ⏸️ **Aparcada en Propose** — se retoma tras la semántica |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |
 | 5 | `release-hotfix` | 1 | Pendiente |

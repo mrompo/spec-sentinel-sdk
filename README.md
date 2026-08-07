@@ -26,22 +26,24 @@ arquitectónica y deuda invisible después.
 La respuesta habitual —pedirle al agente que siga las reglas mediante prompts e instrucciones—
 no es ingeniería: es confianza. **Y la confianza no escala.**
 
-## 🧱 Las cuatro capas
+## 🔁 El Loop
 
-Vocabulario completo en [docs/05-semantica.md](docs/05-semantica.md).
+Un cambio no atraviesa una pila de capas: **da una vuelta**. Tres stages lo producen, lo juzgan
+y lo entregan; **Shield** es transversal y está siempre encendido. Vocabulario completo en
+[docs/05-semantica.md](docs/05-semantica.md).
 
-| Capa | Responde a | Qué es |
+| Stage | Responde a | Steps |
 |---|---|---|
-| **Engine** | ¿Qué hay que hacer y quién lo hace? | El método: OpenSpec y todo su ciclo (spec → tareas → código → verificación), las skills y los perfiles que **producen** |
-| **Shield** | ¿Qué no se puede hacer? | Las reglas estrictas: gitflow, conventional commits, ramas protegidas, tests, secretos. Imposibles de saltar, no opcionales |
-| **Tribunal** | ¿Esto está bien? | Los perfiles que **evalúan** y sus artefactos: panel adversarial de tres lentes y veredicto `SHIP / CONDITIONAL / HOLD` |
-| **Delivery** | ¿Cómo llega a producción y qué cuesta? | Release por entornos, carril de hotfix, instalación y medición (KPIs, bitácora, `doctor`) |
+| **Engine** | ¿Qué hay que hacer y quién lo hace? | `discover` → `tune` → `design` → `propose` → `apply` ↺ `verify` |
+| **Tribunal** | ¿Esto está bien? | `review` → `counter-review` → `synthesis` → `disposition` |
+| **Delivery** | ¿Cómo llega a producción y qué cuesta? | `merge` → `release` → `deploy` → `archive` → `measure` |
+| **Shield** *(transversal)* | ¿Qué no se puede hacer? | Gitflow, conventional commits, ramas protegidas, tests, secretos |
 
 La frontera entre **Engine** y **Tribunal** es la separación de poderes: quien produce no juzga
-su propio trabajo.
+su propio trabajo. Y cada step se cierra con un **gate** — Claridad, Verde, Veredicto, Aduana…
 
-**Shield** se aplica en cuatro puestos, cada uno en un momento distinto del camino — y cada uno
-tapa el hueco del anterior:
+**Shield** se aplica en cuatro puestos, cada uno en un momento distinto — y cada uno tapa el
+hueco del anterior:
 
 | Puesto | Momento | El agente… |
 |---|---|---|
