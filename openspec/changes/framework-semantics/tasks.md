@@ -10,9 +10,9 @@
 - [x] 3. Check en el banco: la semántica define los 4 puestos y las superficies los usan (SC-01, 03)
 - [x] 4. Aplicar los nombres en `README.md` (tabla de capas y roadmap)
 - [x] 5. Aplicar los nombres en `docs/guia-uso.md` (guardarraíles + glosario → apunta a la semántica)
-- [ ] 6. Aplicar los nombres en `sentinel/README.md` (tabla de capas y limitaciones)
-- [ ] 7. `STATUS.md`: posición actual + `git-gates` marcado como aparcado en Propose
-- [ ] 8. Verificar que nada de comportamiento cambió (banco en verde sin tocar casos) (SC-04)
+- [x] 6. Modelo Loop/Stage/Step/Gate, steps y gates por stage, y el afinado como principio
+- [x] 7. `STATUS.md` con vocabulario nuevo + `git-gates` marcado como aparcado
+- [x] 8. Verificar que nada de comportamiento cambió (banco en verde sin tocar casos) (SC-04)
 - [ ] 9. Revisión humana → merge → archive
 
 ## Notas de diseño (design gate)

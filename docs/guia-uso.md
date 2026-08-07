@@ -11,14 +11,17 @@ no se le *piden* al agente — se hacen **imposibles de saltar**. Se apoya en
 [OpenSpec](https://github.com/Fission-AI/OpenSpec): primero se escribe qué debe hacer el
 sistema (la *spec*), y el código se valida contra ella.
 
-Tiene cuatro capas (nombres y definiciones en [la semántica](05-semantica.md)):
+Un cambio recorre un **Loop** de tres stages, con **Shield** vigilando todo el rato
+(vocabulario completo en [la semántica](05-semantica.md)):
 
-| Capa | Para qué |
+| Stage | Para qué |
 |---|---|
-| **Engine** | El método: escribir la spec, partirla en tareas, implementarla y verificarla |
-| **Shield** | Las reglas estrictas que nadie —ni el agente— puede saltarse |
-| **Tribunal** | La evaluación independiente del trabajo hecho |
-| **Delivery** | El camino a producción y su medición |
+| **Engine** | Producir: entender qué se pide, afinarlo hasta que sea verificable, implementarlo |
+| **Tribunal** | Juzgar: evaluación independiente de lo hecho |
+| **Delivery** | Entregar y medir: a producción con rastro |
+| **Shield** *(transversal)* | Las reglas estrictas que nadie —ni el agente— puede saltarse |
+
+Dentro de cada stage hay **steps**, y para salir de cada step hay que cruzar un **gate**.
 
 ## ¿Qué puede hacer hoy?
 
@@ -142,9 +145,14 @@ sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto decla
 
 Vocabulario completo y razonado en **[docs/05-semantica.md](05-semantica.md)**. Lo esencial:
 
-- **Engine · Shield · Tribunal · Delivery** — las cuatro capas: producir · restringir · juzgar · entregar.
+- **Loop · Stage · Step · Gate** — el recorrido, sus etapas, lo que pasa dentro y la condición
+  para salir.
+- **Engine · Tribunal · Delivery** — los tres stages: producir · juzgar · entregar.
+  **Shield** es transversal: no es una etapa, está siempre encendido.
 - **Canon · Centinela · Esclusa · Aduana** — los cuatro puestos donde Shield se aplica:
   la intención, la acción, el commit y el merge.
+- **Afinado (`tune`)** — nada se acierta a la primera: la spec, las reglas y los umbrales se
+  ajustan con el uso.
 - **Spec** — el contrato: qué debe hacer el sistema, en escenarios verificables.
 - **Expediente** — un cambio en curso en `openspec/changes/` (proposal + tasks + delta).
 - **Archivar** — cerrar un expediente: su spec pasa a ser contrato vigente.

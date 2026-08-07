@@ -48,12 +48,12 @@ fi
 # Semántica: el vocabulario está definido y las superficies lo usan (SC-framework-semantics-01/03)
 SEM=docs/05-semantica.md
 if [ -f "$SEM" ]; then
-  for term in Engine Shield Tribunal Delivery Canon Centinela Esclusa Aduana; do
+  for term in Loop Stage Step Gate Engine Shield Tribunal Delivery Canon Centinela Esclusa Aduana tune; do
     grep -q "$term" "$SEM" || err "la semántica no define «$term»"
   done
-  ok "semántica: 4 capas + 4 puestos definidos"
+  ok "semántica: modelo, stages, steps y puestos definidos"
   for doc in README.md docs/guia-uso.md; do
-    grep -qE '(Engine|Shield|Tribunal|Delivery)' "$doc" \
+    grep -qE '(Engine|Shield|Tribunal|Delivery)' "$doc" && grep -qiE '(stage|loop)' "$doc" \
       && ok "$doc usa el vocabulario" \
       || err "$doc no usa los nombres de las capas (ver docs/05-semantica.md)"
   done
