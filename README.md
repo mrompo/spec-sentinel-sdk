@@ -26,14 +26,29 @@ arquitectónica y deuda invisible después.
 La respuesta habitual —pedirle al agente que siga las reglas mediante prompts e instrucciones—
 no es ingeniería: es confianza. **Y la confianza no escala.**
 
-Spec Sentinel aplica **defensa en profundidad** en cuatro capas, de la más blanda a la más dura:
+## 🧱 Las cuatro capas
 
-| Capa | Mecanismo | El agente… |
+Vocabulario completo en [docs/05-semantica.md](docs/05-semantica.md).
+
+| Capa | Responde a | Qué es |
 |---|---|---|
-| 1 · Prompt | Instrucciones, estándares, skills | *debería* cumplir |
-| 2 · Tool | Hooks que **bloquean** acciones del agente | *no puede* violar |
-| 3 · Git | git hooks (commit-msg, pre-commit, pre-push) | *no puede* commitear |
-| 4 · CI | Gate de PR (lint, static, tests, secretos) | *no puede* mergear |
+| **Engine** | ¿Qué hay que hacer y quién lo hace? | El método: OpenSpec y todo su ciclo (spec → tareas → código → verificación), las skills y los perfiles que **producen** |
+| **Shield** | ¿Qué no se puede hacer? | Las reglas estrictas: gitflow, conventional commits, ramas protegidas, tests, secretos. Imposibles de saltar, no opcionales |
+| **Tribunal** | ¿Esto está bien? | Los perfiles que **evalúan** y sus artefactos: panel adversarial de tres lentes y veredicto `SHIP / CONDITIONAL / HOLD` |
+| **Delivery** | ¿Cómo llega a producción y qué cuesta? | Release por entornos, carril de hotfix, instalación y medición (KPIs, bitácora, `doctor`) |
+
+La frontera entre **Engine** y **Tribunal** es la separación de poderes: quien produce no juzga
+su propio trabajo.
+
+**Shield** se aplica en cuatro puestos, cada uno en un momento distinto del camino — y cada uno
+tapa el hueco del anterior:
+
+| Puesto | Momento | El agente… |
+|---|---|---|
+| **Canon** | La intención — instrucciones, estándares, skills | *debería* cumplir |
+| **Centinela** | La acción — un hook la intercepta antes de ejecutarse | *no puede* violar |
+| **Esclusa** | El registro — git hooks (commit-msg, pre-commit, pre-push) | *no puede* commitear |
+| **Aduana** | La integración — gate de PR en CI | *no puede* mergear |
 
 ## 🧭 Cómo funciona
 
