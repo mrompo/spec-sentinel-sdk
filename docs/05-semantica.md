@@ -56,15 +56,19 @@ creíble el veredicto.
 
 ### Engine · producir
 
-| Step | Produce | Gate de salida |
-|---|---|---|
-| `discover` *(condicional)* | Qué se pide de verdad: contexto, afectados, alternativas descartadas | — (alimenta a `propose`) |
-| `propose` | **El expediente abierto**: declaración de intenciones (por qué y qué cambia) | **Intención** 👤 — ¿merece la pena y está justificado? Matar aquí cuesta cero · aprueba Producto |
-| `tune` | El delta spec afinado: escenarios falsables, happy path **y** error | **Claridad** ⚙️👤 — `openspec validate --strict`, ids `SC-*`, sin preguntas abiertas |
-| `design` *(condicional)* | `design.md`: alternativas, trade-offs, contratos, ADRs | **Diseño** 👤 — hay enfoque antes de teclear · aprueba tech lead |
-| `breakdown` | Tareas en *vertical slices* + plan de pruebas | **Plan** ⚙️👤 — cada slice mergeable por separado, con su criterio de aceptación |
-| `apply` ↺ | Código por slice, TDD, commits atómicos | **Esclusa** ⚙️ — commit conforme, sin secretos, formato, tests del slice |
-| `verify` ↺ | Evidencia: suite, cobertura, trazabilidad | **Verde** ⚙️ — tests + cobertura + **spec-coverage del delta** + estático + fronteras |
+| Step | Quién | Produce | Gate de salida |
+|---|---|---|---|
+| `discover` *(cond.)* | analista + arquitecto | Qué se pide de verdad: contexto, afectados, alternativas descartadas | **Problema** 👤 — sabemos qué problema resolvemos y a quién le duele |
+| `propose` | quien detecta la necesidad | **El expediente abierto**: declaración de intenciones | **Intención** 👤 — ¿merece la pena y está justificado? · aprueba Producto |
+| `tune` | analista *(con Producto)* | El delta spec afinado: escenarios falsables, happy path **y** error | **Claridad** ⚙️👤 — `openspec validate --strict`, ids `SC-*`, sin preguntas abiertas |
+| `design` *(cond.)* | arquitecto | `design.md`: alternativas, trade-offs, contratos, ADRs | **Diseño** 👤 — hay enfoque antes de teclear · aprueba tech lead |
+| `breakdown` | orquestador + QA | Tareas en *vertical slices* + plan de pruebas | **Plan** ⚙️👤 — cada slice mergeable por separado, con su criterio de aceptación |
+| `apply` ↺ | developer *(+ datos si trigger)* | Código por slice, TDD, commits atómicos | **Esclusa** ⚙️ — commit conforme, sin secretos, formato, tests del slice |
+| `verify` ↺ | automático *(sandbox)* | Evidencia: suite, cobertura, trazabilidad | **Verde** ⚙️ — tests + cobertura + **spec-coverage del delta** + estático + fronteras |
+
+`discover` ocurre **antes de que exista el expediente**, así que no tiene dónde escribir: su
+resultado aterriza en el «por qué» de la propuesta. Es el único step cuyo producto no es un
+fichero propio.
 
 **Por qué `propose` va primero.** No significa "proponer la solución": significa **abrir el
 expediente y declarar la intención**. Todo lo demás se escribe *dentro* de él — el delta spec
@@ -87,27 +91,60 @@ se salta `design` y va de `tune` a `breakdown`.
 
 ### Tribunal · juzgar
 
-| Step | Produce | Gate de salida |
-|---|---|---|
-| `review` | Hallazgos de tres lentes, independientes | **Contexto limpio** ⚙️ — cada lente ve el diff y la spec, nunca el razonamiento del implementador |
-| `counter-review` | Validación cruzada: cada lente ve las otras | — (ronda interna) |
-| `synthesis` | Conteo de acuerdos → `SHIP` / `CONDITIONAL` / `HOLD` | **Veredicto** ⚙️ — lo calcula código contando acuerdos, no otra llamada al LLM |
-| `disposition` | Qué se hace con cada hallazgo | **Resolución** 👤 — `HOLD` devuelve a Engine · `CONDITIONAL` arquitectónico lo resuelve el arquitecto, el resto una persona |
+| Step | Quién | Produce | Gate de salida |
+|---|---|---|---|
+| `review` | las tres lentes | Hallazgos independientes | **Contexto limpio** ⚙️ — ven el diff y la spec, nunca el razonamiento del implementador |
+| `counter-review` | las tres lentes | Validación cruzada: cada lente ve las otras | — *(ronda interna)* |
+| `synthesis` | código determinista | Conteo de acuerdos → `SHIP` / `CONDITIONAL` / `HOLD` | **Veredicto** ⚙️ — lo calcula código, no otra llamada al LLM |
+| `disposition` | arquitecto / dev líder | Qué se hace con cada hallazgo | **Resolución** 👤 — nada se cierra por cansancio |
 
 ### Delivery · entregar y medir
 
-| Step | Produce | Gate de salida |
-|---|---|---|
-| `merge` | El cambio en el tronco común | **Aduana** ⚙️ — gate de CI completo + aprobación humana en la PR |
-| `release` | Versión en su canal (`dev` → `-b.N` → estable) | **Promoción** 👤 — QA valida la versión de preproducción |
-| `deploy` | Artefacto desplegado | **Smoke** ⚙️ — verde, o rollback |
-| `archive` | La delta pasa a contrato vigente | **Cierre** ⚙️ — tareas completas, back-merge hecho, STATUS y guía al día, deuda registrada |
-| `measure` | KPIs, bitácora, informe de `doctor` | — (alimenta el siguiente `discover`) |
+| Step | Quién | Produce | Gate de salida |
+|---|---|---|---|
+| `merge` | dev líder + CI | El cambio en el tronco común | **Aduana** ⚙️ — gate de CI completo + aprobación humana en la PR |
+| `release` | automático *(semantic-release)* | Versión en su canal (`dev` → `-b.N` → estable) | **Promoción** 👤 — QA valida la versión de preproducción |
+| `deploy` | automático / DevOps | Artefacto desplegado | **Smoke** ⚙️ — verde, o rollback |
+| `archive` | orquestador | **Entregado**: la delta pasa a contrato vigente · **Descartado**: el expediente se cierra con su motivo | **Cierre** ⚙️ — tareas completas, back-merge hecho, STATUS y guía al día, deuda registrada |
+| `measure` | `doctor` *(automático)* | KPIs, bitácora, informe | — *(el dato se emite en cada gate; `measure` solo lo lee)* |
+
+**`archive` tiene dos desenlaces.** Un expediente puede cerrarse **entregado** (su delta se
+convierte en contrato vigente) o **descartado** (no pasó el gate de Intención, o el equipo
+decidió no seguir). Los descartados también se archivan **con su motivo**: es la memoria
+institucional más barata que existe — cuando alguien reproponga la misma idea dentro de seis
+meses, la respuesta ya está escrita.
 
 **El hotfix es el mismo Loop comprimido, no otro Loop**: entra directo en `apply` con
 referencia de incidente obligatoria, pasa un Tribunal de una sola ronda y un Delivery rápido.
 **Se saltan steps, nunca gates** — el test de reproducción y el smoke siguen siendo
 obligatorios, y lo aplazado queda como deuda registrada.
+
+### Los caminos de vuelta
+
+Un gate que no dice **a dónde te devuelve** no es un gate: es un muro. Cada fallo tiene un
+retorno definido, y la distancia del retorno mide lo que cuesta descubrir el problema tarde:
+
+| Gate fallado | Vuelve a | Con qué |
+|---|---|---|
+| **Problema** | fuera del Loop | No hay problema que resolver — no se abre expediente |
+| **Intención** | `archive` *(descartado)* | El expediente se cierra con el motivo. Retorno más barato del Loop |
+| **Claridad** | `tune` — o a `discover` si el problema estaba mal entendido | Las preguntas abiertas concretas |
+| **Diseño** | `design` — o a `tune` si la spec no soporta ningún diseño viable | Las objeciones del arquitecto |
+| **Plan** | `breakdown` | Los slices que no eran mergeables por separado |
+| **Esclusa** | no se sale de `apply` | El commit no llegó a existir: se corrige y se recommitea |
+| **Verde** | `apply` *(el slice)* | El test en rojo o el escenario sin cobertura |
+| **Veredicto `HOLD`** | `apply` — o a `design`/`tune` si el hallazgo es de fondo | Los hallazgos con `fichero:línea` |
+| **Resolución** | `apply` | Los `CONDITIONAL` sin resolver bloquean: no se cierran por silencio |
+| **Aduana** | `apply` | El job de CI que falló |
+| **Promoción** | `apply` *(carril rápido contra `preproduction`)* | Lo que QA rechazó → nueva `-b.N` |
+| **Smoke** | rollback inmediato + expediente de hotfix | El síntoma en producción |
+| **Cierre** | el paso que falte | Back-merge pendiente, deuda sin registrar, STATUS sin actualizar |
+| **Regresión post-merge** *(hotfix)* | propuesta de revert | La suite completa en rojo tras el deploy |
+
+Dos lecturas útiles de esta tabla. Primera: **casi todos los retornos caen en `apply`** — por
+eso los slices deben ser pequeños, porque el slice es la unidad de rehacer. Segunda: los
+retornos de arriba cuestan un párrafo y los de abajo cuestan un despliegue; **cada gate existe
+para que el fallo se descubra en la fila más alta posible**.
 
 ## 5. Los cuatro puestos de Shield
 
@@ -150,9 +187,11 @@ ventana de esquive**: el commit existe o no existe, y da igual quién lo intent�
 inspección. Es el único puesto que **no vive en la máquina** de quien hace el cambio.
 *(Antes: "capa 4 · CI".)*
 
-> Fíjate en que `Esclusa` y `Aduana` aparecen dos veces: como puestos de Shield y como gates
-> del Loop. No es duplicación — **los gates duros son Shield materializándose** en el punto
-> exacto del recorrido donde toca.
+> **Por qué dos gates se llaman como un puesto.** Casi todos los gates nombran *lo que
+> garantizan* (Claridad, Verde, Plan, Veredicto); `Esclusa` y `Aduana` nombran *el mecanismo*,
+> porque son puestos de Shield. Es una excepción deliberada: cuando un gate lleva el nombre de
+> su puesto, estás leyendo que **ahí no decide una persona ni una convención — decide Shield**.
+> La irregularidad es información, no ruido.
 
 ## 6. El afinado · un principio, no solo un step
 
