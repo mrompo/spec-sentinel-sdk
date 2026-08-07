@@ -11,6 +11,15 @@ no se le *piden* al agente — se hacen **imposibles de saltar**. Se apoya en
 [OpenSpec](https://github.com/Fission-AI/OpenSpec): primero se escribe qué debe hacer el
 sistema (la *spec*), y el código se valida contra ella.
 
+Tiene cuatro capas (nombres y definiciones en [la semántica](05-semantica.md)):
+
+| Capa | Para qué |
+|---|---|
+| **Engine** | El método: escribir la spec, partirla en tareas, implementarla y verificarla |
+| **Shield** | Las reglas estrictas que nadie —ni el agente— puede saltarse |
+| **Tribunal** | La evaluación independiente del trabajo hecho |
+| **Delivery** | El camino a producción y su medición |
+
 ## ¿Qué puede hacer hoy?
 
 | Capacidad | Estado | Cómo se usa |
@@ -85,10 +94,13 @@ openspec validate --all --strict  # las specs y cambios están bien formados
 Si ambos están en verde, el repo está sano. Esto mismo corre en CI en cada PR
 (cuando el repo tenga remote).
 
-## Guardarraíles
+## Shield · las reglas estrictas
 
-Las reglas viven en un solo sitio: [`sentinel/policy.yaml`](../sentinel/policy.yaml). Cada
-regla vigila una acción y decide en uno de tres modos:
+Las reglas viven en un solo sitio, **la política**
+([`sentinel/policy.yaml`](../sentinel/policy.yaml)). Hoy se aplican en el puesto del
+**Centinela** (el hook que intercepta cada acción del agente); la **Esclusa** (git hooks) y la
+**Aduana** (CI) llegan en las fases 2 y 3. Cada regla vigila una acción y decide en uno de
+tres modos:
 
 | Modo | Qué pasa |
 |---|---|
@@ -128,9 +140,14 @@ sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto decla
 
 ## Glosario mínimo
 
+Vocabulario completo y razonado en **[docs/05-semantica.md](05-semantica.md)**. Lo esencial:
+
+- **Engine · Shield · Tribunal · Delivery** — las cuatro capas: producir · restringir · juzgar · entregar.
+- **Canon · Centinela · Esclusa · Aduana** — los cuatro puestos donde Shield se aplica:
+  la intención, la acción, el commit y el merge.
 - **Spec** — el contrato: qué debe hacer el sistema, en escenarios verificables.
-- **Cambio (change)** — carpeta en `openspec/changes/` con proposal + tasks + spec delta.
-- **Archivar** — cerrar un cambio: su spec pasa a `openspec/specs/` (contrato vigente).
-- **Fixture** — el banco de pruebas del propio framework (`fixture/`).
-- **Gate** — un control que no se puede saltar (hook, git hook o check de CI).
-- **Tier** — nivel de adopción: 0 solo guardarraíles · 1 + método SDD · 2 + subagentes.
+- **Expediente** — un cambio en curso en `openspec/changes/` (proposal + tasks + delta).
+- **Archivar** — cerrar un expediente: su spec pasa a ser contrato vigente.
+- **El banco** — el banco de pruebas del propio framework (`fixture/`).
+- **La llave / la bitácora** — la vía de emergencia auditada y su registro.
+- **Niveles**: Guardia (solo Shield) · Método (+ Engine) · Tribunal (+ evaluación).
