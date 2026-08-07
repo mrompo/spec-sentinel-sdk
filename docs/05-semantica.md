@@ -58,16 +58,32 @@ creíble el veredicto.
 
 | Step | Produce | Gate de salida |
 |---|---|---|
-| `discover` *(condicional)* | Qué se pide de verdad: contexto, afectados, alternativas descartadas | — (alimenta a `tune`) |
-| `tune` | Spec al 100%: escenarios falsables, happy path **y** error | **Claridad** 👤 — sin preguntas abiertas · aprueba Producto |
-| `design` *(condicional)* | `design.md`: alternativas, trade-offs, contratos, ADRs | **Diseño** 👤 — hay plan antes de teclear · aprueba tech lead |
-| `propose` | Expediente: delta spec + tareas en slices + plan de pruebas | **Contrato** ⚙️ — `openspec validate --strict`, ids `SC-*`, slices mergeables por separado |
+| `discover` *(condicional)* | Qué se pide de verdad: contexto, afectados, alternativas descartadas | — (alimenta a `propose`) |
+| `propose` | **El expediente abierto**: declaración de intenciones (por qué y qué cambia) | **Intención** 👤 — ¿merece la pena y está justificado? Matar aquí cuesta cero · aprueba Producto |
+| `tune` | El delta spec afinado: escenarios falsables, happy path **y** error | **Claridad** ⚙️👤 — `openspec validate --strict`, ids `SC-*`, sin preguntas abiertas |
+| `design` *(condicional)* | `design.md`: alternativas, trade-offs, contratos, ADRs | **Diseño** 👤 — hay enfoque antes de teclear · aprueba tech lead |
+| `breakdown` | Tareas en *vertical slices* + plan de pruebas | **Plan** ⚙️👤 — cada slice mergeable por separado, con su criterio de aceptación |
 | `apply` ↺ | Código por slice, TDD, commits atómicos | **Esclusa** ⚙️ — commit conforme, sin secretos, formato, tests del slice |
 | `verify` ↺ | Evidencia: suite, cobertura, trazabilidad | **Verde** ⚙️ — tests + cobertura + **spec-coverage del delta** + estático + fronteras |
 
+**Por qué `propose` va primero.** No significa "proponer la solución": significa **abrir el
+expediente y declarar la intención**. Todo lo demás se escribe *dentro* de él — el delta spec
+en `openspec/changes/<n>/specs/…` y el diseño en `openspec/changes/<n>/design.md` (ruta que la
+regla `design-ownership` de la política protege). Sin expediente no hay dónde escribir.
+
+De ahí sale el orden natural: se declara la intención → se afina qué debe hacer el sistema →
+se decide cómo → y solo entonces se trocea, porque **no se corta en slices lo que aún no tiene
+enfoque técnico**.
+
+El gate de **Intención** es el más barato del Loop: descartar aquí cuesta un párrafo; descartar
+en `verify` cuesta el trabajo entero.
+
 `apply`↔`verify` es un **bucle interno por slice**: un cambio son varias PRs pequeñas, no una
-grande. Los dos steps condicionales son simétricos: una petición clara entra directa en `tune`;
-un chore se salta `design`.
+grande. Los dos condicionales son simétricos: una petición clara se salta `discover`; un chore
+se salta `design` y va de `tune` a `breakdown`.
+
+> `propose` y `archive` son los extremos del expediente: uno lo abre, el otro lo cierra
+> convirtiendo su delta en contrato vigente.
 
 ### Tribunal · juzgar
 

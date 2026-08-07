@@ -34,7 +34,7 @@ y lo entregan; **Shield** es transversal y está siempre encendido. Vocabulario 
 
 | Stage | Responde a | Steps |
 |---|---|---|
-| **Engine** | ¿Qué hay que hacer y quién lo hace? | `discover` → `tune` → `design` → `propose` → `apply` ↺ `verify` |
+| **Engine** | ¿Qué hay que hacer y quién lo hace? | `discover` → `propose` → `tune` → `design` → `breakdown` → `apply` ↺ `verify` |
 | **Tribunal** | ¿Esto está bien? | `review` → `counter-review` → `synthesis` → `disposition` |
 | **Delivery** | ¿Cómo llega a producción y qué cuesta? | `merge` → `release` → `deploy` → `archive` → `measure` |
 | **Shield** *(transversal)* | ¿Qué no se puede hacer? | Gitflow, conventional commits, ramas protegidas, tests, secretos |
