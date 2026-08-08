@@ -35,8 +35,8 @@ repos ajenos.
 
 Ninguna pieza de código, ninguna regla, ningún comportamiento. Los identificadores en código
 (`sentinel-guard`, `policy.yaml`, `block|confirm|warn`) **se mantienen**: la semántica nombra
-conceptos, no renombra ficheros. La numeración de capas (1-4) sigue siendo válida como
-referencia en el plan; los nombres la acompañan, no la sustituyen.
+conceptos, no renombra ficheros. La numeración antigua (capas 1-4) sigue siendo válida como referencia en el plan; los
+nombres la acompañan, no la sustituyen.
 
 ## Impact
 
