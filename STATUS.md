@@ -16,7 +16,7 @@
 
 ## Roadmap
 
-| Fase | Cambio | Tier | Estado |
+| Fase | Cambio | Nivel | Estado |
 |---|---|---|---|
 | 0 | `bootstrap-method` | — | ✅ Archivada (`2026-07-27`) — [change](openspec/changes/archive/2026-07-27-bootstrap-method/proposal.md) |
 | 1 | `sentinel-guard` | 0 | ✅ Archivada (`2026-08-05`) — hook único + política + break-glass auditado; 15 casos en el fixture; endurecida tras panel adversarial |
@@ -43,7 +43,7 @@
 | `openspec validate --all --strict` | ✅ verde (2 specs vivas: `sdk-method`, `sentinel-guard`) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
 | KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log` (vacío: ninguna excepción usada) |
-| Enforcement real | **Capa 2 activa en este repo** (`.claude/settings.json`): el agente no puede commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests ni desarmar el propio guard. Capas 3-4 llegan en fases 2-3 |
+| Enforcement real | **Puesto Centinela activo en este repo** (`.claude/settings.json`): el agente no puede commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests ni desarmar el propio guard. Esclusa y Aduana llegan en fases 2-3 |
 
 ## Deudas / pendientes conscientes
 

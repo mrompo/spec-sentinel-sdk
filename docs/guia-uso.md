@@ -30,8 +30,8 @@ Dentro de cada stage hay **steps**, y para salir de cada step hay que cruzar un 
 | Desarrollar con el método SDD (cambios OpenSpec) | ✅ | Sección «El ciclo de trabajo» |
 | Saber en qué punto está el proyecto | ✅ | Abre [`STATUS.md`](../STATUS.md) |
 | Verificar la salud del framework | ✅ | Sección «Verificar que todo está bien» |
-| Guardarraíles que bloquean al agente | ✅ | Sección «Guardarraíles» |
-| Instalarlo en tu propio proyecto | 🔄 fase 2 (en curso) | — |
+| Shield: reglas que el agente no puede saltarse | ✅ | Sección «Shield» |
+| Instalarlo en tu propio proyecto | ⏸️ fase 2 (aparcada) | — |
 | Gate de PR en CI + spec-coverage | 🔜 fase 3 | — |
 | Skills del ciclo completo + doctor | 🔜 fase 4 | — |
 | Release por entornos + carril hotfix | 🔜 fase 5 | — |
@@ -114,7 +114,7 @@ tres modos:
 **Reglas activas hoy**: no commitear en ramas protegidas (`main`, `development`,
 `preproduction`, `production`) · no force-push · no editar CHANGELOG, lockfiles ni specs
 archivadas · no meter `.skip()`/`.only()` en tests · aviso al tocar config de cobertura ·
-aviso al editar `src/` sin cambio activo (solo Tier 1) · `rm -rf`/`DROP`/`reset --hard` piden
+aviso al editar `src/` sin cambio activo (solo en el nivel Método) · `rm -rf`/`DROP`/`reset --hard` piden
 confirmación · nada de `.env` de producción.
 
 **Cómo añadir una regla**: edita `policy.yaml` (id único + qué vigila + `mode` + `reason`) y
@@ -139,7 +139,7 @@ Los modos `confirm` no necesitan override: el propio Claude Code te pide la apro
 
 **Qué más hacen los hooks**: al arrancar sesión el agente recibe la rama y el cambio activo
 sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto declara un comando
-`format` en `sentinel.yaml` (si no, no pasa nada).
+`format` en su adaptador de stack (si no, no pasa nada).
 
 ## Glosario mínimo
 
@@ -158,4 +158,4 @@ Vocabulario completo y razonado en **[docs/05-semantica.md](05-semantica.md)**. 
 - **Archivar** — cerrar un expediente: su spec pasa a ser contrato vigente.
 - **El banco** — el banco de pruebas del propio framework (`fixture/`).
 - **La llave / la bitácora** — la vía de emergencia auditada y su registro.
-- **Niveles**: Guardia (solo Shield) · Método (+ Engine) · Tribunal (+ evaluación).
+- **Niveles**: Guardia (solo Shield) · Método (+ Engine) · Equipo (+ Tribunal).

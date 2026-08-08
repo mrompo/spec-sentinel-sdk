@@ -25,7 +25,7 @@ otro documento.
 ### Requirement: Nombres en las superficies de usuario
 
 Los documentos de cara al usuario (README y guía de uso) SHALL referirse a las piezas por su
-nombre, no solo por su número de capa o tier.
+nombre —stage, step, gate y puesto—, no solo por su número de capa o tier.
 
 #### Scenario: README y guía usan los nombres (SC-framework-semantics-03)
 

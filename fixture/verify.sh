@@ -55,7 +55,7 @@ if [ -f "$SEM" ]; then
   for doc in README.md docs/guia-uso.md; do
     grep -qE '(Engine|Shield|Tribunal|Delivery)' "$doc" && grep -qiE '(stage|loop)' "$doc" \
       && ok "$doc usa el vocabulario" \
-      || err "$doc no usa los nombres de las capas (ver docs/05-semantica.md)"
+      || err "$doc no usa el vocabulario del framework (ver docs/05-semantica.md)"
   done
 else
   err "falta docs/05-semantica.md (fuente única del vocabulario)"

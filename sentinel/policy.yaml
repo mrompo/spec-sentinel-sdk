@@ -1,7 +1,7 @@
-# sentinel/policy.yaml — LA política de escritura/ejecución (capa 2)
+# sentinel/policy.yaml — LA política de escritura/ejecución (puesto Centinela)
 #
 # Esquema v1 (plano, parseable con bash+sed — sin dependencias):
-#   sdd: true|false            → Tier 1 activo (habilita reglas con requires_sdd)
+#   sdd: true|false            → nivel Método activo (habilita reglas con requires_sdd)
 #   rules:                     → lista ordenada; LA PRIMERA REGLA QUE MATCHEA DECIDE
 #     - id:            único y obligatorio (lo referencia overrides.log)
 #       tool:          regex sobre tool_name (Bash, Edit|Write, …)
@@ -24,7 +24,7 @@ sdd: true
 
 rules:
   # ── autoprotección: el guardarraíl no se desarma a sí mismo ────────────────
-  # (hallazgo #1 del panel adversarial: sin esto, una sola escritura anula la capa 2)
+  # (hallazgo #1 del panel adversarial: sin esto, una sola escritura anula el Centinela)
   - id: self-protection
     tool: Bash|Edit|Write|MultiEdit|NotebookEdit
     path_re: (sentinel/(hooks/|policy\.yaml|overrides\.log)|\.claude/settings|AGENTS\.md$)

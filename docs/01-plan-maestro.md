@@ -1,5 +1,10 @@
 # 01 · Plan maestro — Spec Sentinel SDK (v2)
 
+> **Nota de vocabulario**: este plan es anterior a la semántica del framework
+> ([`05-semantica.md`](05-semantica.md)). Donde dice *capa* 1-4 léase los puestos de Shield
+> (Canon · Centinela · Esclusa · Aduana), y donde dice *tier* léase los niveles
+> (Guardia · Método · Equipo).
+>
 > Plan de construcción del SDK. Parte de la visión ([`framework-contex.md`](framework-contex.md)),
 > del análisis de fuentes (repo de investigación `../../spec-sentinel-research/` — docs 00 ·
 > 02 · 03, ver §13) y de la revisión
@@ -14,7 +19,7 @@ specboot (C) resolvió la **distribución** portable multi-copilot del método S
 probó el **enforcement** (hooks que bloquean, contrato `exit 2` + stderr); el monorepo (B)
 aporta la **madurez operativa** (intake real, PR lifecycle, versionado por entorno, Boost);
 el ecosistema Osmani (D) aporta la **disciplina de skills verificables** — y confirma la tesis:
-es el estado del arte en contenido y aun así todo es capa 1 (prompt). Ninguna fuente combina
+es el estado del arte en contenido y aun así todo es Canon (persuasión). Ninguna fuente combina
 disciplina + enforcement. Spec Sentinel es esa combinación, con seis piezas propias:
 
 1. **Validación cruzada spec↔código como gate** — `verify` en pre-push y CI.
@@ -33,13 +38,13 @@ lo calcula código determinista; el LLM solo genera los hallazgos* (adverse).
 
 ## 2. Tiers de adopción (el empaquetado del producto)
 
-El SDK se adopta por capas — cada tier da valor completo por sí solo, y el core de enforcement
+El SDK se adopta por niveles — cada uno da valor completo por sí solo, y el core de enforcement
 **no exige OpenSpec** (binding opcional):
 
-| Tier | Qué instala | Requiere | Valor |
+| Nivel | Qué instala | Requiere | Valor |
 |---|---|---|---|
-| **0 · Guardarraíles** | Hooks de agente (capa 2) + git hooks + CI gate + permissions | Nada (spec-agnóstico; 5 minutos con `setup`) | El agente ya no puede violar las reglas duras del repo |
-| **1 · Ciclo SDD** | OpenSpec + skills del ciclo (intake→archive) + `spec-coverage` + `doctor` | Tier 0 | La spec es el contrato y genera la obligación de test |
+| **0 · Guardia** | Hooks de agente (puesto Centinela) + git hooks + CI gate + permissions | Nada (spec-agnóstico; 5 minutos con `setup`) | El agente ya no puede violar las reglas duras del repo |
+| **1 · Método** | OpenSpec + skills del ciclo (intake→archive) + `spec-coverage` + `doctor` | Tier 0 | La spec es el contrato y genera la obligación de test |
 | **2 · Equipo** | Subagentes (§4) + qa-plan/db-review + panel adversarial + perfiles de stack | Tier 1 | Delegación atómica con separación de poderes |
 
 `spec-guard` (la regla "no hay código sin cambio activo") solo se activa con Tier 1 — en Tier 0
@@ -56,7 +61,7 @@ spec-sentinel/
 ├── sentinel/
 │   ├── policy.yaml            # LA política de escritura/ejecución (reglas del hook único, §6)
 │   ├── hooks/                 # 3 hooks: sentinel-guard · session-start · post-edit
-│   ├── githooks/  ci/         # Templates capa 3 y 4
+│   ├── githooks/  ci/         # Templates Esclusa y Aduana
 │   └── adapters/              # tracker / forge / stack (comandos + entorno-listo)
 ├── openspec/                  # Binding SDD (Tier 1): changes + specs + config
 ├── CLAUDE.md · AGENTS.md · GEMINI.md · codex.md    # symlinks → fuente única
@@ -117,14 +122,14 @@ la tabla v1 (histórico git) y la investigación (research/02).
 Extensiones de perfil (no core): `new-module`, scaffolding de entorno, skills de dominio,
 `code-simplification`/`security-and-hardening`/`context-engineering` vendorizadas de D.
 
-## 6. Guardarraíles: 4 capas + break-glass
+## 6. Shield: 4 puestos + break-glass
 
-| Capa | Mecanismo | El agente… |
+| Puesto | Mecanismo | El agente… |
 |---|---|---|
-| 1 · Prompt | Estándares + guidelines de perfil (Boost) + skills | *debería* cumplir |
-| 2 · Tool | **`sentinel-guard`** + `session-start` + `post-edit` + deny-list | *no puede* violar |
-| 3 · Git | commit-msg (bash puro) · pre-commit (gitleaks+format+static) · pre-push (tests + validate) — patrón skip-vs-fail de A | *no puede* commitear |
-| 4 · CI | commitlint · gitleaks · lint · static · tests+cobertura · fronteras · verify · **spec-coverage** · revisión de datos (trigger db) · mutation *(opt-in)* — GitHub Actions primero (A y B lo usan), GitLab después | *no puede* mergear |
+| **Canon** | Estándares + guidelines de perfil (Boost) + skills | *debería* cumplir |
+| **Centinela** | **`sentinel-guard`** + `session-start` + `post-edit` + deny-list | *no puede* violar |
+| **Esclusa** | commit-msg (bash puro) · pre-commit (gitleaks+format+static) · pre-push (tests + validate) — patrón skip-vs-fail de A | *no puede* commitear |
+| **Aduana** | commitlint · gitleaks · lint · static · tests+cobertura · fronteras · verify · **spec-coverage** · revisión de datos (trigger db) · mutation *(opt-in)* — GitHub Actions primero (A y B lo usan), GitLab después | *no puede* mergear |
 
 **Un solo hook de política, no seis**: `sentinel-guard` (PreToolUse) lee `sentinel/policy.yaml`
 — tabla declarativa `patrón (ruta/comando) → regla → modo (block/confirm/warn)` que implementa
@@ -168,7 +173,7 @@ matriz del delta calculada por script, nunca retroactiva.
 cambio toca una capability sin especificar, el intake crea su spec mínima (y su escenario de
 regresión). La cobertura SDD crece orgánicamente por las zonas que cambian — nunca big-bang.
 
-### 7.2 Carril hotfix (comprime fases, no quita capas)
+### 7.2 Carril hotfix (comprime steps, no quita gates)
 
 Incidencia con referencia obligatoria → rama `hotfix/<id>` desde `production` (paraguas si
 agrupa `fix/*`; bugs de una `-b.N` → mismo carril contra `preproduction`) → diagnóstico
