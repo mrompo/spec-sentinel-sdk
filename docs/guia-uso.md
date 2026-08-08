@@ -19,7 +19,8 @@ Un cambio recorre un **Loop** de tres stages, con **Shield** vigilando todo el r
 | **Engine** | Producir: entender qué se pide, afinarlo hasta que sea verificable, implementarlo |
 | **Tribunal** | Juzgar: evaluación independiente de lo hecho |
 | **Delivery** | Entregar y medir: a producción con rastro |
-| **Shield** *(transversal)* | Las reglas estrictas que nadie —ni el agente— puede saltarse |
+
+Y **Shield**, transversal, vigila todo el rato: no es un stage.
 
 Dentro de cada stage hay **steps**, y para salir de cada step hay que cruzar un **gate**.
 
@@ -107,9 +108,9 @@ tres modos:
 
 | Modo | Qué pasa |
 |---|---|
-| **block** | El agente no puede: la acción se deniega con el motivo explicado |
-| **confirm** | No se ejecuta sin aprobación humana explícita |
-| **warn** | Pasa, pero deja un aviso visible |
+| `block` | El agente no puede: la acción se deniega con el motivo explicado |
+| `confirm` | No se ejecuta sin aprobación humana explícita |
+| `warn` | Pasa, pero deja un aviso visible |
 
 **Reglas activas hoy**: no commitear en ramas protegidas (`main`, `development`,
 `preproduction`, `production`) · no force-push · no editar CHANGELOG, lockfiles ni specs
@@ -150,7 +151,7 @@ Vocabulario completo y razonado en **[docs/05-semantica.md](05-semantica.md)**. 
 - **Engine · Tribunal · Delivery** — los tres stages: producir · juzgar · entregar.
   **Shield** es transversal: no es una etapa, está siempre encendido.
 - **Canon · Centinela · Esclusa · Aduana** — los cuatro puestos donde Shield se aplica:
-  la intención, la acción, el commit y el merge.
+  la intención, la acción, el registro y la integración.
 - **Afinado (`tune`)** — nada se acierta a la primera: la spec, las reglas y los umbrales se
   ajustan con el uso.
 - **Spec** — el contrato: qué debe hacer el sistema, en escenarios verificables.

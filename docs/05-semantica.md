@@ -37,14 +37,17 @@ siempre encendido, dentro de cada step y sobre todo en cada gate.
         └───────────── archive · métricas ───────────────┘
 ```
 
-## 3. Los cuatro grandes
+## 3. Los tres stages y Shield
 
 | Stage | Responde a | Qué contiene |
 |---|---|---|
 | **Engine** | ¿Qué hay que hacer y quién lo hace? | OpenSpec y todo su entorno: el ciclo, specs vivas, expedientes, tareas, skills, y los perfiles que **producen** (arquitecto, developer, QA, datos) |
-| **Shield** | ¿Qué no se puede hacer? | Las reglas estrictas: gitflow, conventional commits, ramas protegidas, ficheros gestionados, tests, secretos, aislamiento. Se aplica en cuatro puestos (§5) |
 | **Tribunal** | ¿Esto está bien? | Los perfiles que **evalúan** y sus artefactos: panel adversarial de tres lentes, veredicto `SHIP / CONDITIONAL / HOLD`, informes |
 | **Delivery** | ¿Cómo llega a producción y qué cuesta? | Release por entornos, carril de hotfix, instalación, y la medición: KPIs, bitácora, `doctor` |
+
+Y **Shield**, que no es un stage: es transversal. Impide lo que no se puede hacer —gitflow,
+conventional commits, ramas protegidas, ficheros gestionados, tests, secretos, aislamiento— y
+se aplica en cuatro puestos (§5), dentro de cada step y en cada gate.
 
 **La frontera entre Engine y Tribunal es la separación de poderes.** Un perfil está en Engine
 si escribe y en Tribunal si dictamina; ninguno hace las dos cosas. Esa línea es la que hace
@@ -72,8 +75,9 @@ fichero propio.
 
 **Por qué `propose` va primero.** No significa "proponer la solución": significa **abrir el
 expediente y declarar la intención**. Todo lo demás se escribe *dentro* de él — el delta spec
-en `openspec/changes/<n>/specs/…` y el diseño en `openspec/changes/<n>/design.md` (ruta que la
-regla `design-ownership` de la política protege). Sin expediente no hay dónde escribir.
+en `openspec/changes/<n>/specs/…` y el diseño en `openspec/changes/<n>/design.md`. Sin
+expediente no hay dónde escribir. *(La regla `design-ownership` que protegerá esa ruta llega
+en la fase 6: hoy es una intención documentada en la política, no enforcement.)*
 
 De ahí sale el orden natural: se declara la intención → se afina qué debe hacer el sistema →
 se decide cómo → y solo entonces se trocea, porque **no se corta en slices lo que aún no tiene
@@ -93,10 +97,15 @@ se salta `design` y va de `tune` a `breakdown`.
 
 | Step | Quién | Produce | Gate de salida |
 |---|---|---|---|
-| `review` | las tres lentes | Hallazgos independientes | **Contexto limpio** ⚙️ — ven el diff y la spec, nunca el razonamiento del implementador |
-| `counter-review` | las tres lentes | Validación cruzada: cada lente ve las otras | — *(ronda interna)* |
+| `review` | Auditor · Adversary · Pragmatist | Hallazgos independientes | **Contexto limpio** ⚙️ — ven el diff y la spec, nunca el razonamiento del implementador |
+| `counter-review` | las mismas tres | Validación cruzada: cada lente ve las otras | — *(ronda interna)* |
 | `synthesis` | código determinista | Conteo de acuerdos → `SHIP` / `CONDITIONAL` / `HOLD` | **Veredicto** ⚙️ — lo calcula código, no otra llamada al LLM |
 | `disposition` | arquitecto / dev líder | Qué se hace con cada hallazgo | **Resolución** 👤 — nada se cierra por cansancio |
+
+**Las tres lentes** son ortogonales por diseño: **Auditor** (¿calcula bien? corrección y lógica),
+**Adversary** (¿qué puede hacer un hostil? seguridad y abuso) y **Pragmatist** (¿sobrevivirá al
+contacto con la realidad? mantenibilidad). Un hallazgo que ven ≥2 lentes es *validado-cruzado*;
+uno bloqueante validado-cruzado produce `HOLD`.
 
 ### Delivery · entregar y medir
 
@@ -209,7 +218,7 @@ configuración perfecta el día uno: specs, reglas y umbrales se afinan con el u
 
 ## 7. Niveles de adopción
 
-| Nivel | Nombre | Stages | Qué te llevas |
+| Nivel | Nombre | Incluye | Qué te llevas |
 |---|---|---|---|
 | 0 | **Guardia** | Shield | Las reglas dejan de ser opcionales, sin cambiar tu forma de trabajar |
 | 1 | **Método** | + Engine | La spec es el contrato y genera la obligación de test |
@@ -232,11 +241,14 @@ hotfix y métricas cuando el equipo los adopte. *(Antes: "Tier 0/1/2".)*
 
 ## 9. Los tres modos de Shield
 
-| Modo | En código | Qué ocurre |
-|---|---|---|
-| **Bloquea** | `block` | La acción se deniega con su motivo. Solo la llave la permite |
-| **Consulta** | `confirm` | No se ejecuta sin que una persona apruebe **esa** acción |
-| **Avisa** | `warn` | Pasa dejando aviso visible (modo de rodaje al instalar) |
+Se nombran igual en la documentación y en la política — traducirlos solo añadiría un segundo
+juego de etiquetas para lo mismo:
+
+| Modo | Qué ocurre |
+|---|---|
+| `block` | La acción se deniega con su motivo. Solo la llave la permite |
+| `confirm` | No se ejecuta sin que una persona apruebe **esa** acción |
+| `warn` | Pasa dejando aviso visible (modo de rodaje al instalar) |
 
 ## 10. Lo que deliberadamente NO renombramos
 
@@ -254,10 +266,22 @@ JS/Node/asyncio, y ya tenemos eventos de verdad en los hooks) y *fine-tuning* a 
 contexto de IA significa reentrenar un modelo; por eso el step es `tune` y en prosa hablamos
 de **afinado**).
 
+### Colisiones que asumimos a sabiendas
+
+Ningún nombre está libre. Estas son las que un panel de revisión detectó y decidimos asumir,
+documentadas para que nadie las descubra por sorpresa:
+
+| Nombre | Choca con | Por qué lo asumimos |
+|---|---|---|
+| **Sentinel** | **HashiCorp Sentinel** — policy-as-code con tres niveles de enforcement (`advisory`/`soft-mandatory` con override auditado/`hard-mandatory`) que son casi punto por punto nuestros `warn`/`confirm`/`block` | Es el nombre del producto. Regla: **nunca "Sentinel" a secas, siempre "Spec Sentinel"** |
+| **Stage** | El *staging area* de git, los `stages:` de CI, `.env.staging` — los tres presentes en este repo | La jerarquía *stage → step → gate* es la convención que el lector ya conoce |
+| **Loop** | *Agent loop* y *human in the loop*, que en 2026 son el significado dominante en nuestro propio nicho | El bucle que describimos es el del cambio, no el del agente; el contexto desambigua |
+| **`verify`** | `--no-verify` de git significa lo contrario, y hay un job de CI homónimo | Pendiente: renombrar el job de CI, no el step |
+
 ## 11. Cómo se usa este vocabulario
 
 - Documentación de cara al usuario (README, guía): **los nombres**.
 - Plan y specs: los nombres, con la equivalencia antigua entre paréntesis cuando ayude.
 - Código, ids y ficheros: **sin cambios** — `sentinel-guard`, `policy.yaml`, `block`.
 - Un término nuevo se añade **aquí primero**; el banco verifica que esta página define los
-  cuatro stages y los cuatro puestos, y que las superficies principales los usan.
+  tres stages, Shield y los cuatro puestos, y que las superficies principales los usan.
