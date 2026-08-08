@@ -1,6 +1,7 @@
 # Spec Sentinel SDK
 
 > **Ingeniería de software para el desarrollo asistido por IA.**
+> → **Empieza aquí:** [guía de uso](docs/guia-uso.md) · [vocabulario](docs/05-semantica.md) · [estado](STATUS.md)
 > Un framework portable que convierte *reglas que el agente debería seguir* en *reglas que el agente **no puede** violar*.
 
 ![Estado](https://img.shields.io/badge/estado-en%20construcci%C3%B3n-orange)
@@ -37,7 +38,9 @@ y lo entregan; **Shield** es transversal y está siempre encendido. Vocabulario 
 | **Engine** | ¿Qué hay que hacer y quién lo hace? | `discover` → `propose` → `tune` → `design` → `breakdown` → `apply` ↺ `verify` |
 | **Tribunal** | ¿Esto está bien? | `review` → `counter-review` → `synthesis` → `disposition` |
 | **Delivery** | ¿Cómo llega a producción y qué cuesta? | `merge` → `release` → `deploy` → `archive` → `measure` |
-| **Shield** *(transversal)* | ¿Qué no se puede hacer? | Gitflow, conventional commits, ramas protegidas, tests, secretos |
+
+Y **Shield** —que no es un stage— vigila transversalmente: gitflow, conventional commits, ramas
+protegidas, tests y secretos, dentro de cada step y en cada gate.
 
 La frontera entre **Engine** y **Tribunal** es la separación de poderes: quien produce no juzga
 su propio trabajo. Y cada step se cierra con un **gate** — Claridad, Verde, Veredicto, Aduana…
