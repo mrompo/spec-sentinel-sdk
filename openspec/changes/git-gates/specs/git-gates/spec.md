@@ -1,4 +1,4 @@
-> **Orden de implementación: 01/01** — única capability de esta fase (tasks §Checklist).
+> **Orden de implementación: 01/01** — pendiente de `tune`: puede dividirse en `git-gates` + `sdk-setup` (proposal, cuestión 2).
 
 # git-gates — Delta spec
 
@@ -32,7 +32,7 @@ del adaptador de stack **solo sobre los ficheros en staging**.
 ### Requirement: Barrera antes de publicar
 
 El hook `pre-push` SHALL ejecutar la suite de tests del adaptador y SHALL rechazar el push
-cuando la rama de destino esté protegida, cerrando el TOCTOU que la capa 2 no puede evitar.
+cuando la rama de destino esté protegida, cerrando el TOCTOU que el Centinela no puede evitar.
 
 #### Scenario: Tests en rojo (SC-git-gates-04)
 
@@ -67,7 +67,7 @@ El proyecto consumidor SHALL declarar sus comandos (`format`, `lint`, `static`, 
 
 ### Requirement: Instalación de un comando
 
-La skill `setup` SHALL instalar el Tier 0 completo en un repo ajeno con una sola invocación:
+La skill `setup` SHALL instalar el nivel Guardia completo en un repo ajeno con una sola invocación:
 copia del enforcement, `core.hooksPath`, cableado de los hooks de agente y detección de stack.
 SHALL preservar la configuración existente del consumidor (backup + fusión, o instrucción
 manual explícita si la fusión no es segura) y SHALL ser idempotente.
@@ -85,6 +85,6 @@ manual explícita si la fusión no es segura) y SHALL ser idempotente.
 
 #### Scenario: Tras instalar, los gates bloquean (SC-git-gates-10)
 
-- **WHEN** se instala el Tier 0 en un repo limpio y se intenta un commit con mensaje no conforme
+- **WHEN** se instala el nivel Guardia en un repo limpio y se intenta un commit con mensaje no conforme
   o una acción prohibida por la política
 - **THEN** ambos se rechazan — la instalación es efectiva sin pasos manuales adicionales
