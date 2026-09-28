@@ -45,6 +45,34 @@ else
   ok "todos los Scenarios llevan id SC-*"
 fi
 
+# Semántica: el vocabulario está definido y las superficies lo usan (SC-framework-semantics-01/03)
+SEM=docs/05-semantica.md
+if [ -f "$SEM" ]; then
+  for term in Loop Stage Step Gate Engine Shield Tribunal Delivery Canon Centinela Esclusa Aduana tune; do
+    grep -q "$term" "$SEM" || err "la semántica no define «${term}»"
+  done
+  for slug in canon guard lock customs; do
+    grep -q "(\`$slug\`)" "$SEM" || err "la semántica no da el slug «${slug}» de su puesto"
+  done
+  ok "semántica: modelo, stages, steps, puestos y slugs definidos"
+  # Todo gate de salida de un step tiene camino de vuelta (SC-framework-semantics-07)
+  RET=$(sed -n '/^### Los caminos de vuelta/,/^## 5\./p' "$SEM")
+  GATES=$(sed -n '/^## 4\./,/^### Los caminos de vuelta/p' "$SEM" | grep '^| `' \
+    | awk -F'|' '{print $(NF-1)}' | sed -n 's/^ *\*\*\([^*]*\)\*\*.*/\1/p')
+  [ -n "$GATES" ] || err "semántica: no se encontraron gates en las tablas de steps (§4)"
+  MISSING=$(echo "$GATES" | while IFS= read -r g; do
+    echo "$RET" | grep -qF "| **$g" || echo "$g"; done)
+  [ -z "$MISSING" ] && ok "semántica: todos los gates tienen camino de vuelta" \
+    || err "gates sin camino de vuelta: $(echo "$MISSING" | tr '\n' ' ')"
+  for doc in README.md docs/guia-uso.md; do
+    grep -qE '(Engine|Shield|Tribunal|Delivery)' "$doc" && grep -qiE '(stage|loop)' "$doc" \
+      && ok "$doc usa el vocabulario" \
+      || err "$doc no usa el vocabulario del framework (ver docs/05-semantica.md)"
+  done
+else
+  err "falta docs/05-semantica.md (fuente única del vocabulario)"
+fi
+
 # Runner de hooks: si el guard existe, sus casos son obligatorios (nunca skip silencioso)
 if [ -f sentinel/hooks/sentinel-guard.sh ]; then
   if [ -d fixture/hooks/cases ] && ls fixture/hooks/cases/*.sh >/dev/null 2>&1; then
