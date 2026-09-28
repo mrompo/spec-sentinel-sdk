@@ -1,4 +1,4 @@
-# sentinel/hooks — Capa 2 (fase 1: `sentinel-guard`)
+# sentinel/hooks — El puesto Centinela (fase 1: `sentinel-guard`)
 
 Tres hooks, tres arquetipos (no habrá más scripts — las reglas nuevas van a `../policy.yaml`):
 
