@@ -22,6 +22,30 @@ otro documento.
 - **WHEN** un documento introduce un nombre propio del framework que no está en la semántica
 - **THEN** es un defecto: el nombre se define primero en `docs/05-semantica.md`
 
+### Requirement: Modelo del Loop
+
+La semántica SHALL definir el modelo con el que se describe el recorrido de un cambio: Loop,
+Stage, Step y Gate, sin solape entre ellos; los tres stages (Engine, Tribunal, Delivery) con
+sus steps, su dueño y su gate de salida; y Shield como capa transversal que no es un stage.
+Todo gate SHALL declarar a qué step devuelve cuando falla.
+
+#### Scenario: El modelo está definido (SC-framework-semantics-06)
+
+- **WHEN** se consulta el documento de semántica
+- **THEN** define Loop, Stage, Step y Gate, los stages Engine, Tribunal y Delivery con sus
+  steps y gates, y Shield como transversal
+
+#### Scenario: Gate sin camino de vuelta (SC-framework-semantics-07)
+
+- **WHEN** un gate del Loop no tiene fila en la tabla de caminos de vuelta
+- **THEN** es un defecto: un gate que no dice a dónde devuelve es un muro, no un gate
+
+#### Scenario: Archive con dos desenlaces (SC-framework-semantics-08)
+
+- **WHEN** se cierra un expediente
+- **THEN** la semántica distingue **entregado** (la delta pasa a contrato vigente) de
+  **descartado** (se archiva con su motivo)
+
 ### Requirement: Nombres en las superficies de usuario
 
 Los documentos de cara al usuario (README y guía de uso) SHALL referirse a las piezas por su

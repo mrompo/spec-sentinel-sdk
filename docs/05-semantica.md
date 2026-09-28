@@ -142,6 +142,7 @@ retorno definido, y la distancia del retorno mide lo que cuesta descubrir el pro
 | **Plan** | `breakdown` | Los slices que no eran mergeables por separado |
 | **Esclusa** | no se sale de `apply` | El commit no llegó a existir: se corrige y se recommitea |
 | **Verde** | `apply` *(el slice)* | El test en rojo o el escenario sin cobertura |
+| **Contexto limpio** | `review` *(se relanza el panel)* | La fuga detectada: qué razonamiento del implementador vio la lente |
 | **Veredicto `HOLD`** | `apply` — o a `design`/`tune` si el hallazgo es de fondo | Los hallazgos con `fichero:línea` |
 | **Resolución** | `apply` | Los `CONDITIONAL` sin resolver bloquean: no se cierran por silencio |
 | **Aduana** | `apply` | El job de CI que falló |
@@ -167,32 +168,36 @@ Una regla se puede hacer cumplir en cuatro momentos, y hay un puesto en cada uno
     la doctrina    el guardia     la cámara      la frontera
 ```
 
-| Puesto | Actúa | Coste de fallar | Garantía |
-|---|---|---|---|
-| **Canon** | Antes de nada | Nulo — corrige la intención | Ninguna: es persuasión |
-| **Centinela** | Antes de la acción | Bajo — el agente reintenta bien | Alta contra descuidos, no contra ingenio |
-| **Esclusa** | Al escribir la historia | Medio — hay que rehacer el commit | Total sobre lo que se registra |
-| **Aduana** | Al integrar | Alto — vuelta atrás y revisión | Total sobre lo que se comparte |
+| Puesto | Slug | Actúa | Coste de fallar | Garantía |
+|---|---|---|---|---|
+| **Canon** | `canon` | Antes de nada | Nulo — corrige la intención | Ninguna: es persuasión |
+| **Centinela** | `guard` | Antes de la acción | Bajo — el agente reintenta bien | Alta contra descuidos, no contra ingenio |
+| **Esclusa** | `lock` | Al escribir la historia | Medio — hay que rehacer el commit | Total sobre lo que se registra |
+| **Aduana** | `customs` | Al integrar | Alto — vuelta atrás y revisión | Total sobre lo que se comparte |
+
+El **slug** es el nombre en inglés del puesto, para ids, flags y futuros comandos (`doctor`,
+KPIs por puesto). El de Centinela es `guard` y no `sentinel` para no chocar con el nombre del
+producto (§10) — y coincide con el ya existente `sentinel-guard`.
 
 Cuanto **antes** actúa un puesto, más barato y amable es; cuanto **después**, más difícil de
 esquivar. Por eso no sobra ninguno.
 
-**Canon** · *la doctrina* — lo que el agente sabe antes de actuar: estándares, `AGENTS.md`,
+**Canon** (`canon`) · *la doctrina* — lo que el agente sabe antes de actuar: estándares, `AGENTS.md`,
 skills, contexto inyectado al arrancar. *Límite honesto*: es persuasión, no control.
 *(Antes: "capa 1 · prompt".)*
 
-**Centinela** · *el guardia* — el hook que intercepta cada acción y la evalúa contra **la
+**Centinela** (`guard`) · *el guardia* — el hook que intercepta cada acción y la evalúa contra **la
 política**; decide **bloquea**, **consulta** o **avisa**. *Límite honesto*: *best effort* —
 evalúa texto y evalúa antes de ejecutar, así que hay grafías no previstas y ventanas de tiempo.
 Hace imposible el descuido, no detiene a un adversario con shell
 ([detalle](../sentinel/README.md)). *(Antes: "capa 2 · tool".)*
 
-**Esclusa** · *la cámara de paso* — los git hooks. Para pasar del trabajo en curso a la
+**Esclusa** (`lock`) · *la cámara de paso* — los git hooks. Para pasar del trabajo en curso a la
 historia del repositorio hay que entrar en la cámara y cumplir los requisitos. Aquí **no hay
 ventana de esquive**: el commit existe o no existe, y da igual quién lo intentó.
 *(Antes: "capa 3 · git".)*
 
-**Aduana** · *la frontera* — el gate de CI sobre la PR: nada entra en el tronco común sin
+**Aduana** (`customs`) · *la frontera* — el gate de CI sobre la PR: nada entra en el tronco común sin
 inspección. Es el único puesto que **no vive en la máquina** de quien hace el cambio.
 *(Antes: "capa 4 · CI".)*
 
