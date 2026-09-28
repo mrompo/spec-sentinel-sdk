@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sentinel-guard — capa 2 del enforcement (PreToolUse).
+# sentinel-guard — el puesto Centinela de Shield (PreToolUse).
 #
 # Contrato: stdin = JSON del tool call.
 #   exit 0            → la acción pasa (con JSON en stdout si hay aviso que el agente debe ver)
@@ -7,7 +7,7 @@
 #   stdout JSON ask   → requiere aprobación humana (permissionDecision del harness)
 # Reglas: sentinel/policy.yaml (esquema v1 plano). Primera regla que matchea decide.
 # Sin dependencias: bash + grep/sed. Endurecido tras el panel adversarial (ver §Limitaciones
-# en sentinel/README.md: lo que esta capa NO puede garantizar lo cubren las capas 3 y 4).
+# en sentinel/README.md: lo que este puesto NO puede garantizar lo cubren Esclusa y Aduana).
 set -uo pipefail
 
 # Anclaje: el project dir del harness manda (monorepo/submódulo/worktree), luego la raíz git.

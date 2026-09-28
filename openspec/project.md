@@ -12,7 +12,7 @@ agente debería seguir* en *reglas que el agente no puede violar*. Plan completo
 
 ## Reglas duras (no negociables)
 
-1. Nada entra en `main` sin su cambio OpenSpec (este repo es Tier 1 de sí mismo).
+1. Nada entra en `main` sin su cambio OpenSpec (este repo se aplica a sí mismo el nivel Método).
 2. La spec es el contrato: el código se valida contra ella, no al revés.
 3. Conventional commits; sin force-push; sin `--no-verify`.
 4. Toda regla dura del framework tiene un test que la falsifica (fixture, fase 0+).
