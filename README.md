@@ -1,9 +1,10 @@
 # Spec Sentinel SDK
 
 > **Ingeniería de software para el desarrollo asistido por IA.**
+> → **Empieza aquí:** [guía de uso](docs/guia-uso.md) · [vocabulario](docs/05-semantica.md) · [estado](STATUS.md)
 > Un framework portable que convierte *reglas que el agente debería seguir* en *reglas que el agente **no puede** violar*.
 
-![Estado](https://img.shields.io/badge/estado-fase%20de%20definici%C3%B3n-orange)
+![Estado](https://img.shields.io/badge/estado-en%20construcci%C3%B3n-orange)
 ![Método](https://img.shields.io/badge/m%C3%A9todo-Spec--Driven%20Development-blue)
 ![Spec](https://img.shields.io/badge/spec-OpenSpec-8A2BE2)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
@@ -26,37 +27,59 @@ arquitectónica y deuda invisible después.
 La respuesta habitual —pedirle al agente que siga las reglas mediante prompts e instrucciones—
 no es ingeniería: es confianza. **Y la confianza no escala.**
 
-Spec Sentinel aplica **defensa en profundidad** en cuatro capas, de la más blanda a la más dura:
+## 🔁 El Loop
 
-| Capa | Mecanismo | El agente… |
+Un cambio no atraviesa una pila de capas: **da una vuelta**. Tres stages lo producen, lo juzgan
+y lo entregan; **Shield** es transversal y está siempre encendido. Vocabulario completo en
+[docs/05-semantica.md](docs/05-semantica.md).
+
+| Stage | Responde a | Steps |
 |---|---|---|
-| 1 · Prompt | Instrucciones, estándares, skills | *debería* cumplir |
-| 2 · Tool | Hooks que **bloquean** acciones del agente | *no puede* violar |
-| 3 · Git | git hooks (commit-msg, pre-commit, pre-push) | *no puede* commitear |
-| 4 · CI | Gate de PR (lint, static, tests, secretos) | *no puede* mergear |
+| **Engine** | ¿Qué hay que hacer y quién lo hace? | `discover` → `propose` → `tune` → `design` → `breakdown` → `apply` ↺ `verify` |
+| **Tribunal** | ¿Esto está bien? | `review` → `counter-review` → `synthesis` → `disposition` |
+| **Delivery** | ¿Cómo llega a producción y qué cuesta? | `merge` → `release` → `deploy` → `archive` → `measure` |
+
+Y **Shield** —que no es un stage— vigila transversalmente: gitflow, conventional commits, ramas
+protegidas, tests y secretos, dentro de cada step y en cada gate.
+
+La frontera entre **Engine** y **Tribunal** es la separación de poderes: quien produce no juzga
+su propio trabajo. Y cada step se cierra con un **gate** — Claridad, Verde, Veredicto, Aduana…
+
+**Shield** se aplica en cuatro puestos, cada uno en un momento distinto — y cada uno tapa el
+hueco del anterior:
+
+| Puesto | Momento | El agente… |
+|---|---|---|
+| **Canon** | La intención — instrucciones, estándares, skills | *debería* cumplir |
+| **Centinela** | La acción — un hook la intercepta antes de ejecutarse | *no puede* violar |
+| **Esclusa** | El registro — git hooks (commit-msg, pre-commit, pre-push) | *no puede* commitear |
+| **Aduana** | La integración — gate de PR en CI | *no puede* mergear |
 
 ## 🧭 Cómo funciona
 
-Ciclo de vida canalizado, con [OpenSpec](https://github.com/Fission-AI/OpenSpec) como fuente
-única de verdad:
+Un cambio recorre el Loop y **cada step se cierra con un gate**. Si un gate falla, hay un
+camino de vuelta definido — y cuanto más arriba se descubra el fallo, más barato es
+(detalle en [la semántica](docs/05-semantica.md)):
 
 ```mermaid
 flowchart LR
-    A[📥 Ingesta<br/>spec en OpenSpec] --> B[🧩 Delegación atómica<br/>Spec-Agent]
-    B --> C[⚙️ Implementación restringida<br/>subagentes + guardrails]
-    C --> D[🧪 Validación autónoma<br/>sandbox contra la spec]
-    D --> E[👁️ Revisión humana<br/>PR + gates]
+    A["🧭 propose<br/>declarar intención"] -->|Intención| B["🎚️ tune<br/>spec falsable"]
+    B -->|Claridad| C["📐 design · breakdown<br/>enfoque y slices"]
+    C -->|Plan| D["⚙️ apply ↺ verify<br/>por slice, con TDD"]
+    D -->|Verde| E["⚖️ Tribunal<br/>3 lentes → veredicto"]
+    E -->|SHIP| F["🚢 Delivery<br/>merge · release · archive"]
+    F -.->|métricas| A
 ```
 
-1. **Ingesta y mapeo** — el framework absorbe la especificación (ticket, PDF, documento → spec).
-2. **Delegación atómica** — el *Spec-Agent* fragmenta el trabajo y lo reparte a subagentes
-   especializados (Backend, Ops, Tooling), cada uno con contexto delimitado.
-3. **Implementación restringida** — el código se escribe dentro de los guardarraíles de
-   arquitectura; las acciones prohibidas se bloquean a nivel de tool.
-4. **Validación autónoma** — todo se ejecuta y valida en sandbox contra la spec antes de
-   cualquier commit.
-5. **Revisión humana** — el desarrollador revisa el paquete consolidado; los gates de git y CI
-   cierran el bucle.
+1. **`propose`** — se abre el expediente y se declara la intención. Descartar aquí cuesta un
+   párrafo: es el gate más barato del Loop.
+2. **`tune`** — la spec se afina en rondas hasta que cada escenario es falsable.
+3. **`design` · `breakdown`** — el enfoque técnico y, solo entonces, el troceado en slices
+   mergeables por separado.
+4. **`apply` ↺ `verify`** — bucle por slice con TDD; los hooks de Shield bloquean en el acto.
+5. **Tribunal** — tres lentes independientes y un veredicto que calcula código, no un LLM.
+6. **Delivery** — a producción por canal de entorno, y el expediente se archiva convirtiendo
+   su delta en contrato vigente.
 
 ## 🧩 Qué incluirá
 
@@ -64,8 +87,9 @@ flowchart LR
   (ramas protegidas, ficheros gestionados, comandos destructivos). *La joya del framework.*
 - 🔗 **Quality gates instalables** — git hooks, commitlint, gitleaks y CI gate de PR como
   templates listos para importar.
-- 🤖 **Subagentes especializados** — Spec-Agent (orquestador), Backend-Agent, Ops-Agent,
-  Tooling-Agent, con contexto acotado para evitar alucinaciones.
+- 🤖 **Perfiles especializados** — orquestador, analista, arquitecto, developer, QA y datos
+  producen (Engine); tres lentes independientes juzgan (Tribunal). Contexto acotado y
+  separación de poderes: quien produce no juzga.
 - 🧰 **Skills portables y verificables** — intake de specs (ticket/PDF → spec), ciclo de PR,
   breakdown de tareas, sincronización de repos. Toda skill sigue una anatomía estándar
   (*process, not prose*): pasos con checkpoints, tabla de anti-racionalizaciones y
@@ -78,24 +102,27 @@ flowchart LR
 ## 🗺️ Roadmap
 
 El framework se construye con su propio método (*dogfooding* sobre OpenSpec): cada fase = un
-cambio en `openspec/changes/`. Se adopta por **tiers**: Tier 0 (solo guardarraíles, sin exigir
-OpenSpec) → Tier 1 (ciclo SDD + `spec-coverage`) → Tier 2 (equipo de subagentes).
+cambio en `openspec/changes/`. Se adopta por **niveles**: **Guardia** (solo Shield, sin exigir
+OpenSpec) → **Método** (+ Engine: ciclo SDD y `spec-coverage`) → **Equipo** (+ Tribunal).
 
 - [x] **0. bootstrap-method** — decisiones cerradas, esqueleto, OpenSpec operativo, fixture
-- [ ] **1. sentinel-guard** — hook único de política + break-glass auditado *(Tier 0)*
-- [ ] **2. git-gates** — git hooks + commitlint + gitleaks + instalador *(Tier 0)*
-- [ ] **3. ci-gate + spec-coverage CLI** — gate de PR + la matriz escenario↔test como CLI standalone *(Tier 0/1)*
-- [ ] **4. sdd-cycle** — skills del ciclo + doctor + brownfield "spec on first touch" *(Tier 1)*
-- [ ] **5. release-hotfix** — release multicanal por entorno + carril hotfix *(Tier 1)*
-- [ ] **6. team** — subagentes con manifiestos de contexto + panel adversarial *(Tier 2)*
+- [x] **1. sentinel-guard** — hook único de política + break-glass auditado *(Guardia)*
+- [ ] **2. git-gates** — git hooks + commitlint + gitleaks + instalador *(Guardia)* · ⏸️ aparcada
+- [ ] **3. ci-gate + spec-coverage CLI** — gate de PR + la matriz escenario↔test como CLI standalone *(Guardia/Método)*
+- [ ] **4. sdd-cycle** — skills del ciclo + doctor + brownfield "spec on first touch" *(Método)*
+- [ ] **5. release-hotfix** — release multicanal por entorno + carril hotfix *(Método)*
+- [ ] **6. team** — subagentes con manifiestos de contexto + panel adversarial *(Equipo)*
 - [ ] **7. agent-run-audit** *(opcional)* — auditoría de ejecuciones de agente
 
 ## 🚧 Estado
 
-**Fase 0 completada y archivada** — el repo se desarrolla con su propio método y ya existe la
-primera spec viva ([`openspec/specs/sdk-method/`](openspec/specs/sdk-method/spec.md)). La foto
-actual (roadmap + ciclo + salud) vive siempre en **[STATUS.md](STATUS.md)**; el plan completo,
-en [docs/01-plan-maestro.md](docs/01-plan-maestro.md).
+**Fases 0 y 1 archivadas.** El repo se desarrolla con su propio método y el puesto
+**Centinela** ya está activo aquí: hay dos specs vivas
+([`sdk-method`](openspec/specs/sdk-method/spec.md),
+[`sentinel-guard`](openspec/specs/sentinel-guard/spec.md)) y 15 casos en el banco de pruebas.
+La foto actual vive siempre en **[STATUS.md](STATUS.md)**; el vocabulario en
+**[docs/05-semantica.md](docs/05-semantica.md)**; el plan completo en
+[docs/01-plan-maestro.md](docs/01-plan-maestro.md).
 
 ## 🙏 Agradecimientos
 

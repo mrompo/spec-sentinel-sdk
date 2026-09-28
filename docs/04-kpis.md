@@ -22,4 +22,4 @@ Notas de implementación:
   (¿rápido a costa de romper?); % hotfix ↔ MTTR (¿el carril se abusa o funciona?);
   overrides ↔ regla concreta (¿qué gate estorba injustamente y hay que recalibrar?).
 - Línea base: primera medición al archivar la fase 4 sobre este mismo repo (dogfooding);
-  en consumidores (A/B), al mes de instalar el Tier 1.
+  en consumidores (A/B), al mes de instalar el nivel Método.
