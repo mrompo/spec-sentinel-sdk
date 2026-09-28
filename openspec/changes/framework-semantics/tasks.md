@@ -13,7 +13,9 @@
 - [x] 6. Modelo Loop/Stage/Step/Gate, steps y gates por stage, y el afinado como principio
 - [x] 7. `STATUS.md` con vocabulario nuevo + `git-gates` marcado como aparcado
 - [x] 8. Verificar que nada de comportamiento cambió (banco en verde sin tocar casos) (SC-04)
-- [ ] 9. Revisión humana → merge → archive
+- [x] 9. Alinear el expediente con lo implementado: slugs de los puestos (SC-01, con check en
+       el banco), requirement del modelo del Loop (SC-06..08) y `STATUS.md` al día
+- [ ] 10. Revisión humana → merge → archive
 
 ## Notas de diseño (design gate)
 
