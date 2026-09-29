@@ -66,7 +66,7 @@ creíble el veredicto.
 | `tune` | analista *(con Producto)* | El delta spec afinado: escenarios falsables, happy path **y** error | **Claridad** ⚙️👤 — `openspec validate --strict`, ids `SC-*`, sin preguntas abiertas |
 | `design` *(cond.)* | arquitecto | `design.md`: alternativas, trade-offs, contratos, ADRs | **Diseño** 👤 — hay enfoque antes de teclear · aprueba tech lead |
 | `breakdown` | orquestador + QA | Tareas en *vertical slices* + plan de pruebas | **Plan** ⚙️👤 — cada slice mergeable por separado, con su criterio de aceptación |
-| `apply` ↺ | developer *(+ datos si trigger)* | Código por slice, TDD, commits atómicos | **Esclusa** ⚙️ — commit conforme, sin secretos, formato, tests del slice |
+| `apply` ↺ | developer *(+ datos si trigger)* | Código por slice, TDD, commits atómicos | **Esclusa** ⚙️ — en dos tiempos: al commitear (mensaje conforme, sin secretos, formato y lint) y al publicar (tests del slice, rama protegida) |
 | `verify` ↺ | automático *(sandbox)* | Evidencia: suite, cobertura, trazabilidad | **Verde** ⚙️ — tests + cobertura + **spec-coverage del delta** + estático + fronteras |
 
 `discover` ocurre **antes de que exista el expediente**, así que no tiene dónde escribir: su
@@ -140,7 +140,7 @@ retorno definido, y la distancia del retorno mide lo que cuesta descubrir el pro
 | **Claridad** | `tune` — o a `discover` si el problema estaba mal entendido | Las preguntas abiertas concretas |
 | **Diseño** | `design` — o a `tune` si la spec no soporta ningún diseño viable | Las objeciones del arquitecto |
 | **Plan** | `breakdown` | Los slices que no eran mergeables por separado |
-| **Esclusa** | no se sale de `apply` | El commit no llegó a existir: se corrige y se recommitea |
+| **Esclusa** | no se sale de `apply` | El commit o el push no llegaron a existir: se corrige y se repite |
 | **Verde** | `apply` *(el slice)* | El test en rojo o el escenario sin cobertura |
 | **Contexto limpio** | `review` *(se relanza el panel)* | La fuga detectada: qué razonamiento del implementador vio la lente |
 | **Veredicto `HOLD`** | `apply` — o a `design`/`tune` si el hallazgo es de fondo | Los hallazgos con `fichero:línea` |
@@ -194,7 +194,10 @@ Hace imposible el descuido, no detiene a un adversario con shell
 
 **Esclusa** (`lock`) · *la cámara de paso* — los git hooks. Para pasar del trabajo en curso a la
 historia del repositorio hay que entrar en la cámara y cumplir los requisitos. Aquí **no hay
-ventana de esquive**: el commit existe o no existe, y da igual quién lo intentó.
+ventana de esquive**: el commit existe o no existe, y da igual quién lo intentó. Se cierra
+en **dos tiempos**: al commitear (mensaje, secretos, formato y lint, solo sobre lo que entra en
+el commit) y al publicar (tests y rama protegida). Los tests van en el segundo porque pasarlos
+en cada commit es lento y empuja a saltárselos.
 *(Antes: "capa 3 · git".)*
 
 **Aduana** (`customs`) · *la frontera* — el gate de CI sobre la PR: nada entra en el tronco común sin
