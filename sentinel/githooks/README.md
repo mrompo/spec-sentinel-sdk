@@ -9,31 +9,58 @@ La Esclusa se cierra **en dos tiempos** (decisión 1 de `git-gates`):
 | Tiempo | Hook | Ejecuta | Rechaza si |
 |---|---|---|---|
 | **Al commitear** | `commit-msg` | Conventional Commits en **bash puro** (sin Node), el mismo criterio que commitlint. Exentos por prefijo exacto: `Merge …` y `chore(release): …` | El asunto no cumple el patrón |
-| | `pre-commit` | Sobre los ficheros **en staging**: base de patrones de secretos (siempre) + gitleaks (si está) → `env-ready` → `format-check` → `lint` del adaptador de stack | Secretos, entorno roto, formato o lint en rojo |
+| | `pre-commit` | Sobre los ficheros **en staging**: base de patrones de secretos + **gitleaks (obligatorio)** → `env-ready` → `format-check` → `lint` del adaptador de stack | Secretos, gitleaks ausente, entorno roto, formato o lint en rojo |
 | **Al publicar** | `pre-push` | `tests` del adaptador + rama protegida + `openspec validate --strict` (nivel Método) | Tests en rojo, push a rama protegida o spec inválida |
 
 Los tests **no** corren al commitear: pasarlos en cada commit es lento y empuja a saltárselos.
+
+## Requisitos
+
+| Herramienta | ¿Obligatoria? | Si falta |
+|---|---|---|
+| `git`, `bash` (3.2 o posterior) | Sí | — |
+| **gitleaks** v8 | **Sí** (decisión 6 de `git-gates`) | **Fallo duro**: el commit se rechaza con la instrucción de instalación (SC-git-gates-10) |
+| Comandos del adaptador de stack | No | Skip con aviso (SC-git-gates-06) |
+| `openspec` CLI | No (nivel Método) | Skip con aviso; la Aduana (fase 3) lo hará obligatorio |
+
+Instalar gitleaks:
+
+| Sistema | Comando |
+|---|---|
+| macOS | `brew install gitleaks` |
+| Linux | Binario de <https://github.com/gitleaks/gitleaks/releases>, o `go install github.com/zricethezav/gitleaks/v8@latest` |
+| Windows | `scoop install gitleaks` |
+
+Comprueba que está con `gitleaks version`. La Esclusa usa `gitleaks git --pre-commit --staged`
+en v8.19 o posterior, y `gitleaks protect --staged` en las anteriores.
 
 ## skip-vs-fail
 
 | Situación | Qué hace | Ejemplo |
 |---|---|---|
-| Herramienta no instalada | **Skip con aviso** visible, y sigue con lo demás | gitleaks ausente; un comando del adaptador que da exit 127 |
+| Herramienta opcional no instalada | **Skip con aviso** visible, y sigue con lo demás | Un comando del adaptador que da exit 127 |
 | Sin adaptador de stack | **Skip con aviso** de lo que se omite | Repo recién clonado sin `sentinel/adapters/stack.yaml` |
+| Herramienta obligatoria no instalada | **Fallo duro** con la instrucción de instalación | gitleaks ausente |
 | Entorno mal configurado | **Fallo duro** con la instrucción de arreglo (`env-fix`) | `env-ready` falla porque el contenedor está parado |
 
 Nunca pasa sin comprobaciones en silencio.
 
-## Secretos: por qué hay una base de patrones además de gitleaks
+## Secretos: gitleaks y la base de patrones
 
-gitleaks no suele estar instalado (tampoco en el CI de este repo). Si la Esclusa dependiera
-solo de él, en la mayoría de máquinas no detectaría nada. La base de patrones es pequeña y
-concreta, para no dar falsos positivos: claves de acceso de AWS, cabeceras de clave privada,
-tokens de GitHub (`ghp_`, `gho_`…) y de Slack (`xox?-`). Se evalúa el contenido **stageado**, no
-el del árbol de trabajo, y el mensaje señala fichero y línea sin mostrar el secreto.
+**gitleaks es obligatorio**: un secreto que llega a la historia de git es caro de sacar (hay que
+reescribirla y rotar la credencial), y exigir la herramienta cuesta menos que confiar en que
+cada máquina la tenga.
+
+Por debajo corre siempre una **base de patrones en bash**, como segunda red por si gitleaks está
+mal configurado. Es pequeña y concreta, para no dar falsos positivos: claves de acceso de AWS,
+cabeceras de clave privada, tokens de GitHub (`ghp_`, `gho_`…) y de Slack (`xox?-`). Las dos
+evalúan el contenido **stageado**, no el del árbol de trabajo. La base de patrones señala fichero
+y línea sin mostrar el secreto; gitleaks, con `--redact`, tampoco lo muestra.
 
 ## Banco
 
 Cada hook tiene sus casos en [`fixture/githooks/cases/`](../../fixture/githooks/cases), que
 hacen commits y pushes reales en un repo desechable, aislado del config de git del usuario.
+El banco **no** necesita gitleaks: usa un gitleaks falso (`gl_ok` en el harness), así que los
+casos prueban la lógica de la Esclusa, no la instalación de la máquina.
 Si existe un hook sin casos, `fixture/verify.sh` falla.

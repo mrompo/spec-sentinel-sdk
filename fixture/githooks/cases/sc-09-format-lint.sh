@@ -6,7 +6,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh" || exit 1
 mk_git_workspace
 use_hooks
 fail_case() { echo "    $1" >&2; cleanup_git_workspace; exit 1; }
-nogl="SENTINEL_GITLEAKS_BIN=/nonexistent/gitleaks"
+gl="$(gl_ok)"
 
 # Comprobador falso: falla si algún fichero recibido contiene «MAL», y dice cuál
 chk="$WS/.bin/check"; mkdir -p "$WS/.bin"
@@ -27,12 +27,12 @@ for key in format-check lint; do
   # Un fichero mal formateado SIN stagear no se evalúa
   printf 'bien %s\n' "$key" >"$WS/bien.txt"; printf 'MAL\n' >"$WS/mal.txt"
   git_in_ws add bien.txt
-  _capture env "$nogl" git commit -q -m "feat: bien"
+  _capture env "$gl" git commit -q -m "feat: bien"
   assert_exit 0 || fail_case "$key: evaluó un fichero fuera de staging"
 
   # Stageado → rechazo con la salida del comando
   git_in_ws add mal.txt
-  _capture env "$nogl" git commit -q -m "feat: mal"
+  _capture env "$gl" git commit -q -m "feat: mal"
   assert_exit 1 || fail_case "$key: aceptó un fichero en rojo"
   assert_err_contains "formato incorrecto en mal.txt" || fail_case "$key: no muestra la salida del comando"
   git_in_ws rm -q --cached mal.txt

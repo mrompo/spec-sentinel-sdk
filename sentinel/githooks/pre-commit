@@ -2,8 +2,8 @@
 # pre-commit — la Esclusa, primer tiempo: secretos, entorno, formato y lint, SOLO sobre lo que
 # está en staging. Los tests no se ejecutan aquí: son del segundo tiempo (pre-push).
 # Patrón skip-vs-fail: herramienta ausente → aviso y se sigue; entorno roto → fallo duro con
-# la instrucción de arreglo. Nunca pasa en silencio.
-# Falsifica: SC-git-gates-03, 06, 07, 08, 09 (fixture/githooks/cases/).
+# la instrucción de arreglo. gitleaks es la excepción: es obligatorio. Nunca pasa en silencio.
+# Falsifica: SC-git-gates-03, 06, 07, 08, 09, 10 (fixture/githooks/cases/).
 set -uo pipefail
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,8 +23,8 @@ while IFS= read -r -d '' f; do files+=("$f"); done \
 [ "${#files[@]}" -gt 0 ] || exit 0
 
 # ── 1. Secretos ───────────────────────────────────────────────────────────────────
-# Base de patrones: corre siempre, sin dependencias. Se evalúa el contenido STAGEADO (:fichero),
-# no el del árbol de trabajo. gitleaks, si está, amplía la cobertura.
+# Base de patrones: corre siempre, sin dependencias, como segunda red por debajo de gitleaks.
+# Se evalúa el contenido STAGEADO (:fichero), no el del árbol de trabajo.
 SECRET_RE='(A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z0-9]{16}|-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}'
 leaks=""
 for f in "${files[@]}"; do
@@ -37,17 +37,31 @@ if [ -n "$leaks" ]; then
   echo "    Sácalo del fichero y usa una variable de entorno o un gestor de secretos." >&2
 fi
 
+# gitleaks es OBLIGATORIO (decisión 6 de git-gates): sin él, el entorno está mal configurado.
 GITLEAKS="${SENTINEL_GITLEAKS_BIN:-gitleaks}"
-if command -v "$GITLEAKS" >/dev/null 2>&1; then
-  out="$("$GITLEAKS" protect --staged --no-banner --redact 2>&1)"; rc=$?
-  case "$rc" in
-    0) ;;
-    1) bad "gitleaks ha encontrado secretos en staging:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
-    *) bad "gitleaks ha fallado (exit $rc) — revisa su instalación:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
-  esac
-else
-  warn "gitleaks no está instalado: se omite su análisis (sigue activa la base de patrones). Instálalo: https://github.com/gitleaks/gitleaks#installing"
+if ! command -v "$GITLEAKS" >/dev/null 2>&1; then
+  cat >&2 <<'MSG'
+✗ [Esclusa] gitleaks es obligatorio y no está instalado: el commit no puede comprobar secretos.
+    Instálalo y vuelve a commitear:
+      macOS:    brew install gitleaks
+      Linux:    descarga el binario de https://github.com/gitleaks/gitleaks/releases
+                (o: go install github.com/zricethezav/gitleaks/v8@latest)
+      Windows:  scoop install gitleaks
+    Detalle en sentinel/githooks/README.md §Requisitos.
+MSG
+  exit 1
 fi
+# v8.19+ usa «gitleaks git --pre-commit --staged»; las anteriores, «gitleaks protect --staged»
+if "$GITLEAKS" git --help >/dev/null 2>&1; then
+  out="$("$GITLEAKS" git --pre-commit --staged --no-banner --redact 2>&1)"; rc=$?
+else
+  out="$("$GITLEAKS" protect --staged --no-banner --redact 2>&1)"; rc=$?
+fi
+case "$rc" in
+  0) ;;
+  1) bad "gitleaks ha encontrado secretos en staging:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+  *) bad "gitleaks ha fallado (exit $rc) — revisa su instalación:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+esac
 
 # ── 2. Comandos del adaptador de stack ────────────────────────────────────────────
 if ! stack_available; then

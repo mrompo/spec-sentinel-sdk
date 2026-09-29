@@ -45,4 +45,12 @@ gh_commit() { _capture git commit -q --allow-empty -m "$1"; }
 # gh_push <refspec> [VAR=valor …] → push al remoto bare del workspace
 gh_push() { local ref="$1"; shift; _capture env "$@" git push -q origin "$ref"; }
 
+# gl_ok → «SENTINEL_GITLEAKS_BIN=<gitleaks falso que no encuentra nada>», para los casos que no
+# prueban secretos: gitleaks es obligatorio (SC-git-gates-10) y el banco no depende de tenerlo.
+gl_ok() {
+  local b="$WS/.gl-ok"; mkdir -p "$b"
+  [ -x "$b/gitleaks" ] || { printf '#!/usr/bin/env bash\nexit 0\n' >"$b/gitleaks"; chmod +x "$b/gitleaks"; }
+  printf 'SENTINEL_GITLEAKS_BIN=%s\n' "$b/gitleaks"
+}
+
 cleanup_git_workspace() { [ -n "$WS" ] && rm -rf "$WS.remote"; cleanup_workspace; }
