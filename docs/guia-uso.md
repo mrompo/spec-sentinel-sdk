@@ -32,7 +32,8 @@ Dentro de cada stage hay **steps**, y para salir de cada step hay que cruzar un 
 | Saber en qué punto está el proyecto | ✅ | Abre [`STATUS.md`](../STATUS.md) |
 | Verificar la salud del framework | ✅ | Sección «Verificar que todo está bien» |
 | Shield: reglas que el agente no puede saltarse | ✅ | Sección «Shield» |
-| Instalarlo en tu propio proyecto | ⏸️ fase 2 (aparcada) | — |
+| Abrir PRs con un formato que se revisa bien | ✅ | Paso 4 de «El ciclo de trabajo» |
+| Instalarlo en tu propio proyecto | 🔄 fase 2 (en propuesta) | — |
 | Gate de PR en CI + spec-coverage | 🔜 fase 3 | — |
 | Skills del ciclo completo + doctor | 🔜 fase 4 | — |
 | Release por entornos + carril hotfix | 🔜 fase 5 | — |

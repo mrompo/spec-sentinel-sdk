@@ -1,7 +1,7 @@
 # Tasks — pr-format
 
 **Objetivo**: toda PR se puede aprobar con criterio sin reconstruir el contexto a mano.
-**Posición en el Loop**: Engine · `apply` (desde 2026-09-29).
+**Posición en el Loop**: Delivery · `merge` — `archive` adelantado en la rama, como en `framework-semantics`.
 
 ## Engine · antes de teclear
 
@@ -11,13 +11,13 @@
 
 ## Checklist
 
-- [ ] 1. Check en el banco: la plantilla tiene las diez secciones (SC-pr-format-02), primero
+- [x] 1. Check en el banco: la plantilla tiene las diez secciones (SC-pr-format-02), primero
        en rojo
-- [ ] 2. `.github/pull_request_template.md` con las diez secciones y su línea de ayuda → verde
-- [ ] 3. `docs/guia-uso.md`, paso 4: el formato y el enlace a la plantilla
-- [ ] 4. `docs/01-plan-maestro.md`: la plantilla sale de la fase 5 (queda la procedencia
+- [x] 2. `.github/pull_request_template.md` con las diez secciones y su línea de ayuda → verde
+- [x] 3. `docs/guia-uso.md`, paso 4: el formato y el enlace a la plantilla
+- [x] 4. `docs/01-plan-maestro.md`: la plantilla sale de la fase 5 (queda la procedencia
        automática) · `STATUS.md`
-- [ ] 5. Dogfooding: la descripción de la PR #1 y la PR de este cambio, con el formato
+- [x] 5. Dogfooding: la descripción de la PR #1 y la PR de este cambio, con el formato
 - [ ] 6. Revisión humana → merge → archive
 
 ## Notas de diseño
