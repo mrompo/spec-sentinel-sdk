@@ -73,6 +73,28 @@ else
   err "falta docs/05-semantica.md (fuente única del vocabulario)"
 fi
 
+# Formato de PR: la plantilla tiene las diez secciones, en orden (SC-pr-format-02)
+TPL=.github/pull_request_template.md
+if [ -f "$TPL" ]; then
+  prev=0; n=0; tplbad=0
+  for sec in "Expediente" "Posición en el Loop" "Qué cambia y por qué" "Escenarios" \
+             "Qué NO cambia" "Verificación" "Riesgos y vuelta atrás" "Excepciones y deuda" \
+             "Procedencia" "Foco de la revisión"; do
+    n=$((n + 1))
+    line=$(grep -nxF "## ${n}. ${sec}" "$TPL" | head -1 | cut -d: -f1 || true)
+    if [ -z "$line" ]; then
+      err "la plantilla de PR no tiene la sección «## ${n}. ${sec}»"; tplbad=1
+    elif [ "$line" -le "$prev" ]; then
+      err "la plantilla de PR tiene «${sec}» fuera de orden"; tplbad=1
+    else
+      prev=$line
+    fi
+  done
+  [ "$tplbad" -eq 0 ] && ok "plantilla de PR: diez secciones en orden"
+else
+  err "falta $TPL (formato de PR, ver openspec pr-format)"
+fi
+
 # Runner de hooks: si el guard existe, sus casos son obligatorios (nunca skip silencioso)
 if [ -f sentinel/hooks/sentinel-guard.sh ]; then
   if [ -d fixture/hooks/cases ] && ls fixture/hooks/cases/*.sh >/dev/null 2>&1; then

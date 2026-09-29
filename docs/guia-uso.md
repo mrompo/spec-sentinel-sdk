@@ -32,7 +32,8 @@ Dentro de cada stage hay **steps**, y para salir de cada step hay que cruzar un 
 | Saber en qué punto está el proyecto | ✅ | Abre [`STATUS.md`](../STATUS.md) |
 | Verificar la salud del framework | ✅ | Sección «Verificar que todo está bien» |
 | Shield: reglas que el agente no puede saltarse | ✅ | Sección «Shield» |
-| Instalarlo en tu propio proyecto | ⏸️ fase 2 (aparcada) | — |
+| Abrir PRs con un formato que se revisa bien | ✅ | Paso 4 de «El ciclo de trabajo» |
+| Instalarlo en tu propio proyecto | 🔄 fase 2 (en propuesta) | — |
 | Gate de PR en CI + spec-coverage | 🔜 fase 3 | — |
 | Skills del ciclo completo + doctor | 🔜 fase 4 | — |
 | Release por entornos + carril hotfix | 🔜 fase 5 | — |
@@ -71,13 +72,27 @@ git add -A && git commit -m "feat(<área>): <qué>"
 
 Marca la tarea con `- [x]` en el `tasks.md`. El progreso real vive ahí.
 
-**4. Pide revisión y mergea.** Con remote: `gh pr create`. Sin remote, el merge a `main` lo
-hace **una persona en su terminal** (el agente tiene bloqueadas las ramas protegidas — es la
-regla funcionando, no un fallo):
+**4. Pide revisión y mergea.** Abre una PR con el formato del framework: título en
+Conventional Commits y las diez secciones de
+[`.github/pull_request_template.md`](../.github/pull_request_template.md) (Expediente,
+Posición en el Loop, Qué cambia, Escenarios, Qué NO cambia, Verificación, Riesgos, Excepciones,
+Procedencia y Foco de la revisión). Si una sección no aplica, se deja con `N/A — motivo`:
+**nunca se borra**.
+
+```bash
+gh pr create --title "tipo(ámbito): descripción" --body-file pr.md   # pr.md parte de la plantilla
+```
+
+Desde la web, GitHub precarga la plantilla sola. **El merge lo hace una persona**: la
+aprobación humana es la mitad del gate Aduana, y el agente tiene bloqueadas las ramas
+protegidas (es la regla funcionando, no un fallo). Sin remote, el merge se hace en local:
 
 ```bash
 git checkout main && git merge --no-ff feature/<nombre>
 ```
+
+Si mergeas en GitHub, tu `main` local **no se actualiza solo**: tráelo con
+`git fetch origin main:main` (o `git pull` estando en `main`).
 
 **5. Archívalo.** Al terminar, la spec del cambio pasa a ser contrato vigente:
 
