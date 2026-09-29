@@ -80,7 +80,9 @@ esquive. El **instalador** resuelve el segundo. Con los dos, el nivel Guardia pa
 
 ## Cuestiones para el gate Intención y para `tune`
 
-1. **¿Dónde se cierra el gate Esclusa?** La semántica lo define como "commit conforme, sin
+1. ✅ **Resuelta el 2026-09-29: en dos tiempos** (commit: mensaje, secretos, formato · push:
+   tests, rama protegida), y `docs/05` se ajusta para decirlo.
+   **¿Dónde se cierra el gate Esclusa?** La semántica lo define como "commit conforme, sin
    secretos, formato, **tests del slice**", pero este diseño pone los tests en `pre-push`
    (pasarlos en cada commit es lento y empuja a saltárselos). *Propuesta*: la Esclusa se cierra
    **en dos tiempos** — al commitear (formato, secretos, mensaje) y al publicar (tests, rama
