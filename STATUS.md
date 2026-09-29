@@ -11,7 +11,7 @@
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `propose`, espera el gate Intención |
-| **Loop** | `git-gates`: Engine · `tune` cerrado (5 decisiones, 2 capabilities) → espera el gate **Plan** |
+| **Loop** | `git-gates`: PR 1/3 (la Esclusa: `commit-msg`, `pre-commit`, `pre-push`) en revisión · siguen 2/3 (ficheros protegidos, 👤) y 3/3 (instalación) |
 | **Niveles entregados** | **Guardia** al 50%: el puesto Centinela operativo; faltan Esclusa (fase 2) y Aduana (fase 3) |
 
 ## Roadmap
@@ -44,7 +44,7 @@
 
 | Check | Estado |
 |---|---|
-| `fixture/verify.sh` | ✅ verde — 15 casos de guardarraíles + estructura + semántica (términos, slugs y caminos de vuelta) + plantilla de PR |
+| `fixture/verify.sh` | ✅ verde — 15 casos del Centinela + 12 de la Esclusa + estructura + semántica + plantilla de PR |
 | `openspec validate --all --strict` | ✅ verde (3 specs vivas + los expedientes activos) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
 | KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log` (vacío: ninguna excepción usada) |
