@@ -2,7 +2,7 @@
 
 **Objetivo**: el nivel Guardia instalable en cualquier repo con un comando, con la Esclusa real.
 **Ritmo**: un slice = caso del banco en rojo → implementación mínima → verde → commit atómico.
-**Posición en el Loop**: Engine · `tune` cerrado (2026-09-29) → espera el gate **Plan** (`breakdown`).
+**Posición en el Loop**: Engine · `apply` ↺ `verify` — PR 1/3 en curso (desde 2026-09-29).
 
 ## Engine · antes de teclear
 
@@ -14,11 +14,14 @@
          lo exige;
        - falta un escenario de **formato/lint** en `pre-commit` (hoy solo cubre secretos);
        - separar la capability `sdk-setup` si se aprueba la cuestión 2
-- [ ] 0c. `breakdown` → gate **Plan**: confirmar los slices de abajo, cada uno mergeable solo
+- [x] 0c. `breakdown` → gate **Plan**: aprobado el 2026-09-29 — tres PRs (abajo)
 
 ## Checklist (`apply` ↺ `verify`, por slice)
 
-- [ ] 1. Runner de git hooks en el banco: workspace con `git init` + commits reales
+**Tres PRs** (gate Plan): **1/3 · La Esclusa** = slices 1, 2, 3, 4, 5a, 5
+· **2/3 · Ficheros protegidos** 👤 = slices 3b, 6 y 6b · **3/3 · Instalación** = slices 7, 8, 9, 10.
+
+- [x] 1. Runner de git hooks en el banco: workspace con `git init` + commits reales
        (aprovecha `fixture/hooks/harness.sh`); se engancha a `verify.sh`
 - [ ] 2. `commit-msg` en bash puro: Conventional Commits + bypass merges/release
        (SC-git-gates-01, 02)
@@ -27,18 +30,22 @@
        una persona o con la llave, y queda en la bitácora
 - [ ] 4. `pre-commit`: gitleaks + format --check + lint sobre staged, con **skip-vs-fail**
        (SC-git-gates-03, 06, 08, 09)
+- [ ] 5a. `docs/05-semantica.md`: el gate Esclusa se cierra en dos tiempos (decisión 1)
 - [ ] 5. `pre-push`: tests + rama protegida (cierra el TOCTOU) + openspec validate opcional
        (SC-git-gates-04, 05)
 - [ ] 6. 👤 Separación de la política en distribuida (`policy.default.yaml`) y del consumidor
        (SC-sdk-setup-05) — **fichero protegido**: igual que 3b
+- [ ] 6b. 👤 Añadir `sentinel/githooks/` a la regla `self-protection`: hoy la Esclusa no
+       estaría protegida y el agente podría desactivarla editando un hook — **fichero protegido**
 - [ ] 7. Skill `setup`: instalación de un comando (copia, `core.hooksPath`, fusión de
        `.claude/settings.json` con `jq` o fragmento, backup, detección de stack)
        (SC-sdk-setup-02, 03, 04)
 - [ ] 8. Caso de instalación end-to-end en `demo-app/`: tras `setup`, los gates bloquean
        (SC-sdk-setup-01) — DoD de la fase
-- [ ] 9. Auto-instalación en este repo (`core.hooksPath` apuntando a `sentinel/githooks`),
-       solo con el banco en verde
-- [ ] 10. `docs/05-semantica.md` (gate Esclusa, según la cuestión 1) + `STATUS.md` + sección
+- [ ] 9. 👤 Auto-instalación en este repo (`core.hooksPath` apuntando a `sentinel/githooks`),
+       solo con el banco en verde — la regla `no-hook-disabling` impide al agente tocar
+       `core.hooksPath`, así que lo ejecuta una persona
+- [ ] 10. `STATUS.md` + sección
        «Instalar en tu proyecto» de `docs/guia-uso.md`
 
 ## Tribunal y Delivery

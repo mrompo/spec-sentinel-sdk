@@ -104,4 +104,12 @@ if [ -f sentinel/hooks/sentinel-guard.sh ]; then
   fi
 fi
 
+# Runner de git hooks (la Esclusa): si existe algún hook, sus casos son obligatorios
+GH_HOOKS=$(find sentinel/githooks -maxdepth 1 -type f ! -name '*.md' 2>/dev/null)
+if ls fixture/githooks/cases/*.sh >/dev/null 2>&1; then
+  bash fixture/githooks/run.sh || fail=1
+elif [ -n "$GH_HOOKS" ]; then
+  err "hay hooks en sentinel/githooks pero no casos en fixture/githooks/cases — sin test, el hook no entra"
+fi
+
 [ "$fail" -eq 0 ] && echo "— fixture: OK" || { echo "— fixture: FALLOS" >&2; exit 1; }
