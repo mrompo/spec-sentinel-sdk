@@ -78,23 +78,15 @@ esquive. El **instalador** resuelve el segundo. Con los dos, el nivel Guardia pa
   roto bloquea todos los commits. Se instala al final, con el banco en verde, y con el
   skip-vs-fail probado antes.
 
-## Cuestiones para el gate Intención y para `tune`
+## Decisiones (gate Intención y `tune`, 2026-09-29)
 
-1. ✅ **Resuelta el 2026-09-29: en dos tiempos** (commit: mensaje, secretos, formato · push:
-   tests, rama protegida), y `docs/05` se ajusta para decirlo.
-   **¿Dónde se cierra el gate Esclusa?** La semántica lo define como "commit conforme, sin
-   secretos, formato, **tests del slice**", pero este diseño pone los tests en `pre-push`
-   (pasarlos en cada commit es lento y empuja a saltárselos). *Propuesta*: la Esclusa se cierra
-   **en dos tiempos** — al commitear (formato, secretos, mensaje) y al publicar (tests, rama
-   protegida) — y se ajusta `docs/05` para decirlo.
-2. **¿Un expediente o dos?** El instalador `setup` es casi tan grande como la Esclusa.
-   *Propuesta*: un expediente (el DoD de la fase es "nivel Guardia instalable con un comando"),
-   pero **dos capabilities** en el delta: `git-gates` (la Esclusa) y `sdk-setup` (la
-   instalación), para que cada una tenga su spec viva al archivar.
-3. **Fusión de `.claude/settings.json`**: usar `jq` si existe y, si no, escribir
-   `sentinel/settings.fragment.json` con la instrucción (*propuesta*), frente a una fusión
-   propia en bash.
-4. **`openspec validate` en `pre-push`**: skip con aviso si el CLI no está (*propuesta*; la
-   Aduana de la fase 3 lo hace obligatorio) frente a exigirlo en el nivel Método.
-5. **Validación de commits**: bash propio siempre (*propuesta*, cero dependencias, plan §11)
-   frente a `@commitlint/cli` cuando el proyecto ya sea Node.
+| # | Cuestión | Decisión |
+|---|---|---|
+| 1 | ¿Dónde se cierra el gate Esclusa? | **En dos tiempos**: al commitear (mensaje, secretos, formato) y al publicar (tests, rama protegida). `docs/05` se ajusta para decirlo. Pasar los tests en cada commit es lento y empuja a saltárselos |
+| 2 | ¿Un expediente o dos? | **Uno, con dos capabilities**: `git-gates` (la Esclusa) y `sdk-setup` (la instalación). El DoD de la fase es "nivel Guardia instalable con un comando", y cada capability acaba con su propia spec viva |
+| 3 | Fusión de `.claude/settings.json` | **`jq` si existe**; si no, `sentinel/settings.fragment.json` con la instrucción manual. Nunca una fusión propia en bash (SC-sdk-setup-03, 04) |
+| 4 | `openspec validate` en `pre-push` | **Skip con aviso** si el CLI no está; la Aduana (fase 3) lo hace obligatorio |
+| 5 | Validación de commits | **Bash propio siempre**: cero dependencias (plan §11). El consumidor puede añadir commitlint en su CI si quiere |
+
+Las decisiones 1 y 2 las tomó una persona en el gate Intención. Las 3 a 5 se cerraron en `tune`
+con la propuesta por defecto, que se aceptó sin cambios.

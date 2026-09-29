@@ -1,4 +1,5 @@
-> **Orden de implementación: 01/01** — pendiente de `tune`: puede dividirse en `git-gates` + `sdk-setup` (proposal, cuestión 2).
+> **Orden de implementación: 01/02** — la Esclusa primero; `sdk-setup` la instala después
+> (tasks §Checklist, slices 1-5).
 
 # git-gates — Delta spec
 
@@ -6,8 +7,8 @@
 
 ### Requirement: Mensajes de commit conformes
 
-El hook `commit-msg` SHALL rechazar todo mensaje que no siga Conventional Commits, sin depender
-de Node ni de paquetes externos.
+El hook `commit-msg` SHALL rechazar todo mensaje que no siga Conventional Commits, en bash
+puro, sin depender de Node ni de paquetes externos.
 
 #### Scenario: Mensaje no conforme (SC-git-gates-01)
 
@@ -21,18 +22,27 @@ de Node ni de paquetes externos.
 
 ### Requirement: Calidad antes del commit
 
-El hook `pre-commit` SHALL ejecutar detección de secretos y las comprobaciones de formato/lint
-del adaptador de stack **solo sobre los ficheros en staging**.
+El hook `pre-commit` SHALL ejecutar la detección de secretos y las comprobaciones de formato y
+lint del adaptador de stack, **solo sobre los ficheros en staging**. SHALL NOT ejecutar la suite
+de tests: la Esclusa se cierra en dos tiempos y los tests son del segundo (`pre-push`).
 
 #### Scenario: Secreto en staging (SC-git-gates-03)
 
 - **WHEN** un fichero en staging contiene una credencial detectable
 - **THEN** el commit se rechaza señalando el fichero
 
+#### Scenario: Formato o lint en rojo (SC-git-gates-09)
+
+- **WHEN** un fichero en staging no pasa el `format --check` o el `lint` del adaptador
+- **THEN** el commit se rechaza mostrando la salida del comando que falló, y los ficheros que
+  no están en staging no se evalúan
+
 ### Requirement: Barrera antes de publicar
 
 El hook `pre-push` SHALL ejecutar la suite de tests del adaptador y SHALL rechazar el push
 cuando la rama de destino esté protegida, cerrando el TOCTOU que el Centinela no puede evitar.
+En el nivel Método SHALL ejecutar `openspec validate --strict` si el CLI está instalado, y
+omitirlo con aviso si no lo está (la Aduana de la fase 3 lo hace obligatorio).
 
 #### Scenario: Tests en rojo (SC-git-gates-04)
 
@@ -46,45 +56,28 @@ cuando la rama de destino esté protegida, cerrando el TOCTOU que el Centinela n
 
 ### Requirement: Degradación explícita (skip-vs-fail)
 
-Los git hooks SHALL distinguir "herramienta no instalada" (skip con aviso visible) de "entorno
-mal configurado" (fallo duro con la instrucción exacta de arreglo), y nunca SHALL pasar en
-silencio sin ejecutar sus comprobaciones.
+La Esclusa SHALL distinguir "herramienta no instalada" (skip con aviso visible) de "entorno mal
+configurado" (fallo duro con la instrucción exacta de arreglo), y nunca SHALL pasar en silencio
+sin ejecutar sus comprobaciones.
 
 #### Scenario: Herramienta ausente (SC-git-gates-06)
 
 - **WHEN** gitleaks no está instalado
 - **THEN** el hook avisa de que se omite esa comprobación y continúa con las demás
 
+#### Scenario: Entorno roto (SC-git-gates-08)
+
+- **WHEN** el adaptador declara un comando cuyo entorno no está listo (su `env-ready` falla,
+  p. ej. un contenedor parado)
+- **THEN** el hook falla en duro y muestra la instrucción exacta para arreglarlo; no hace skip
+
 ### Requirement: Adaptador de stack declarativo
 
 El proyecto consumidor SHALL declarar sus comandos (`format`, `lint`, `static`, `tests`,
-`env-ready`) en un único fichero, y los hooks y el CI SHALL consumirlos sin conocer el stack.
+`env-ready`) en un único fichero, `sentinel/adapters/stack.yaml`, y la Esclusa, la Aduana y el
+Centinela SHALL consumirlos sin conocer el stack.
 
 #### Scenario: Sin adaptador (SC-git-gates-07)
 
 - **WHEN** no existe fichero de adaptador en el repo
 - **THEN** los hooks omiten las comprobaciones dependientes del stack con aviso, sin fallar
-
-### Requirement: Instalación de un comando
-
-La skill `setup` SHALL instalar el nivel Guardia completo en un repo ajeno con una sola invocación:
-copia del enforcement, `core.hooksPath`, cableado de los hooks de agente y detección de stack.
-SHALL preservar la configuración existente del consumidor (backup + fusión, o instrucción
-manual explícita si la fusión no es segura) y SHALL ser idempotente.
-
-#### Scenario: Repo con configuración previa (SC-git-gates-08)
-
-- **WHEN** se instala en un repo que ya tiene `.claude/settings.json` con hooks propios
-- **THEN** los hooks previos se conservan, se crea un backup y los del SDK se añaden (o se
-  entrega el fragmento con la instrucción, sin sobrescribir nada)
-
-#### Scenario: Actualización sin pisar la política (SC-git-gates-09)
-
-- **WHEN** se reinstala o actualiza el SDK en un repo cuya `policy.yaml` fue personalizada
-- **THEN** la política del consumidor se conserva intacta y solo se actualiza la distribuida
-
-#### Scenario: Tras instalar, los gates bloquean (SC-git-gates-10)
-
-- **WHEN** se instala el nivel Guardia en un repo limpio y se intenta un commit con mensaje no conforme
-  o una acción prohibida por la política
-- **THEN** ambos se rechazan — la instalación es efectiva sin pasos manuales adicionales
