@@ -56,17 +56,7 @@ if ! stack_available; then
 fi
 
 # El entorno roto es fallo duro: si env-ready falla, lo demás no es fiable
-env_cmd="$(stack_get env-ready)"
-if [ -n "$env_cmd" ] && ! bash -c "$env_cmd" >/dev/null 2>&1; then
-  fix="$(stack_get env-fix)"
-  bad "El entorno no está listo: «${env_cmd}» ha fallado (env-ready)."
-  if [ -n "$fix" ]; then
-    echo "    Arreglo: $fix" >&2
-  else
-    echo "    Ejecuta «${env_cmd}» para ver qué falla. Declara env-fix en stack.yaml para mostrar aquí la instrucción." >&2
-  fi
-  exit 1
-fi
+stack_env_ready || exit 1
 
 # format-check y lint reciben SOLO los ficheros en staging
 for key in format-check lint; do
