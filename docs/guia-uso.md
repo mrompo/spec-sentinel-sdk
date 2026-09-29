@@ -161,6 +161,28 @@ Los modos `confirm` no necesitan override: el propio Claude Code te pide la apro
 sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto declara un comando
 `format` en su adaptador de stack (si no, no pasa nada).
 
+### Requisitos de la Esclusa: gitleaks es obligatorio
+
+La Esclusa (los git hooks, fase 2) necesita **[gitleaks](https://github.com/gitleaks/gitleaks)**
+para detectar secretos antes de cada commit. **No es opcional**: sin gitleaks, el `pre-commit`
+rechaza el commit y muestra cómo instalarlo. Un secreto que llega a la historia de git es caro
+de sacar, y cuesta menos exigir la herramienta que confiar en que cada máquina la tenga.
+
+| Sistema | Instalación |
+|---|---|
+| macOS | `brew install gitleaks` |
+| Linux | Binario de [releases](https://github.com/gitleaks/gitleaks/releases), o `go install github.com/zricethezav/gitleaks/v8@latest` |
+| Windows | `scoop install gitleaks` |
+
+Comprueba que está: `gitleaks version`. Vale cualquier v8: la Esclusa usa
+`gitleaks git --pre-commit --staged` en v8.19 o posterior, y `gitleaks protect --staged` en las
+anteriores.
+
+Por debajo de gitleaks corre siempre una base de patrones en bash (claves de AWS, claves
+privadas, tokens de GitHub y Slack), como segunda red. El resto de herramientas del
+[adaptador de stack](../sentinel/adapters/README.md) sí son opcionales: si falta una, se omite
+con aviso. Detalle en [`sentinel/githooks/README.md`](../sentinel/githooks/README.md).
+
 ## Glosario mínimo
 
 Vocabulario completo y razonado en **[docs/05-semantica.md](05-semantica.md)**. Lo esencial:

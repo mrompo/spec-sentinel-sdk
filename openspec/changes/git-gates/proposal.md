@@ -28,7 +28,7 @@ esquive. El **instalador** resuelve el segundo. Con los dos, el nivel Guardia pa
 1. **El puesto Esclusa** — `sentinel/githooks/`, instalables vía `core.hooksPath`:
    - `commit-msg`: Conventional Commits en bash puro (sin Node), con bypass para merges y
      `chore(release)`.
-   - `pre-commit`: detección de secretos (gitleaks si está) + `format --check` + `lint` del
+   - `pre-commit`: detección de secretos (**gitleaks obligatorio**) + `format --check` + `lint` del
      adaptador, **solo sobre staged**.
    - `pre-push`: `tests` del adaptador + `openspec validate --strict` (nivel Método) + **la rama
      protegida se valida aquí de verdad** (cierra el TOCTOU del Centinela).
@@ -87,6 +87,7 @@ esquive. El **instalador** resuelve el segundo. Con los dos, el nivel Guardia pa
 | 3 | Fusión de `.claude/settings.json` | **`jq` si existe**; si no, `sentinel/settings.fragment.json` con la instrucción manual. Nunca una fusión propia en bash (SC-sdk-setup-03, 04) |
 | 4 | `openspec validate` en `pre-push` | **Skip con aviso** si el CLI no está; la Aduana (fase 3) lo hace obligatorio |
 | 5 | Validación de commits | **Bash propio siempre**: cero dependencias (plan §11). El consumidor puede añadir commitlint en su CI si quiere |
+| 6 | ¿gitleaks opcional u obligatorio? | **Obligatorio** (decidido el 2026-09-30 en la revisión de la PR 1/3). Sin gitleaks el commit se rechaza con la instrucción de instalación (SC-git-gates-10). La base de patrones en bash se mantiene como segunda red |
 
-Las decisiones 1 y 2 las tomó una persona en el gate Intención. Las 3 a 5 se cerraron en `tune`
+Las decisiones 1 y 2 las tomó una persona en el gate Intención, y la 6 en la revisión de la PR 1/3. Las 3 a 5 se cerraron en `tune`
 con la propuesta por defecto, que se aceptó sin cambios.

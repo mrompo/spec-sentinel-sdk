@@ -14,19 +14,19 @@ env-ready: false
 env-fix: docker compose up -d app
 lint: true
 EOF
-_capture env SENTINEL_GITLEAKS_BIN=/nonexistent/gitleaks git commit -q -m "feat: a"
+_capture env "$(gl_ok)" git commit -q -m "feat: a"
 assert_exit 1 || fail_case "con el entorno roto el commit no debería entrar"
 assert_err_contains "docker compose up -d app" || fail_case "no muestra la instrucción de arreglo"
 case "$RH_ERR" in *"se omiten env-ready"*|*"sin adaptador"*) fail_case "un entorno roto no es un skip" ;; esac
 
 # Sin env-fix: el mensaje nombra el comando que comprueba el entorno
 printf 'env-ready: false\n' >"$WS/sentinel/adapters/stack.yaml"
-_capture env SENTINEL_GITLEAKS_BIN=/nonexistent/gitleaks git commit -q -m "feat: a"
+_capture env "$(gl_ok)" git commit -q -m "feat: a"
 assert_exit 1 || fail_case "sin env-fix también es fallo duro"
 assert_err_contains "env-ready" || fail_case "no nombra el comando env-ready"
 
 # Entorno listo → pasa
 printf 'env-ready: true\n' >"$WS/sentinel/adapters/stack.yaml"
-_capture env SENTINEL_GITLEAKS_BIN=/nonexistent/gitleaks git commit -q -m "feat: a"
+_capture env "$(gl_ok)" git commit -q -m "feat: a"
 assert_exit 0 || fail_case "con el entorno listo debería entrar"
 cleanup_git_workspace

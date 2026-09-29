@@ -8,7 +8,7 @@ use_hooks
 [ ! -f "$WS/sentinel/adapters/stack.yaml" ] || { echo "    el workspace no debería traer adaptador" >&2; cleanup_git_workspace; exit 1; }
 
 printf 'limpio\n' >"$WS/a.txt"; git_in_ws add a.txt
-_capture env SENTINEL_GITLEAKS_BIN=/nonexistent/gitleaks git commit -q -m "feat: a"
+_capture env "$(gl_ok)" git commit -q -m "feat: a"
 assert_exit 0 || { cleanup_git_workspace; exit 1; }
 assert_err_contains "sin adaptador de stack" || { cleanup_git_workspace; exit 1; }
 cleanup_git_workspace
