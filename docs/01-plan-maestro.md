@@ -222,7 +222,7 @@ instalación real en A (duoclaude) y B (monorepo).
 | 2 | `git-gates` | githooks (skip-vs-fail) + commitlint + gitleaks + instalador `setup` | 0 | Tier 0 instalable en repo ajeno con un comando |
 | 3 | `ci-gate` + **`spec-coverage` CLI** | Template CI (GitHub Actions; A y B lo usan) + spec-coverage como CLI standalone publicable | 0/1 | PR sin gates no mergea; un Scenario sin test rompe el fixture |
 | 4 | `sdd-cycle` | Skills del ciclo (intake→archive) + binding spec-guard + `doctor` v1 + brownfield first-touch | 1 | Ciclo completo en el fixture; doctor detecta refs colgantes sembradas |
-| 5 | `release-hotfix` | `release` multicanal + `hotfix` + gate de back-merge + PR template con procedencia IA | 1 | Patch de prueba llega al fixture-production en horas con su test |
+| 5 | `release-hotfix` | `release` multicanal + `hotfix` + gate de back-merge + procedencia IA **automática** en la PR (la plantilla se adelantó en `pr-format`) | 1 | Patch de prueba llega al fixture-production en horas con su test |
 | 6 | `team` | Subagentes §4 + manifiestos de contexto + qa-plan/db-review + `adverse` vendorizado + fronteras (dependency-cruiser/arch) | 2 | Ciclo §7 completo por slice con separación de poderes |
 | 7 | `agent-run-audit` *(opcional)* | Perfil agent-house (`assert --min-score` en CI) | 2 | Coste/eficiencia medible por PR |
 
