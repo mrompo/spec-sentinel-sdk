@@ -23,7 +23,7 @@
 
 - [x] 1. Runner de git hooks en el banco: workspace con `git init` + commits reales
        (aprovecha `fixture/hooks/harness.sh`); se engancha a `verify.sh`
-- [ ] 2. `commit-msg` en bash puro: Conventional Commits + bypass merges/release
+- [x] 2. `commit-msg` en bash puro: Conventional Commits + bypass merges/release
        (SC-git-gates-01, 02)
 - [ ] 3. `sentinel/adapters/stack.yaml` + autodetección Node/Laravel (SC-git-gates-07)
 - [ ] 3b. 👤 Renombrado del fichero de stack en `post-edit.sh` — **fichero protegido**: lo hace

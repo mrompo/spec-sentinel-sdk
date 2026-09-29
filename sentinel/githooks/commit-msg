@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# commit-msg — la Esclusa, primer tiempo: el mensaje del commit sigue Conventional Commits.
+# Bash puro, sin Node (decisión 5 de git-gates). Mismo criterio que commitlint
+# config-conventional para el asunto. Exentos: merges y chore(release).
+# Falsifica: SC-git-gates-01, SC-git-gates-02 (fixture/githooks/cases/).
+set -uo pipefail
+
+msg_file="${1:-}"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || {
+  echo "✗ [Esclusa] commit-msg: git no pasó el fichero del mensaje — el hook está mal instalado" >&2
+  exit 1
+}
+
+# El asunto es la primera línea que no es comentario (#) ni está en blanco
+subject="$(grep -v '^#' "$msg_file" | sed -e 's/[[:space:]]*$//' | grep -m1 -v '^$' || true)"
+
+# Exentos por prefijo exacto: los merges los escribe git/el forge, y el release semantic-release
+case "$subject" in
+  "Merge "*|"chore(release): "*) exit 0 ;;
+esac
+
+types='build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test'
+if printf '%s\n' "$subject" | grep -Eq "^(${types})(\([^()[:space:]][^()]*\))?!?: [^[:space:]].*$"; then
+  exit 0
+fi
+
+cat >&2 <<EOF
+✗ [Esclusa] El mensaje del commit no sigue Conventional Commits.
+
+  Recibido:  ${subject:-<vacío>}
+  Esperado:  tipo(ámbito): descripción      — el ámbito es opcional; «!» antes de «:» = ruptura
+  Tipos:     ${types//|/, }
+  Ejemplo:   fix(guard): tolerate quoted paths in the parser
+
+El commit no se ha creado. Corrige el mensaje y vuelve a commitear.
+EOF
+exit 1
