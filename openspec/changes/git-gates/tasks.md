@@ -25,7 +25,7 @@
        (aprovecha `fixture/hooks/harness.sh`); se engancha a `verify.sh`
 - [x] 2. `commit-msg` en bash puro: Conventional Commits + bypass merges/release
        (SC-git-gates-01, 02)
-- [ ] 3. `sentinel/adapters/stack.yaml` + autodetección Node/Laravel (SC-git-gates-07)
+- [x] 3. `sentinel/adapters/stack.yaml` + autodetección Node/Laravel (SC-git-gates-07)
 - [ ] 3b. 👤 Renombrado del fichero de stack en `post-edit.sh` — **fichero protegido**: lo hace
        una persona o con la llave, y queda en la bitácora
 - [ ] 4. `pre-commit`: gitleaks + format --check + lint sobre staged, con **skip-vs-fail**
