@@ -1,13 +1,13 @@
 # Tasks — pr-format
 
 **Objetivo**: toda PR se puede aprobar con criterio sin reconstruir el contexto a mano.
-**Posición en el Loop**: Engine · `propose` (2026-09-28) → espera el gate **Intención**.
+**Posición en el Loop**: Engine · `apply` (desde 2026-09-29).
 
 ## Engine · antes de teclear
 
 - [x] 0. `propose`: expediente abierto, con el formato completo en la proposal
-- [ ] 0a. Gate **Intención** 👤 — cuestiones 1-3 de la proposal
-- [ ] 0b. `tune` → gate **Claridad**: `openspec validate --strict`, sin preguntas abiertas
+- [x] 0a. Gate **Intención** 👤 — aprobado el 2026-09-29: las tres propuestas aceptadas
+- [x] 0b. `tune` → gate **Claridad**: `openspec validate --strict`, sin preguntas abiertas
 
 ## Checklist
 

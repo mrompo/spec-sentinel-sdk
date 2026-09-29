@@ -73,6 +73,9 @@ en el historial, es lo más barato.
 
 ## Cuestiones para el gate Intención
 
+> **Resueltas el 2026-09-29** (gate Intención aprobado): se aceptan las tres propuestas —
+> diez secciones con `N/A — motivo`, castellano, procedencia a mano hasta la fase 5.
+
 1. **¿Diez secciones son demasiadas?** *Propuesta*: sí son muchas, pero siete de ellas son de
    una o dos líneas y el `N/A — motivo` hace barato no aplicar. Quitar alguna deja sin
    respuesta una pregunta que el revisor se va a hacer igual.
