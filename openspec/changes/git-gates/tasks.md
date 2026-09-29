@@ -2,7 +2,7 @@
 
 **Objetivo**: el nivel Guardia instalable en cualquier repo con un comando, con la Esclusa real.
 **Ritmo**: un slice = caso del banco en rojo → implementación mínima → verde → commit atómico.
-**Posición en el Loop**: Engine · `apply` ↺ `verify` — PR 1/3 en curso (desde 2026-09-29).
+**Posición en el Loop**: PR 1/3 (la Esclusa) en Delivery · `merge` — slices 1-5 hechos (2026-09-30).
 
 ## Engine · antes de teclear
 
@@ -35,8 +35,11 @@
        (SC-git-gates-04, 05)
 - [ ] 6. 👤 Separación de la política en distribuida (`policy.default.yaml`) y del consumidor
        (SC-sdk-setup-05) — **fichero protegido**: igual que 3b
-- [ ] 6b. 👤 Añadir `sentinel/githooks/` a la regla `self-protection`: hoy la Esclusa no
-       estaría protegida y el agente podría desactivarla editando un hook — **fichero protegido**
+- [ ] 6b. 👤 Proteger la Esclusa en la política — **fichero protegido**:
+       - `self-protection` debe cubrir `sentinel/githooks/` y `sentinel/adapters/stack.sh` (los
+         hooks lo cargan con `source`): hoy el agente podría desactivar la Esclusa editándolos;
+       - `no-hook-disabling` debe cubrir `SENTINEL_GITLEAKS_BIN=` y `SENTINEL_OPENSPEC_BIN=`,
+         las variables de prueba de los hooks, para que el agente no salte gitleaks u openspec
 - [ ] 7. Skill `setup`: instalación de un comando (copia, `core.hooksPath`, fusión de
        `.claude/settings.json` con `jq` o fragmento, backup, detección de stack)
        (SC-sdk-setup-02, 03, 04)
