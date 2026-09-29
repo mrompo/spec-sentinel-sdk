@@ -9,7 +9,7 @@ for msg in "Merge branch 'feature/x' into development" \
            "Merge pull request #1 from mrompo/feature/framework-semantics" \
            "chore(release): 1.2.3 [skip ci]"; do
   gh_commit "$msg"
-  assert_exit 0 || { echo "    rechazó «$msg»" >&2; cleanup_git_workspace; exit 1; }
+  assert_exit 0 || { echo "    rechazó «${msg}»" >&2; cleanup_git_workspace; exit 1; }
 done
 
 # La exención es por prefijo exacto: «Mergeado …» no es un merge
