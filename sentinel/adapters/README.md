@@ -12,10 +12,16 @@ la Aduana consumen estos comandos sin conocer el stack, a través de [`stack.sh`
 ```yaml
 # sentinel/adapters/stack.yaml — plano, una clave por línea
 tests: npm test
-lint: npm run -s lint --          # recibe los ficheros en staging
+# lint y format-check reciben los ficheros en staging como argumentos
+lint: npm run -s lint --
 format-check: npx prettier --check
 env-ready: docker compose ps --status running --quiet app | grep -q .
+# env-fix: lo que se muestra si env-ready falla
+env-fix: docker compose up -d app
 ```
+
+- **Los comentarios van en su propia línea.** Un `#` al final de una línea forma parte del
+  comando (un comando puede contener `#` legítimamente).
 
 - **Sin fichero, sin comandos**: quien lo consume omite con aviso, nunca falla ni adivina.
 - **`stack_detect <dir>`** propone un `stack.yaml` para Node (según los scripts de

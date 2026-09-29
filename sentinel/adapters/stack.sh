@@ -3,13 +3,15 @@
 # Se usa con `source`. Lo consumen la Esclusa (githooks), la Aduana (CI) y el Centinela
 # (post-edit) sin conocer el stack. Bash puro, sin dependencias.
 #
-# Formato de stack.yaml — plano, una clave por línea, `#` comenta:
+# Formato de stack.yaml — plano, una clave por línea; `#` comenta solo al principio de línea
+# (al final de una línea es parte del comando):
 #   format:        formatea en sitio        (recibe los ficheros)
 #   format-check:  comprueba formato        (recibe los ficheros en staging)
 #   lint:          lint                      (recibe los ficheros en staging)
 #   static:        análisis estático         (sin argumentos)
 #   tests:         suite de tests            (sin argumentos)
 #   env-ready:     ¿el entorno está listo?  (sin argumentos; exit ≠ 0 = entorno roto)
+#   env-fix:       texto con la instrucción que se muestra si env-ready falla (opcional)
 # Falsifica: SC-git-gates-07 (fixture/githooks/cases/sc-07-stack-adapter.sh).
 
 # stack_file → ruta del adaptador: $SENTINEL_STACK, o sentinel/adapters/stack.yaml en la raíz
