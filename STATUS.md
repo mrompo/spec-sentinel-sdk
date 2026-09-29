@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-09-29 · `framework-semantics` en `main` (PR #1) · en curso `pr-format` · `git-gates` en `propose`
+**Última actualización**: 2026-09-29 · `framework-semantics` (PR #1) y `pr-format` (PR #2) en `main` · `git-gates` en `propose`
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
-| **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · en curso **`pr-format`** (fuera de roadmap: formato de PR) · **fase 2 `git-gates`** en `propose`, espera el gate Intención |
-| **Loop** | `pr-format`: Engine · `apply` terminado → Delivery · `merge` (su PR) · `git-gates`: Engine · `propose`, espera el gate **Intención** |
+| **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `propose`, espera el gate Intención |
+| **Loop** | `git-gates`: Engine · `propose`, espera el gate **Intención** |
 | **Niveles entregados** | **Guardia** al 50%: el puesto Centinela operativo; faltan Esclusa (fase 2) y Aduana (fase 3) |
 
 ## Roadmap
@@ -21,7 +21,7 @@
 | 0 | `bootstrap-method` | — | ✅ Archivada (`2026-07-27`) — [change](openspec/changes/archive/2026-07-27-bootstrap-method/proposal.md) |
 | 1 | `sentinel-guard` | 0 | ✅ Archivada (`2026-08-05`) — hook único + política + break-glass auditado; 15 casos en el fixture; endurecida tras panel adversarial |
 | — | `framework-semantics` | — | ✅ Archivada (`2026-09-28`, en `main` por la PR #1) — vocabulario del framework en `docs/05-semantica.md`; 8 escenarios, verificados por el banco |
-| — | `pr-format` | — | 🔄 **En PR** — título en Conventional Commits + diez secciones fijas; la plantilla la verifica el banco. Adelanta la plantilla de la fase 5 |
+| — | `pr-format` | — | ✅ Archivada (`2026-09-29`, en `main` por la PR #2) — título en Conventional Commits + diez secciones fijas; la plantilla la verifica el banco. Adelanta la plantilla de la fase 5 |
 | 2 | `git-gates` | 0 | 🔄 **Propose reabierto** — propuesta reescrita con el vocabulario nuevo, espera el gate Intención |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |
