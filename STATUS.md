@@ -11,7 +11,7 @@
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `propose`, espera el gate Intención |
-| **Loop** | `git-gates`: Engine · `propose`, espera el gate **Intención** |
+| **Loop** | `git-gates`: Engine · `tune` cerrado (5 decisiones, 2 capabilities) → espera el gate **Plan** |
 | **Niveles entregados** | **Guardia** al 50%: el puesto Centinela operativo; faltan Esclusa (fase 2) y Aduana (fase 3) |
 
 ## Roadmap
@@ -57,6 +57,12 @@
 - **Falso positivo del Centinela**: la regla `self-protection` bloquea también comandos de solo
   lectura que *nombran* ficheros protegidos (p. ej. un `git diff` de la política). Es el límite
   "evalúa texto" documentado; necesita un caso en el banco y su ajuste en un change propio.
+- **La protección de ficheros choca con operaciones legítimas.** Además del falso positivo de
+  arriba, `managed-files` y `self-protection` impiden al agente: leer (`grep`) dentro del
+  archivo de expedientes, rellenar el `Purpose` de una spec viva recién archivada, deshacer un
+  `openspec archive` que aún no está commiteado (pasó en `pr-format`, lo deshizo una persona) e
+  incluso escribir un texto que *menciona* esas rutas en un comando. Va en un expediente propio
+  del Centinela, junto al falso positivo.
 - Las specs vivas `sentinel-guard` y `framework-semantics` tienen el `Purpose` en «TBD» (lo
   deja `openspec archive`); están protegidas como ficheros gestionados, así que lo rellena una
   persona.
