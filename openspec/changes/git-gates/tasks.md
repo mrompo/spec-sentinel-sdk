@@ -31,7 +31,7 @@
 - [x] 4. `pre-commit`: gitleaks + format --check + lint sobre staged, con **skip-vs-fail**
        (SC-git-gates-03, 06, 08, 09)
 - [x] 5a. `docs/05-semantica.md`: el gate Esclusa se cierra en dos tiempos (decisión 1)
-- [ ] 5. `pre-push`: tests + rama protegida (cierra el TOCTOU) + openspec validate opcional
+- [x] 5. `pre-push`: tests + rama protegida (cierra el TOCTOU) + openspec validate opcional
        (SC-git-gates-04, 05)
 - [ ] 6. 👤 Separación de la política en distribuida (`policy.default.yaml`) y del consumidor
        (SC-sdk-setup-05) — **fichero protegido**: igual que 3b

@@ -32,6 +32,22 @@ stack_get() {
     | sed -E -e 's/[[:space:]]+$//' -e "s/^\"(.*)\"$/\1/" -e "s/^'(.*)'$/\1/"
 }
 
+# stack_env_ready → 0 si no hay env-ready declarado o si pasa. Si falla, escribe en stderr el
+# motivo y la instrucción de arreglo (env-fix) y devuelve 1: un entorno roto es fallo duro.
+stack_env_ready() {
+  local cmd fix; cmd="$(stack_get env-ready)"
+  [ -n "$cmd" ] || return 0
+  bash -c "$cmd" >/dev/null 2>&1 && return 0
+  fix="$(stack_get env-fix)"
+  echo "✗ [Esclusa] El entorno no está listo: «${cmd}» ha fallado (env-ready)." >&2
+  if [ -n "$fix" ]; then
+    echo "    Arreglo: ${fix}" >&2
+  else
+    echo "    Ejecuta «${cmd}» para ver qué falla. Declara env-fix en stack.yaml para mostrar aquí la instrucción." >&2
+  fi
+  return 1
+}
+
 # stack_detect <dir> → imprime un stack.yaml propuesto para Node o Laravel. Nunca escribe
 # nada: lo usa `setup` para proponer, y la persona decide. Stack desconocido → exit 1.
 stack_detect() {
