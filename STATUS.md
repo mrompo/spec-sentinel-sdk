@@ -52,6 +52,11 @@
 
 ## Deudas / pendientes conscientes
 
+- 🔴 **El agente puede crear la llave (`sentinel/.override`)**. La política no la protege y ningún
+  caso del banco lo comprueba: el break-glass de un solo uso se lo puede conceder el propio
+  agente. Detectado el 2026-09-30. Se corrige en la PR 2/3 de `git-gates` (slice 6b), que
+  toca la política y por tanto la aplica una persona.
+
 - El artefacto de revisión del plan menciona aún `docs/02`/`docs/03` (la investigación se movió
   al repo hermano `../spec-sentinel-research/`); se corrige en la próxima republicación.
 - **Falso positivo del Centinela**: la regla `self-protection` bloquea también comandos de solo

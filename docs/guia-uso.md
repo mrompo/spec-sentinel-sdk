@@ -137,7 +137,12 @@ confirmación · nada de `.env` de producción.
 añade su caso en `fixture/hooks/cases/`. Sin test, la regla no entra.
 
 **Si un bloqueo te frena** (vía de emergencia auditada). Escribe el motivo en un fichero
-**desde tu terminal** (el agente no puede crearlo: está protegido):
+**desde tu terminal**. La llave la crea siempre una persona, nunca el agente.
+
+> ⚠️ **Hoy el Centinela todavía no impide que el agente escriba `sentinel/.override`** (hallazgo
+> del 2026-09-30, al diseñar la excepción de la Esclusa). Se corrige en la PR 2/3 de `git-gates`.
+> Hasta entonces, si ves aparecer una llave que no has escrito tú, bórrala y revisa la bitácora.
+
 
 ```bash
 echo "hotfix INC-123 aprobado por tech lead" > sentinel/.override
@@ -149,6 +154,12 @@ escribir, la excepción **se deniega**: sin auditoría no hay excepción.
 
 Para toda una sesión (úsalo con cuidado, afecta a todas las reglas):
 `SENTINEL_OVERRIDE="motivo" claude` al arrancar.
+
+**La misma llave vale para la Esclusa** (los git hooks): si un commit o un push se rechaza,
+la llave permite **ese** rechazo y lo registra en la bitácora como `esclusa:<hook>`. Si el
+mismo commit lo rechazan dos hooks (p. ej. `pre-commit` y luego `commit-msg`), hacen falta dos
+llaves: cada una cubre un solo rechazo. **No uses `git commit --no-verify`**: salta la Esclusa
+sin dejar rastro, y la Aduana (fase 3) lo detectará igual.
 
 Los modos `confirm` no necesitan override: el propio Claude Code te pide la aprobación de
 **esa** acción concreta.

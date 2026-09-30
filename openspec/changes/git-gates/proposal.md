@@ -89,6 +89,7 @@ esquive. El **instalador** resuelve el segundo. Con los dos, el nivel Guardia pa
 | 5 | Validación de commits | **Bash propio siempre**: cero dependencias (plan §11). El consumidor puede añadir commitlint en su CI si quiere |
 | 6 | ¿gitleaks opcional u obligatorio? | **Obligatorio** (decidido el 2026-09-30 en la revisión de la PR 1/3). Sin gitleaks el commit se rechaza con la instrucción de instalación (SC-git-gates-10). La base de patrones en bash se mantiene como segunda red |
 | 7 | ¿Rama protegida en `pre-commit` o solo en `pre-push`? | **Solo en `pre-push`** (decidido el 2026-09-30 en la revisión de la PR 1/3). Un commit local en `main` se permite; publicarlo, no. Así los merges locales de una persona no se rompen, y el TOCTOU del Centinela queda cerrado donde importa: al compartir (SC-git-gates-05) |
+| 8 | ¿Cómo se salta un rechazo de la Esclusa? | **Con la misma llave que el Centinela**, auditada en la bitácora (decidido el 2026-09-30 en la revisión de la PR 1/3; `project.md`: todo gate tiene break-glass auditado). `--no-verify` no se puede impedir porque es de git, pero deja de hacer falta; la Aduana detectará lo que entre sin pasar por la Esclusa (SC-git-gates-11..13) |
 
-Las decisiones 1 y 2 las tomó una persona en el gate Intención, y la 6 y la 7 en la revisión de la PR 1/3. Las 3 a 5 se cerraron en `tune`
+Las decisiones 1 y 2 las tomó una persona en el gate Intención, y la 6, la 7 y la 8 en la revisión de la PR 1/3. Las 3 a 5 se cerraron en `tune`
 con la propuesta por defecto, que se aceptó sin cambios.

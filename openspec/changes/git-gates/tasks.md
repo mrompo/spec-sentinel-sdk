@@ -32,6 +32,8 @@
        (SC-git-gates-03, 06, 08, 09)
 - [x] 4b. gitleaks **obligatorio** (decisión 6, 2026-09-30): sin él, fallo duro con la
        instrucción de instalación (SC-git-gates-10) + documentado en la guía y en el README
+- [x] 5b. Excepción auditada de la Esclusa (decisión 8, 2026-09-30): la misma llave que el
+       Centinela, registrada en la bitácora (SC-git-gates-11, 12, 13)
 - [x] 5a. `docs/05-semantica.md`: el gate Esclusa se cierra en dos tiempos (decisión 1)
 - [x] 5. `pre-push`: tests + rama protegida (cierra el TOCTOU) + openspec validate opcional
        (SC-git-gates-04, 05)
@@ -42,6 +44,10 @@
          hooks lo cargan con `source`): hoy el agente podría desactivar la Esclusa editándolos;
        - `no-hook-disabling` debe cubrir `SENTINEL_GITLEAKS_BIN=` y `SENTINEL_OPENSPEC_BIN=`,
          las variables de prueba de los hooks, para que el agente no salte gitleaks u openspec
+       - **PRIORIDAD**: `self-protection` debe cubrir `sentinel/.override`. Hoy el agente PUEDE
+         crear la llave y concederse excepciones a sí mismo (sonda del 2026-09-30: Write,
+         `echo >` y `tee` pasan con exit 0). Con su caso en `fixture/hooks/cases/`, que hoy
+         ningún caso comprueba; la llave de la Esclusa depende de esto (SC-git-gates-11)
 - [ ] 7. Skill `setup`: instalación de un comando (copia, `core.hooksPath`, fusión de
        `.claude/settings.json` con `jq` o fragmento, backup, detección de stack) — y
        comprobar que gitleaks está instalado, para avisar al instalar y no en el primer commit

@@ -3,18 +3,21 @@
 # está en staging. Los tests no se ejecutan aquí: son del segundo tiempo (pre-push).
 # Patrón skip-vs-fail: herramienta ausente → aviso y se sigue; entorno roto → fallo duro con
 # la instrucción de arreglo. gitleaks es la excepción: es obligatorio. Nunca pasa en silencio.
-# Falsifica: SC-git-gates-03, 06, 07, 08, 09, 10 (fixture/githooks/cases/).
+# Falsifica: SC-git-gates-03, 06, 07, 08, 09, 10; la excepción auditada, 11-13 (lib/breakglass.sh).
 set -uo pipefail
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$HOOK_DIR/../adapters/stack.sh" 2>/dev/null || {
-  echo "✗ [Esclusa] pre-commit: falta $HOOK_DIR/../adapters/stack.sh — reinstala el SDK (setup)" >&2
-  exit 1
-}
+for lib in "$HOOK_DIR/../adapters/stack.sh" "$HOOK_DIR/lib/breakglass.sh"; do
+  source "$lib" 2>/dev/null || {
+    echo "✗ [Esclusa] pre-commit: falta $lib — reinstala el SDK (setup)" >&2
+    exit 1
+  }
+done
 
 warn() { echo "⚠ [Esclusa] $1" >&2; }
-fail=0
-bad() { echo "✗ [Esclusa] $1" >&2; fail=1; }
+fail=0; why=""
+# bad <mensaje> <etiqueta> → rechazo acumulado; la etiqueta va a la bitácora si hay excepción
+bad() { echo "✗ [Esclusa] $1" >&2; fail=1; why="${why:+$why, }$2"; }
 
 # Ficheros en staging (añadidos, copiados, modificados, renombrados); los borrados no se evalúan
 files=()
@@ -32,7 +35,7 @@ for f in "${files[@]}"; do
   [ -n "$lines" ] && leaks="${leaks}    ${f} (línea ${lines%,})"$'\n'
 done
 if [ -n "$leaks" ]; then
-  bad "Posible secreto en staging (el contenido no se muestra):"
+  bad "Posible secreto en staging (el contenido no se muestra):" "secretos"
   printf '%s' "$leaks" >&2
   echo "    Sácalo del fichero y usa una variable de entorno o un gestor de secretos." >&2
 fi
@@ -49,7 +52,7 @@ if ! command -v "$GITLEAKS" >/dev/null 2>&1; then
       Windows:  scoop install gitleaks
     Detalle en sentinel/githooks/README.md §Requisitos.
 MSG
-  exit 1
+  esclusa_reject pre-commit "gitleaks no instalado"
 fi
 # v8.19+ usa «gitleaks git --pre-commit --staged»; las anteriores, «gitleaks protect --staged»
 if "$GITLEAKS" git --help >/dev/null 2>&1; then
@@ -59,18 +62,19 @@ else
 fi
 case "$rc" in
   0) ;;
-  1) bad "gitleaks ha encontrado secretos en staging:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
-  *) bad "gitleaks ha fallado (exit $rc) — revisa su instalación:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+  1) bad "gitleaks ha encontrado secretos en staging:" "gitleaks"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+  *) bad "gitleaks ha fallado (exit $rc) — revisa su instalación:" "gitleaks-error"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
 esac
 
 # ── 2. Comandos del adaptador de stack ────────────────────────────────────────────
 if ! stack_available; then
   warn "sin adaptador de stack ($(stack_file)): se omiten env-ready, format-check y lint"
-  exit "$fail"
+  [ "$fail" -eq 0 ] || esclusa_reject pre-commit "$why"
+  exit 0
 fi
 
 # El entorno roto es fallo duro: si env-ready falla, lo demás no es fiable
-stack_env_ready || exit 1
+stack_env_ready || esclusa_reject pre-commit "entorno no listo"
 
 # format-check y lint reciben SOLO los ficheros en staging
 for key in format-check lint; do
@@ -80,9 +84,9 @@ for key in format-check lint; do
   case "$rc" in
     0) ;;
     127) warn "«${key}» está declarado pero «${cmd}» no está instalado: se omite" ;;
-    *) bad "«${key}» ha fallado:"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+    *) bad "«${key}» ha fallado:" "$key"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
   esac
 done
 
-[ "$fail" -eq 0 ] || echo "El commit no se ha creado. Corrige lo anterior y vuelve a commitear." >&2
-exit "$fail"
+[ "$fail" -eq 0 ] || esclusa_reject pre-commit "$why"
+exit 0

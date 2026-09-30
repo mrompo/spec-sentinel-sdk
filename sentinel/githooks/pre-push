@@ -2,14 +2,16 @@
 # pre-push — la Esclusa, segundo tiempo: rama protegida, entorno, tests y (nivel Método) specs.
 # Aquí el commit ya existe: la rama de destino se valida sin ventana de TOCTOU, venga de donde
 # venga el push. Patrón skip-vs-fail, como pre-commit.
-# Falsifica: SC-git-gates-04, 05 (fixture/githooks/cases/).
+# Falsifica: SC-git-gates-04, 05; la excepción auditada, 11-13 (lib/breakglass.sh).
 set -uo pipefail
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$HOOK_DIR/../adapters/stack.sh" 2>/dev/null || {
-  echo "✗ [Esclusa] pre-push: falta $HOOK_DIR/../adapters/stack.sh — reinstala el SDK (setup)" >&2
-  exit 1
-}
+for lib in "$HOOK_DIR/../adapters/stack.sh" "$HOOK_DIR/lib/breakglass.sh"; do
+  source "$lib" 2>/dev/null || {
+    echo "✗ [Esclusa] pre-push: falta $lib — reinstala el SDK (setup)" >&2
+    exit 1
+  }
+done
 
 warn() { echo "⚠ [Esclusa] $1" >&2; }
 ROOT="$(git rev-parse --show-toplevel)"
@@ -37,16 +39,16 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
     Publica tu rama feature/fix/hotfix y abre una PR: la integración pasa por la Aduana.
     (La lista sale de la regla protected-branches de sentinel/policy.yaml.)
 EOF
-    exit 1
+    esclusa_reject pre-push "push a rama protegida: ${branch}"
   fi
 done
 
 # ── 2. Entorno y tests del adaptador ──────────────────────────────────────────────
-fail=0
+fail=0; why=""
 if ! stack_available; then
   warn "sin adaptador de stack ($(stack_file)): se omiten env-ready y tests"
 else
-  stack_env_ready || exit 1
+  stack_env_ready || esclusa_reject pre-push "entorno no listo"
   tests_cmd="$(stack_get tests)"
   if [ -n "$tests_cmd" ]; then
     out="$(bash -c "$tests_cmd" 2>&1)"; rc=$?
@@ -55,7 +57,7 @@ else
       127) warn "«tests» está declarado pero «${tests_cmd}» no está instalado: se omite" ;;
       *) echo "✗ [Esclusa] La suite de tests está en rojo («${tests_cmd}»):" >&2
          printf '%s\n' "$out" | tail -40 | sed 's/^/    /' >&2
-         fail=1 ;;
+         fail=1; why="${why:+$why, }tests" ;;
     esac
   else
     warn "el adaptador no declara «tests»: se omite la suite"
@@ -70,12 +72,12 @@ if [ "$sdd" = "true" ] && [ -d "$ROOT/openspec" ]; then
     out="$(cd "$ROOT" && "$OPENSPEC" validate --all --strict 2>&1)" || {
       echo "✗ [Esclusa] openspec validate --strict ha fallado:" >&2
       printf '%s\n' "$out" | tail -40 | sed 's/^/    /' >&2
-      fail=1
+      fail=1; why="${why:+$why, }openspec"
     }
   else
     warn "openspec no está instalado: se omite la validación de specs (la Aduana la hará obligatoria)"
   fi
 fi
 
-[ "$fail" -eq 0 ] || echo "El push no se ha hecho. Corrige lo anterior y vuelve a publicar." >&2
-exit "$fail"
+[ "$fail" -eq 0 ] || esclusa_reject pre-push "$why"
+exit 0
