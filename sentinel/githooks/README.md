@@ -45,6 +45,29 @@ en v8.19 o posterior, y `gitleaks protect --staged` en las anteriores.
 
 Nunca pasa sin comprobaciones en silencio.
 
+## Excepción auditada (break-glass)
+
+Todo rechazo de la Esclusa se puede saltar **solo** con la misma excepción que el Centinela
+(decisión 8 de `git-gates`, [`lib/breakglass.sh`](lib/breakglass.sh)):
+
+| Vía | Alcance | Cómo |
+|---|---|---|
+| **La llave** | Un solo rechazo: se consume al aplicarse | Una persona escribe el motivo: `echo "motivo" > sentinel/.override` |
+| `SENTINEL_OVERRIDE` | Toda la sesión | Una persona arranca la sesión con `SENTINEL_OVERRIDE="motivo"` |
+
+Cada uso deja una línea en la bitácora (`sentinel/overrides.log`), con el mismo formato que el
+Centinela: `fecha | esclusa:<hook> | qué se rechazaba | motivo`. Reglas:
+
+- **Sin bitácora escribible no hay excepción**, y la llave se conserva para reintentar.
+- **Un motivo vacío o solo de espacios no vale.**
+- **Un rechazo, una llave**: si el mismo commit lo rechazan `pre-commit` y `commit-msg`, hacen
+  falta dos.
+- `git commit --no-verify` salta la Esclusa **sin rastro**: no se puede impedir porque es de git,
+  pero con esta vía deja de hacer falta. Al agente se lo bloquea el Centinela, y la Aduana
+  (fase 3) detectará en CI lo que entre sin pasar por la Esclusa.
+- ⚠️ La llave solo es segura si el agente no puede crearla. **Hoy el Centinela aún no lo impide**:
+  se corrige en la PR 2/3 de `git-gates` (slice 6b).
+
 ## Secretos: gitleaks y la base de patrones
 
 **gitleaks es obligatorio**: un secreto que llega a la historia de git es caro de sacar (hay que

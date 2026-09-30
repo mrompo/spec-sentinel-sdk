@@ -79,6 +79,34 @@ sin ejecutar sus comprobaciones.
   p. ej. un contenedor parado)
 - **THEN** el hook falla en duro y muestra la instrucción exacta para arreglarlo; no hace skip
 
+### Requirement: Excepción auditada (break-glass)
+
+Todo rechazo de la Esclusa SHALL poder saltarse **solo** con una excepción auditada, la misma que
+usa el Centinela: la llave (`sentinel/.override` con un motivo, **de un solo uso**) o
+`SENTINEL_OVERRIDE` con un motivo en el entorno de la sesión. Cada uso SHALL registrarse en la
+bitácora (`sentinel/overrides.log`) con fecha, hook, qué se rechazaba y motivo. Si la bitácora no
+se puede escribir, la excepción SHALL denegarse y la llave SHALL conservarse. Un motivo vacío o
+solo de espacios SHALL NOT valer como excepción. La llave SHALL poder crearla solo una persona:
+el Centinela SHALL impedir que el agente la escriba.
+
+#### Scenario: Rechazo saltado con la llave (SC-git-gates-11)
+
+- **WHEN** una persona escribe `hotfix INC-9` en `sentinel/.override` y se intenta un commit que
+  la Esclusa rechazaría
+- **THEN** el commit entra, la bitácora gana una línea con el hook y el motivo, y la llave
+  desaparece: el siguiente rechazo vuelve a bloquear
+
+#### Scenario: Bitácora no escribible (SC-git-gates-12)
+
+- **WHEN** hay llave pero `sentinel/overrides.log` no se puede escribir
+- **THEN** el rechazo se mantiene, el mensaje dice que sin registro no hay excepción, y la llave
+  sigue en su sitio
+
+#### Scenario: Excepción de sesión (SC-git-gates-13)
+
+- **WHEN** la sesión se arrancó con `SENTINEL_OVERRIDE="motivo"` y la Esclusa rechazaría un push
+- **THEN** el push se permite y queda registrado; con `SENTINEL_OVERRIDE` vacío, se rechaza
+
 ### Requirement: Adaptador de stack declarativo
 
 El proyecto consumidor SHALL declarar sus comandos (`format`, `lint`, `static`, `tests`,
