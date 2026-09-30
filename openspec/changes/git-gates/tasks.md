@@ -2,7 +2,7 @@
 
 **Objetivo**: el nivel Guardia instalable en cualquier repo con un comando, con la Esclusa real.
 **Ritmo**: un slice = caso del banco en rojo → implementación mínima → verde → commit atómico.
-**Posición en el Loop**: PR 1/3 (la Esclusa) en Delivery · `merge` — slices 1-5 hechos (2026-09-30).
+**Posición en el Loop**: PR 1/3 ✅ en `main` · PR 2/3 en Delivery · `merge` — parche aplicado por una persona (2026-09-30).
 
 ## Engine · antes de teclear
 
@@ -19,14 +19,15 @@
 ## Checklist (`apply` ↺ `verify`, por slice)
 
 **Tres PRs** (gate Plan): **1/3 · La Esclusa** = slices 1, 2, 3, 4, 5a, 5
-· **2/3 · Ficheros protegidos** 👤 = slices 3b, 6 y 6b · **3/3 · Instalación** = slices 7, 8, 9, 10.
+· **2/3 · Ficheros protegidos** 👤 = slices 3b y 6b · **3/3 · Instalación** = slices 6, 7, 8, 9, 10
+(el 6 pasó a la 3/3 el 2026-09-30: cómo lee el Centinela dos políticas solo tiene sentido con el instalador).
 
 - [x] 1. Runner de git hooks en el banco: workspace con `git init` + commits reales
        (aprovecha `fixture/hooks/harness.sh`); se engancha a `verify.sh`
 - [x] 2. `commit-msg` en bash puro: Conventional Commits + bypass merges/release
        (SC-git-gates-01, 02)
 - [x] 3. `sentinel/adapters/stack.yaml` + autodetección Node/Laravel (SC-git-gates-07)
-- [ ] 3b. 👤 Renombrado del fichero de stack en `post-edit.sh` — **fichero protegido**: lo hace
+- [x] 3b. 👤 Renombrado del fichero de stack en `post-edit.sh` — **fichero protegido**: lo hace
        una persona o con la llave, y queda en la bitácora
 - [x] 4. `pre-commit`: gitleaks + format --check + lint sobre staged, con **skip-vs-fail**
        (SC-git-gates-03, 06, 08, 09)
@@ -39,7 +40,7 @@
        (SC-git-gates-04, 05)
 - [ ] 6. 👤 Separación de la política en distribuida (`policy.default.yaml`) y del consumidor
        (SC-sdk-setup-05) — **fichero protegido**: igual que 3b
-- [ ] 6b. 👤 Proteger la Esclusa en la política — **fichero protegido**:
+- [x] 6b. 👤 Proteger la Esclusa en la política — **fichero protegido**:
        - `self-protection` debe cubrir `sentinel/githooks/` y `sentinel/adapters/stack.sh` (los
          hooks lo cargan con `source`): hoy el agente podría desactivar la Esclusa editándolos;
        - `no-hook-disabling` debe cubrir `SENTINEL_GITLEAKS_BIN=` y `SENTINEL_OPENSPEC_BIN=`,
