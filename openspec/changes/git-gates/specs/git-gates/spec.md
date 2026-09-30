@@ -107,6 +107,19 @@ el Centinela SHALL impedir que el agente la escriba.
 - **WHEN** la sesión se arrancó con `SENTINEL_OVERRIDE="motivo"` y la Esclusa rechazaría un push
 - **THEN** el push se permite y queda registrado; con `SENTINEL_OVERRIDE` vacío, se rechaza
 
+#### Scenario: El agente no puede crear la llave (SC-git-gates-14)
+
+- **WHEN** el agente intenta escribir `sentinel/.override` (con Write, `echo >` o `tee`)
+- **THEN** el Centinela lo bloquea: la llave solo la crea una persona desde su terminal
+
+#### Scenario: El agente no puede desarmar la Esclusa (SC-git-gates-15)
+
+- **WHEN** el agente intenta editar o borrar un hook de la Esclusa, su librería o el lector del
+  adaptador, o ejecutar un comando con `SENTINEL_GITLEAKS_BIN=`, `SENTINEL_OPENSPEC_BIN=` o
+  `SENTINEL_STACK=`
+- **THEN** el Centinela lo bloquea; los ficheros del consumidor (`stack.yaml`) y la documentación
+  de la Esclusa siguen siendo editables
+
 ### Requirement: Adaptador de stack declarativo
 
 El proyecto consumidor SHALL declarar sus comandos (`format`, `lint`, `static`, `tests`,
