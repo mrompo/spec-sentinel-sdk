@@ -107,7 +107,7 @@ OpenSpec) → **Método** (+ Engine: ciclo SDD y `spec-coverage`) → **Equipo**
 
 - [x] **0. bootstrap-method** — decisiones cerradas, esqueleto, OpenSpec operativo, fixture
 - [x] **1. sentinel-guard** — hook único de política + break-glass auditado *(Guardia)*
-- [ ] **2. git-gates** — git hooks + commitlint + gitleaks + instalador *(Guardia)* · ⏸️ aparcada
+- [ ] **2. git-gates** — git hooks + commitlint + gitleaks (obligatorio) + instalador *(Guardia)* · 🔄 en curso: PR 1/3 (la Esclusa)
 - [ ] **3. ci-gate + spec-coverage CLI** — gate de PR + la matriz escenario↔test como CLI standalone *(Guardia/Método)*
 - [ ] **4. sdd-cycle** — skills del ciclo + doctor + brownfield "spec on first touch" *(Método)*
 - [ ] **5. release-hotfix** — release multicanal por entorno + carril hotfix *(Método)*

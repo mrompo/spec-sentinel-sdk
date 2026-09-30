@@ -3,11 +3,32 @@
 El core no depende de ningún servicio externo; cada adaptador define una interfaz mínima y
 sus implementaciones. Toda skill que use un adaptador declara fallback CLI/manual.
 
-## stack (`sentinel.yaml` del consumidor)
+## stack (`sentinel/adapters/stack.yaml` del consumidor)
 
-Interfaz: `format` · `lint` · `static` · `tests` · `domain-lint` (opcional) + `env-ready`
-(detección de entorno listo, p. ej. contenedor corriendo). Hooks, githooks y CI consumen estos
-comandos sin conocer el stack.
+Interfaz: `format` · `format-check` · `lint` · `static` · `tests` · `domain-lint` (opcional) +
+`env-ready` (detección de entorno listo, p. ej. contenedor corriendo). El Centinela, la Esclusa y
+la Aduana consumen estos comandos sin conocer el stack, a través de [`stack.sh`](stack.sh).
+
+```yaml
+# sentinel/adapters/stack.yaml — plano, una clave por línea
+tests: npm test
+# lint y format-check reciben los ficheros en staging como argumentos
+lint: npm run -s lint --
+format-check: npx prettier --check
+env-ready: docker compose ps --status running --quiet app | grep -q .
+# env-fix: lo que se muestra si env-ready falla
+env-fix: docker compose up -d app
+```
+
+- **Los comentarios van en su propia línea.** Un `#` al final de una línea forma parte del
+  comando (un comando puede contener `#` legítimamente).
+
+- **Sin fichero, sin comandos**: quien lo consume omite con aviso, nunca falla ni adivina.
+- **`stack_detect <dir>`** propone un `stack.yaml` para Node (según los scripts de
+  `package.json`) o Laravel (`artisan` + Pint/PHPStan si están). Solo imprime: lo aplica
+  `setup`, y la persona lo revisa.
+- *(Antes se llamaba `sentinel.yaml` en la raíz; el nombre era ambiguo, hallazgo #27 del panel.
+  El Centinela lo leerá del sitio nuevo en el slice 3b de `git-gates`.)*
 
 Perfiles completos (adaptador + guidelines versionadas + MCP de introspección + docs
 versionadas + skills de paquete — patrón **Laravel Boost**, plan §3):

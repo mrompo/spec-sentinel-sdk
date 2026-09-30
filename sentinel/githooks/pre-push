@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# pre-push — la Esclusa, segundo tiempo: rama protegida, entorno, tests y (nivel Método) specs.
+# Aquí el commit ya existe: la rama de destino se valida sin ventana de TOCTOU, venga de donde
+# venga el push. Patrón skip-vs-fail, como pre-commit.
+# Falsifica: SC-git-gates-04, 05; la excepción auditada, 11-13 (lib/breakglass.sh).
+set -uo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for lib in "$HOOK_DIR/../adapters/stack.sh" "$HOOK_DIR/lib/breakglass.sh"; do
+  source "$lib" 2>/dev/null || {
+    echo "✗ [Esclusa] pre-push: falta $lib — reinstala el SDK (setup)" >&2
+    exit 1
+  }
+done
+
+warn() { echo "⚠ [Esclusa] $1" >&2; }
+ROOT="$(git rev-parse --show-toplevel)"
+POLICY="$ROOT/sentinel/policy.yaml"
+
+# ── 1. Rama protegida ─────────────────────────────────────────────────────────────
+# Una sola fuente: el branch_re de la regla protected-branches de la política (el mismo que usa
+# el Centinela). Sin política, la lista por defecto del SDK.
+protected_re='^(main|master|development|preproduction|production)$'
+if [ -f "$POLICY" ]; then
+  re="$(awk '/^[[:space:]]*- id:[[:space:]]*protected-branches[[:space:]]*$/{inb=1; next}
+             inb && /^[[:space:]]*- id:/{exit}
+             inb && /^[[:space:]]*branch_re:/{sub(/^[[:space:]]*branch_re:[[:space:]]*/, ""); print; exit}' "$POLICY")"
+  [ -n "$re" ] && protected_re="$re"
+fi
+
+# stdin: <ref local> <sha local> <ref remoto> <sha remoto>, una línea por ref que se publica
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  [ -n "${remote_ref:-}" ] || continue
+  branch="${remote_ref#refs/heads/}"
+  [ "$branch" != "$remote_ref" ] || continue    # tags y otras refs: no son ramas
+  if printf '%s\n' "$branch" | grep -Eq "$protected_re"; then
+    cat >&2 <<EOF
+✗ [Esclusa] Push directo a una rama protegida: «${branch}».
+    Publica tu rama feature/fix/hotfix y abre una PR: la integración pasa por la Aduana.
+    (La lista sale de la regla protected-branches de sentinel/policy.yaml.)
+EOF
+    esclusa_reject pre-push "push a rama protegida: ${branch}"
+  fi
+done
+
+# ── 2. Entorno y tests del adaptador ──────────────────────────────────────────────
+fail=0; why=""
+if ! stack_available; then
+  warn "sin adaptador de stack ($(stack_file)): se omiten env-ready y tests"
+else
+  stack_env_ready || esclusa_reject pre-push "entorno no listo"
+  tests_cmd="$(stack_get tests)"
+  if [ -n "$tests_cmd" ]; then
+    out="$(bash -c "$tests_cmd" 2>&1)"; rc=$?
+    case "$rc" in
+      0) ;;
+      127) warn "«tests» está declarado pero «${tests_cmd}» no está instalado: se omite" ;;
+      *) echo "✗ [Esclusa] La suite de tests está en rojo («${tests_cmd}»):" >&2
+         printf '%s\n' "$out" | tail -40 | sed 's/^/    /' >&2
+         fail=1; why="${why:+$why, }tests" ;;
+    esac
+  else
+    warn "el adaptador no declara «tests»: se omite la suite"
+  fi
+fi
+
+# ── 3. Specs (solo nivel Método: sdd: true en la política y openspec/ en el repo) ──
+sdd="$( [ -f "$POLICY" ] && sed -nE 's/^sdd:[[:space:]]*([a-z]+).*/\1/p' "$POLICY" | head -1 )"
+if [ "$sdd" = "true" ] && [ -d "$ROOT/openspec" ]; then
+  OPENSPEC="${SENTINEL_OPENSPEC_BIN:-openspec}"
+  if command -v "$OPENSPEC" >/dev/null 2>&1; then
+    out="$(cd "$ROOT" && "$OPENSPEC" validate --all --strict 2>&1)" || {
+      echo "✗ [Esclusa] openspec validate --strict ha fallado:" >&2
+      printf '%s\n' "$out" | tail -40 | sed 's/^/    /' >&2
+      fail=1; why="${why:+$why, }openspec"
+    }
+  else
+    warn "openspec no está instalado: se omite la validación de specs (la Aduana la hará obligatoria)"
+  fi
+fi
+
+[ "$fail" -eq 0 ] || esclusa_reject pre-push "$why"
+exit 0
