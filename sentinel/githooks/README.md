@@ -65,8 +65,9 @@ Centinela: `fecha | esclusa:<hook> | qué se rechazaba | motivo`. Reglas:
 - `git commit --no-verify` salta la Esclusa **sin rastro**: no se puede impedir porque es de git,
   pero con esta vía deja de hacer falta. Al agente se lo bloquea el Centinela, y la Aduana
   (fase 3) detectará en CI lo que entre sin pasar por la Esclusa.
-- ⚠️ La llave solo es segura si el agente no puede crearla. **Hoy el Centinela aún no lo impide**:
-  se corrige en la PR 2/3 de `git-gates` (slice 6b).
+- La llave solo es segura si el agente no puede crearla: el Centinela se lo impide, igual que
+  editar los hooks de la Esclusa, su librería o `stack.sh`, o usar sus variables de prueba
+  (SC-git-gates-14, 15). Por eso, cambiar la Esclusa es cosa de una persona, como el Centinela.
 
 ## Secretos: gitleaks y la base de patrones
 
