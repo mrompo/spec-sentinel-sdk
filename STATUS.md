@@ -11,7 +11,7 @@
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `propose`, espera el gate Intención |
-| **Loop** | `git-gates`: PR 1/3 (la Esclusa: `commit-msg`, `pre-commit`, `pre-push`) en revisión · siguen 2/3 (ficheros protegidos, 👤) y 3/3 (instalación) |
+| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` · PR 2/3 (ficheros protegidos, aplicada por una persona) en revisión · sigue 3/3 (instalación) |
 | **Niveles entregados** | **Guardia** al 50%: el puesto Centinela operativo; faltan Esclusa (fase 2) y Aduana (fase 3) |
 
 ## Roadmap
@@ -51,11 +51,6 @@
 | Enforcement real | **Puesto Centinela activo en este repo** (`.claude/settings.json`): el agente no puede commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests ni desarmar el propio guard. Esclusa y Aduana llegan en fases 2-3 |
 
 ## Deudas / pendientes conscientes
-
-- 🔴 **El agente puede crear la llave (`sentinel/.override`)**. La política no la protege y ningún
-  caso del banco lo comprueba: el break-glass de un solo uso se lo puede conceder el propio
-  agente. Detectado el 2026-09-30. Se corrige en la PR 2/3 de `git-gates` (slice 6b), que
-  toca la política y por tanto la aplica una persona.
 
 - El artefacto de revisión del plan menciona aún `docs/02`/`docs/03` (la investigación se movió
   al repo hermano `../spec-sentinel-research/`); se corrige en la próxima republicación.

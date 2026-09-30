@@ -137,11 +137,8 @@ confirmación · nada de `.env` de producción.
 añade su caso en `fixture/hooks/cases/`. Sin test, la regla no entra.
 
 **Si un bloqueo te frena** (vía de emergencia auditada). Escribe el motivo en un fichero
-**desde tu terminal**. La llave la crea siempre una persona, nunca el agente.
-
-> ⚠️ **Hoy el Centinela todavía no impide que el agente escriba `sentinel/.override`** (hallazgo
-> del 2026-09-30, al diseñar la excepción de la Esclusa). Se corrige en la PR 2/3 de `git-gates`.
-> Hasta entonces, si ves aparecer una llave que no has escrito tú, bórrala y revisa la bitácora.
+**desde tu terminal**. La llave la crea siempre una persona: el Centinela impide que el agente
+la escriba (SC-git-gates-14).
 
 
 ```bash
