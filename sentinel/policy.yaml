@@ -27,13 +27,17 @@ rules:
   # (hallazgo #1 del panel adversarial: sin esto, una sola escritura anula el Centinela)
   - id: self-protection
     tool: Bash|Edit|Write|MultiEdit|NotebookEdit
-    path_re: (sentinel/(hooks/|policy\.yaml|overrides\.log)|\.claude/settings|AGENTS\.md$)
+    # La llave (.override) también: si el agente pudiera escribirla, se concedería a sí mismo
+    # el break-glass (hallazgo del 2026-09-30, SC-git-gates-14). La Esclusa entra con sus hooks,
+    # su librería y el lector del adaptador (SC-git-gates-15); su README y el stack.yaml del
+    # consumidor siguen siendo editables.
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy\.yaml|overrides\.log|\.override)|\.claude/settings|AGENTS\.md$)
     mode: block
-    reason: No se modifica ni borra el propio enforcement (hooks, política, log de overrides, cableado) — hazlo en un cambio OpenSpec revisado por un humano
+    reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
 
   - id: no-hook-disabling
     tool: Bash
-    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_(OVERRIDE|CONFIRM|POLICY|OVERRIDES_LOG)=)
+    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_(OVERRIDE|CONFIRM|POLICY|OVERRIDES_LOG|GITLEAKS_BIN|OPENSPEC_BIN|STACK)=)
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 
