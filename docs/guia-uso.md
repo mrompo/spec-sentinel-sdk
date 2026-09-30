@@ -137,7 +137,12 @@ confirmación · nada de `.env` de producción.
 añade su caso en `fixture/hooks/cases/`. Sin test, la regla no entra.
 
 **Si un bloqueo te frena** (vía de emergencia auditada). Escribe el motivo en un fichero
-**desde tu terminal** (el agente no puede crearlo: está protegido):
+**desde tu terminal**. La llave la crea siempre una persona, nunca el agente.
+
+> ⚠️ **Hoy el Centinela todavía no impide que el agente escriba `sentinel/.override`** (hallazgo
+> del 2026-09-30, al diseñar la excepción de la Esclusa). Se corrige en la PR 2/3 de `git-gates`.
+> Hasta entonces, si ves aparecer una llave que no has escrito tú, bórrala y revisa la bitácora.
+
 
 ```bash
 echo "hotfix INC-123 aprobado por tech lead" > sentinel/.override
@@ -150,12 +155,44 @@ escribir, la excepción **se deniega**: sin auditoría no hay excepción.
 Para toda una sesión (úsalo con cuidado, afecta a todas las reglas):
 `SENTINEL_OVERRIDE="motivo" claude` al arrancar.
 
+**La misma llave vale para la Esclusa** (los git hooks): si un commit o un push se rechaza,
+la llave permite **ese** rechazo y lo registra en la bitácora como `esclusa:<hook>`. Si el
+mismo commit lo rechazan dos hooks (p. ej. `pre-commit` y luego `commit-msg`), hacen falta dos
+llaves: cada una cubre un solo rechazo. **No uses `git commit --no-verify`**: salta la Esclusa
+sin dejar rastro, y la Aduana (fase 3) lo detectará igual.
+
 Los modos `confirm` no necesitan override: el propio Claude Code te pide la aprobación de
 **esa** acción concreta.
+
+> **Importante al instalar**: los hooks se cargan **al arrancar la sesión** del agente. Si
+> acabas de instalarlos (o de cambiar `.claude/settings.json`), reinicia la sesión: hasta
+> entonces las reglas no se aplican, aunque los ficheros ya estén ahí.
 
 **Qué más hacen los hooks**: al arrancar sesión el agente recibe la rama y el cambio activo
 sin pedirlo; tras cada edición, el fichero se autoformatea si tu proyecto declara un comando
 `format` en su adaptador de stack (si no, no pasa nada).
+
+### Requisitos de la Esclusa: gitleaks es obligatorio
+
+La Esclusa (los git hooks, fase 2) necesita **[gitleaks](https://github.com/gitleaks/gitleaks)**
+para detectar secretos antes de cada commit. **No es opcional**: sin gitleaks, el `pre-commit`
+rechaza el commit y muestra cómo instalarlo. Un secreto que llega a la historia de git es caro
+de sacar, y cuesta menos exigir la herramienta que confiar en que cada máquina la tenga.
+
+| Sistema | Instalación |
+|---|---|
+| macOS | `brew install gitleaks` |
+| Linux | Binario de [releases](https://github.com/gitleaks/gitleaks/releases), o `go install github.com/zricethezav/gitleaks/v8@latest` |
+| Windows | `scoop install gitleaks` |
+
+Comprueba que está: `gitleaks version`. Vale cualquier v8: la Esclusa usa
+`gitleaks git --pre-commit --staged` en v8.19 o posterior, y `gitleaks protect --staged` en las
+anteriores.
+
+Por debajo de gitleaks corre siempre una base de patrones en bash (claves de AWS, claves
+privadas, tokens de GitHub y Slack), como segunda red. El resto de herramientas del
+[adaptador de stack](../sentinel/adapters/README.md) sí son opcionales: si falta una, se omite
+con aviso. Detalle en [`sentinel/githooks/README.md`](../sentinel/githooks/README.md).
 
 ## Glosario mínimo
 

@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# pre-commit — la Esclusa, primer tiempo: secretos, entorno, formato y lint, SOLO sobre lo que
+# está en staging. Los tests no se ejecutan aquí: son del segundo tiempo (pre-push).
+# Patrón skip-vs-fail: herramienta ausente → aviso y se sigue; entorno roto → fallo duro con
+# la instrucción de arreglo. gitleaks es la excepción: es obligatorio. Nunca pasa en silencio.
+# Falsifica: SC-git-gates-03, 06, 07, 08, 09, 10; la excepción auditada, 11-13 (lib/breakglass.sh).
+set -uo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for lib in "$HOOK_DIR/../adapters/stack.sh" "$HOOK_DIR/lib/breakglass.sh"; do
+  source "$lib" 2>/dev/null || {
+    echo "✗ [Esclusa] pre-commit: falta $lib — reinstala el SDK (setup)" >&2
+    exit 1
+  }
+done
+
+warn() { echo "⚠ [Esclusa] $1" >&2; }
+fail=0; why=""
+# bad <mensaje> <etiqueta> → rechazo acumulado; la etiqueta va a la bitácora si hay excepción
+bad() { echo "✗ [Esclusa] $1" >&2; fail=1; why="${why:+$why, }$2"; }
+
+# Ficheros en staging (añadidos, copiados, modificados, renombrados); los borrados no se evalúan
+files=()
+while IFS= read -r -d '' f; do files+=("$f"); done \
+  < <(git diff --cached --name-only --diff-filter=ACMR -z)
+[ "${#files[@]}" -gt 0 ] || exit 0
+
+# ── 1. Secretos ───────────────────────────────────────────────────────────────────
+# Base de patrones: corre siempre, sin dependencias, como segunda red por debajo de gitleaks.
+# Se evalúa el contenido STAGEADO (:fichero), no el del árbol de trabajo.
+SECRET_RE='(A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z0-9]{16}|-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}'
+leaks=""
+for f in "${files[@]}"; do
+  lines="$(git show ":$f" 2>/dev/null | grep -nIE "$SECRET_RE" | cut -d: -f1 | tr '\n' ',' || true)"
+  [ -n "$lines" ] && leaks="${leaks}    ${f} (línea ${lines%,})"$'\n'
+done
+if [ -n "$leaks" ]; then
+  bad "Posible secreto en staging (el contenido no se muestra):" "secretos"
+  printf '%s' "$leaks" >&2
+  echo "    Sácalo del fichero y usa una variable de entorno o un gestor de secretos." >&2
+fi
+
+# gitleaks es OBLIGATORIO (decisión 6 de git-gates): sin él, el entorno está mal configurado.
+GITLEAKS="${SENTINEL_GITLEAKS_BIN:-gitleaks}"
+if ! command -v "$GITLEAKS" >/dev/null 2>&1; then
+  cat >&2 <<'MSG'
+✗ [Esclusa] gitleaks es obligatorio y no está instalado: el commit no puede comprobar secretos.
+    Instálalo y vuelve a commitear:
+      macOS:    brew install gitleaks
+      Linux:    descarga el binario de https://github.com/gitleaks/gitleaks/releases
+                (o: go install github.com/zricethezav/gitleaks/v8@latest)
+      Windows:  scoop install gitleaks
+    Detalle en sentinel/githooks/README.md §Requisitos.
+MSG
+  esclusa_reject pre-commit "gitleaks no instalado"
+fi
+# v8.19+ usa «gitleaks git --pre-commit --staged»; las anteriores, «gitleaks protect --staged»
+if "$GITLEAKS" git --help >/dev/null 2>&1; then
+  out="$("$GITLEAKS" git --pre-commit --staged --no-banner --redact 2>&1)"; rc=$?
+else
+  out="$("$GITLEAKS" protect --staged --no-banner --redact 2>&1)"; rc=$?
+fi
+case "$rc" in
+  0) ;;
+  1) bad "gitleaks ha encontrado secretos en staging:" "gitleaks"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+  *) bad "gitleaks ha fallado (exit $rc) — revisa su instalación:" "gitleaks-error"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+esac
+
+# ── 2. Comandos del adaptador de stack ────────────────────────────────────────────
+if ! stack_available; then
+  warn "sin adaptador de stack ($(stack_file)): se omiten env-ready, format-check y lint"
+  [ "$fail" -eq 0 ] || esclusa_reject pre-commit "$why"
+  exit 0
+fi
+
+# El entorno roto es fallo duro: si env-ready falla, lo demás no es fiable
+stack_env_ready || esclusa_reject pre-commit "entorno no listo"
+
+# format-check y lint reciben SOLO los ficheros en staging
+for key in format-check lint; do
+  cmd="$(stack_get "$key")"
+  [ -n "$cmd" ] || continue
+  out="$(bash -c "$cmd \"\$@\"" _ "${files[@]}" 2>&1)"; rc=$?
+  case "$rc" in
+    0) ;;
+    127) warn "«${key}» está declarado pero «${cmd}» no está instalado: se omite" ;;
+    *) bad "«${key}» ha fallado:" "$key"; printf '%s\n' "$out" | sed 's/^/    /' >&2 ;;
+  esac
+done
+
+[ "$fail" -eq 0 ] || esclusa_reject pre-commit "$why"
+exit 0

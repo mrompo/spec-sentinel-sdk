@@ -33,7 +33,7 @@ el Centinela no puede garantizar lo cierran la Esclusa y la Aduana):
 
 | Límite | Por qué | Quién lo cubre |
 |---|---|---|
-| **TOCTOU de rama** | El guard evalúa la rama *antes* de ejecutar; `git checkout main && git commit` la cambia después (mitigado: ese patrón pide confirmación) | La **Esclusa**: el `pre-commit`/`commit-msg` valida en el momento del commit, venga de donde venga |
+| **TOCTOU de rama** | El guard evalúa la rama *antes* de ejecutar; `git checkout main && git commit` la cambia después (mitigado: ese patrón pide confirmación) | La **Esclusa**: el `pre-push` rechaza publicar en una rama protegida, venga de donde venga el commit (SC-git-gates-05) |
 | **Regex evadibles** | El matching es sobre la cadena del comando; siempre habrá una grafía no prevista | **Esclusa** y **Aduana**, que actúan sobre el resultado (el commit, la PR), no sobre la intención |
 | **Hook ausente = fail-open** | Si el fichero del hook no existe, el harness recibe exit 127, que no bloquea. Mitigado con la regla `self-protection` (borrarlo o editarlo está bloqueado) | La **Aduana**: CI verifica que el enforcement sigue en su sitio |
 | **Entorno de la sesión** | Un `SENTINEL_OVERRIDE` exportado al arrancar afecta a toda la sesión. Por eso la vía recomendada es el token de un solo uso `sentinel/.override` | Auditoría: todo uso queda en `overrides.log` y es un KPI |
