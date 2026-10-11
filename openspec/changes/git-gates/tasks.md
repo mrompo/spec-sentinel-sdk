@@ -49,10 +49,18 @@
          crear la llave y concederse excepciones a sí mismo (sonda del 2026-09-30: Write,
          `echo >` y `tee` pasan con exit 0). Con su caso en `fixture/hooks/cases/`, que hoy
          ningún caso comprueba; la llave de la Esclusa depende de esto (SC-git-gates-11)
-- [ ] 7. Skill `setup`: instalación de un comando (copia, `core.hooksPath`, fusión de
+- [x] 7. Skill `setup`: instalación de un comando (copia, `core.hooksPath`, fusión de
        `.claude/settings.json` con `jq` o fragmento, backup, detección de stack) — y
        comprobar que gitleaks está instalado, para avisar al instalar y no en el primer commit
-       (SC-sdk-setup-02, 03, 04)
+       (SC-sdk-setup-01..04, 06..08; el 05 a medias hasta el slice 6) — `ai-specs/skills/setup/`
+       (`SKILL.md` + `setup.sh`), 8 casos en `fixture/install/`. Decisiones tomadas en `apply`:
+       - exit 3 = «instalado con pasos pendientes» (sin jq, gitleaks ausente, git hooks
+         previos): nunca éxito silencioso;
+       - solo instala en la **raíz** de un repo (dentro de un subdirectorio caería en el repo
+         padre); backups en `sentinel/.backup/<fecha>/`, fuera de git como la llave;
+       - el stack detectado se escribe en `stack.proposed.yaml`; lo activa una persona;
+       - un `core.hooksPath` previo, **también el global** de la persona, no se pisa: se
+         explica cómo encadenar la Esclusa (afecta al slice 9 si la máquina tiene uno global)
 - [ ] 8. Caso de instalación end-to-end en `demo-app/`: tras `setup`, los gates bloquean
        (SC-sdk-setup-01) — DoD de la fase
 - [ ] 9. 👤 Auto-instalación en este repo (`core.hooksPath` apuntando a `sentinel/githooks`),
