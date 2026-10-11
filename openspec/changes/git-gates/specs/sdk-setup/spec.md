@@ -47,3 +47,29 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
 - **WHEN** se reinstala o actualiza el SDK en un repo cuya `policy.yaml` fue personalizada
 - **THEN** la política del consumidor se conserva intacta y solo se actualiza la distribuida
   (`policy.default.yaml`)
+
+#### Scenario: Git hooks previos del consumidor (SC-sdk-setup-08)
+
+- **WHEN** se instala en un repo que ya usa otros git hooks (`core.hooksPath` propio o hooks en
+  el directorio de hooks de git)
+- **THEN** `setup` no cambia `core.hooksPath`, termina con «pasos pendientes» (exit 3) y explica
+  cómo encadenar la Esclusa a mano
+
+### Requirement: La instalación avisa de lo que no puede resolver sola
+
+`setup` SHALL detectar el stack y proponer el adaptador sin aplicarlo, y SHALL comprobar las
+herramientas obligatorias de la Esclusa en el momento de instalar, no en el primer commit.
+Cuando queda un paso manual, SHALL terminar con exit 3 («instalado, con pasos pendientes») y
+nunca con éxito silencioso.
+
+#### Scenario: Stack detectado, no aplicado (SC-sdk-setup-06)
+
+- **WHEN** se instala en un repo Node o Laravel sin `sentinel/adapters/stack.yaml`
+- **THEN** se escribe `sentinel/adapters/stack.proposed.yaml` con lo detectado y no se crea
+  `stack.yaml`: lo activa una persona tras revisarlo. Si `stack.yaml` ya existe, no se propone nada
+
+#### Scenario: gitleaks ausente al instalar (SC-sdk-setup-07)
+
+- **WHEN** se instala en una máquina sin gitleaks
+- **THEN** la instalación se completa, la salida da la instrucción de instalación de gitleaks
+  y `setup` termina con exit 3
