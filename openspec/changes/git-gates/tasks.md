@@ -2,7 +2,7 @@
 
 **Objetivo**: el nivel Guardia instalable en cualquier repo con un comando, con la Esclusa real.
 **Ritmo**: un slice = caso del banco en rojo → implementación mínima → verde → commit atómico.
-**Posición en el Loop**: PR 1/3 ✅ en `main` · PR 2/3 en Delivery · `merge` — parche aplicado por una persona (2026-09-30).
+**Posición en el Loop**: PR 1/3 ✅ en `main` (#3) · PR 2/3 ✅ en `main` (#4) · PR 3/3 en `apply` (2026-10-12).
 
 ## Engine · antes de teclear
 
