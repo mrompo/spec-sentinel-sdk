@@ -15,7 +15,7 @@ rules:
     mode: warn
     reason: aviso de prueba
 EOF
-run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$WS/p1.yaml"
+run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$WS/p1.yaml" SENTINEL_POLICY="$NO_POLICY"
 assert_exit 0 || rc=1
 assert_err_contains "warn:demo" || rc=1
 
@@ -28,24 +28,24 @@ rules:
     mode: block
     reason: usa el tool: correcto o revisa el mode: elegido
 EOF
-run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$WS/p2.yaml"
+run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$WS/p2.yaml" SENTINEL_POLICY="$NO_POLICY"
 assert_exit 2 || rc=1
 
 # c) Política con 'rules:' pero sin reglas → fail-closed (no "todo pasa")
 printf 'version: 1\nrules:\n' > "$WS/p3.yaml"
-run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$WS/p3.yaml"
+run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$WS/p3.yaml" SENTINEL_POLICY="$NO_POLICY"
 assert_exit 2 || rc=1
 assert_err_contains "sin reglas" || rc=1
 
 # d) Regla sin mode: → error explícito, no regla ignorada
 printf 'version: 1\nrules:\n  - id: rota\n    tool: Edit\n' > "$WS/p4.yaml"
-run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$WS/p4.yaml"
+run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$WS/p4.yaml" SENTINEL_POLICY="$NO_POLICY"
 assert_exit 2 || rc=1
 assert_err_contains "sin 'mode:'" || rc=1
 
 # e) Regex inválida → error de política, no fail-open
 printf 'version: 1\nrules:\n  - id: mala\n    tool: Edit\n    path_re: a(\n    mode: block\n    reason: x\n' > "$WS/p5.yaml"
-run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$WS/p5.yaml"
+run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$WS/p5.yaml" SENTINEL_POLICY="$NO_POLICY"
 assert_exit 2 || rc=1
 assert_err_contains "regex inválida" || rc=1
 

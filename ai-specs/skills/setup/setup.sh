@@ -5,9 +5,10 @@
 #
 # Lo invoca la skill `setup` (SKILL.md, al lado); también se puede ejecutar a mano. Idempotente:
 # una segunda ejecución no cambia nada. Nunca pisa la configuración del consumidor:
-#   - lo distribuido (hooks, githooks, lector del adaptador) se instala o actualiza, con backup si
-#     el fichero del consumidor difería;
+#   - lo distribuido (hooks, githooks, lector del adaptador, policy.default.yaml) se instala o
+#     actualiza, con backup si el fichero del consumidor difería;
 #   - lo del consumidor (policy.yaml, overrides.log, stack.yaml) solo se crea si no existe;
+#     policy.yaml nace sin reglas: las del SDK viven en policy.default.yaml y se evalúan antes;
 #   - .claude/settings.json se fusiona con jq; sin jq, o si la fusión no es segura, se deja
 #     sentinel/settings.fragment.json y se explica el paso manual;
 #   - core.hooksPath solo se activa si el repo no usa ya otros git hooks.
@@ -30,7 +31,7 @@ note() { echo "· $1"; }
 todo() { echo "⚠ PENDIENTE: $1"; pending=1; }
 
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
-[ -f "$SDK_ROOT/sentinel/hooks/sentinel-guard.sh" ] && [ -f "$SDK_ROOT/sentinel/policy.yaml" ] \
+[ -f "$SDK_ROOT/sentinel/hooks/sentinel-guard.sh" ] && [ -f "$SDK_ROOT/sentinel/policy.default.yaml" ] \
   || die "SDK incompleto en $SDK_ROOT: falta sentinel/ — ejecuta setup.sh desde una copia íntegra del SDK"
 [ -d "${1:-.}" ] || die "no existe el directorio ${1:-.}"
 TARGET="$(cd "${1:-.}" && pwd -P)"
@@ -66,20 +67,38 @@ else
     mkdir -p "$(dirname "$dst")" && cp "$src" "$dst" || die "no se pudo copiar $rel"
     [ -x "$src" ] && chmod +x "$dst"
     updated=$((updated + 1))
-  done < <(cd "$SDK_ROOT" && find sentinel/README.md sentinel/hooks sentinel/githooks sentinel/adapters \
+  done < <(cd "$SDK_ROOT" && find sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters \
              -type f ! -name '.*' ! -name stack.yaml ! -name stack.proposed.yaml | LC_ALL=C sort)
   [ "$updated" -gt 0 ] && ok "enforcement instalado o actualizado ($updated ficheros en sentinel/)" \
     || ok "enforcement al día"
 fi
 
 # ── 2. Lo del consumidor (solo se crea si falta) ─────────────────────────────────────────
-# TODO slice 6: con la política separada, aquí se actualizará policy.default.yaml y policy.yaml
-# quedará solo para las reglas propias del consumidor (SC-sdk-setup-05).
-if [ -f "$TARGET/sentinel/policy.yaml" ]; then
+# La política del consumidor solo AÑADE reglas: las del SDK (policy.default.yaml) se evalúan
+# antes y no se sustituyen (SC-sentinel-guard-17..19, SC-sdk-setup-05). Nivel Método (sdd: true)
+# solo si el repo ya trabaja con OpenSpec.
+CP="$TARGET/sentinel/policy.yaml"
+policy_ids() { sed -nE 's/^[[:space:]]*-[[:space:]]+id:[[:space:]]*([^[:space:]]+).*/\1/p' "$1" | LC_ALL=C sort -u; }
+if [ -f "$CP" ]; then
   ok "política del consumidor conservada (sentinel/policy.yaml)"
+  # Una política anterior a la separación repite las reglas del SDK: el Centinela la rechazaría
+  dup="$(LC_ALL=C comm -12 <(policy_ids "$CP") <(policy_ids "$SDK_ROOT/sentinel/policy.default.yaml") | tr '\n' ' ')"
+  [ -z "$dup" ] || todo "sentinel/policy.yaml repite reglas del SDK (${dup% }): ahora viven en
+    sentinel/policy.default.yaml y el Centinela rechaza los ids duplicados. Deja en policy.yaml
+    solo tus reglas propias (es un fichero protegido: lo edita una persona)"
 else
-  cp "$SDK_ROOT/sentinel/policy.yaml" "$TARGET/sentinel/policy.yaml" || die "no se pudo crear la política"
-  ok "política creada (sentinel/policy.yaml) — es tuya: adáptala en un cambio revisado"
+  sdd=false; [ -d "$TARGET/openspec" ] && sdd=true
+  cat >"$CP" <<EOF || die "no se pudo crear la política del consumidor"
+# sentinel/policy.yaml — la política de ESTE proyecto (puesto Centinela).
+# Las reglas del SDK viven en sentinel/policy.default.yaml: se evalúan antes que estas y setup
+# las actualiza. Aquí solo se AÑADEN reglas propias (mismo esquema); un id del SDK repetido es
+# un error de política. Fichero protegido: se cambia en un cambio revisado por una persona.
+version: 1
+sdd: $sdd
+
+rules:
+EOF
+  ok "política del consumidor creada (sentinel/policy.yaml, sdd: $sdd) — sin reglas propias aún"
 fi
 [ -f "$TARGET/sentinel/overrides.log" ] || { : >"$TARGET/sentinel/overrides.log" && ok "bitácora creada (sentinel/overrides.log)"; }
 

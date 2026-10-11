@@ -25,4 +25,11 @@ printf 'version: 1\nsdd: false\nrules:\n' >"$WS/sentinel/policy.yaml"
 git_in_ws commit -q --allow-empty -m "feat: otro"
 gh_push HEAD:feature/fixture SENTINEL_OPENSPEC_BIN="$WS/.bin/openspec"
 assert_exit 0 || fail_case "con sdd: false no debería validar las specs"
+
+# SC-git-gates-16: si la del consumidor no declara sdd:, manda la distribuida
+printf 'version: 1\nrules:\n' >"$WS/sentinel/policy.yaml"
+printf 'version: 1\nsdd: true\nrules:\n' >"$WS/sentinel/policy.default.yaml"
+git_in_ws commit -q --allow-empty -m "feat: uno más"
+gh_push HEAD:feature/fixture SENTINEL_OPENSPEC_BIN="$WS/.bin/openspec"
+assert_exit 1 || fail_case "sin sdd: en el consumidor debería heredar sdd: true de la distribuida"
 cleanup_git_workspace

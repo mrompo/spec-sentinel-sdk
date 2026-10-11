@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SC-git-gates-05: push directo a una rama protegida → rechazado. Aquí el commit ya existe:
 # no hay ventana de TOCTOU. La lista sale de la regla protected-branches de la política
-# (la misma fuente que el Centinela); sin política, se usa la lista por defecto.
+# distribuida (la misma fuente que el Centinela, SC-git-gates-16); sin ella, la lista por defecto.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh" || exit 1
 
 mk_git_workspace
@@ -21,9 +21,9 @@ assert_exit 0 || fail_case "rechazó una rama feature"
 gh_push HEAD:mainline
 assert_exit 0 || fail_case "«mainline» no es «main»"
 
-# Con política: manda su branch_re (aquí solo «trunk» está protegida)
+# Con política distribuida: manda su branch_re (aquí solo «trunk» está protegida)
 mkdir -p "$WS/sentinel"
-cat >"$WS/sentinel/policy.yaml" <<'EOF'
+cat >"$WS/sentinel/policy.default.yaml" <<'EOF'
 version: 1
 sdd: false
 rules:

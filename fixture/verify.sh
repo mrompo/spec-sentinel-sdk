@@ -12,7 +12,9 @@ ok()  { echo "✓ $1"; }
 for d in docs ai-specs/agents ai-specs/skills sentinel/hooks sentinel/githooks sentinel/ci sentinel/adapters openspec/changes fixture; do
   [ -d "$d" ] && ok "dir $d" || err "falta el directorio $d"
 done
-[ -f sentinel/policy.yaml ] && ok "sentinel/policy.yaml" || err "falta sentinel/policy.yaml"
+for f in sentinel/policy.default.yaml sentinel/policy.yaml; do
+  [ -f "$f" ] && ok "$f" || err "falta $f (política distribuida + del consumidor, slice 6 de git-gates)"
+done
 [ -f openspec/project.md ] && ok "openspec/project.md" || err "falta openspec/project.md"
 
 # Symlinks multi-copilot → fuente única (SC-sdk-method-03/04)

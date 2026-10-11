@@ -13,7 +13,7 @@ assert_exit 0 || fail_case "la instalación en un repo limpio debería terminar 
 # El enforcement está en su sitio y los git hooks son ejecutables
 for f in sentinel/hooks/sentinel-guard.sh sentinel/githooks/commit-msg sentinel/githooks/pre-commit \
          sentinel/githooks/pre-push sentinel/githooks/lib/breakglass.sh sentinel/adapters/stack.sh \
-         sentinel/policy.yaml sentinel/overrides.log; do
+         sentinel/policy.default.yaml sentinel/policy.yaml sentinel/overrides.log; do
   [ -f "$WS/$f" ] || fail_case "falta $f tras instalar"
 done
 [ -x "$WS/sentinel/githooks/commit-msg" ] || fail_case "commit-msg no es ejecutable"
