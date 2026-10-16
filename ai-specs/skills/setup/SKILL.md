@@ -24,14 +24,18 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
 1. **Localiza el SDK y la raíz del repo.** `setup.sh` vive en `<sdk>/ai-specs/skills/setup/`.
    El destino tiene que ser la **raíz** de un repo git (si no, el script falla sin escribir nada).
 2. **Ejecuta** `bash <sdk>/ai-specs/skills/setup/setup.sh <raíz-del-repo>` y lee la salida entera.
+   El Centinela pide aprobación a la persona antes de ejecutarlo: instalar reescribe el
+   enforcement y el cableado, así que lo decide ella.
 3. **Interpreta el código de salida**:
    - `0` → instalado. Sigue en el paso 5.
    - `3` → instalado **con pasos pendientes** (líneas `⚠ PENDIENTE`). Paso 4.
-   - `1` → error; no se ha dejado nada a medias. Muestra el motivo y para.
+   - `1` → error. Si falló una comprobación previa no se escribió nada; si falló a mitad, lo
+     hecho se queda y volver a ejecutar es seguro. Muestra el motivo y para.
 4. **Pasos pendientes**: preséntalos a la persona uno a uno, con la instrucción literal del
-   script. Los que tocan su máquina o su configuración (instalar gitleaks o jq, encadenar sus
-   git hooks, fusionar `sentinel/settings.fragment.json` a mano) **los decide y los hace ella**.
-   Después, vuelve al paso 2: la instalación está cerrada cuando el script sale con `0`.
+   script. Los que tocan su máquina o su configuración (instalar gitleaks o jq, poner las
+   líneas que encadenan la Esclusa en sus git hooks, fusionar `sentinel/settings.fragment.json`,
+   añadir excepciones al `.gitignore`) **los decide y los hace ella**. Después, vuelve al paso 2:
+   `setup` reconoce lo que ya está hecho, y la instalación está cerrada cuando sale con `0`.
 5. **Adaptador de stack**: si hay `sentinel/adapters/stack.proposed.yaml`, enséñaselo a la
    persona. Solo con su visto bueno se renombra a `stack.yaml`. Sin adaptador, la Esclusa omite
    format, lint y tests con aviso, así que no es bloqueante.

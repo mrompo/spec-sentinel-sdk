@@ -126,7 +126,10 @@ git checkout -b chore/spec-sentinel
 bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh .
 ```
 
-También puedes pedírselo al agente: la skill `setup` ejecuta el script y te explica la salida.
+Si prefieres que lo haga el agente, expón la skill para Claude Code
+(`ln -s <ruta-al-sdk>/ai-specs/skills/setup ~/.claude/skills/setup`) y dale la ruta del SDK:
+ejecutará `setup` y te explicará la salida. Antes, el Centinela te pedirá aprobación, porque
+instalar reescribe el enforcement y lo decides tú.
 
 | Qué hace | Qué deja en tu repo |
 |---|---|
@@ -143,17 +146,24 @@ También puedes pedírselo al agente: la skill `setup` ejecuta el script y te ex
 |---|---|---|
 | `0` | Instalado | Commitea (abajo) |
 | `3` | Instalado con pasos pendientes (líneas `⚠ PENDIENTE`) | Resuélvelos y vuelve a ejecutar `setup` hasta que salga `0` |
-| `1` | Error, sin nada a medias | Lee el motivo y corrígelo |
+| `1` | Error | Lee el motivo y corrígelo. Si falló a mitad, lo hecho se queda y volver a ejecutar `setup` es seguro |
 
-**Los pendientes habituales**:
+**Los pendientes habituales** (cuando los resuelves, `setup` lo reconoce y sale con `0`):
 
 - **gitleaks no está instalado** → instálalo (tabla en «Requisitos de la Esclusa», más abajo).
-- **Ya usas otros git hooks** (husky, un `core.hooksPath` propio o global) → `setup` no los
-  silencia: te dice cómo encadenar la Esclusa al final de los tuyos. Si ese `core.hooksPath` no
-  tiene hooks en tu repo (por ejemplo, uno global cuya carpeta no existe ahí), no hay nada que
-  encadenar: te da el comando que la activa, que solo afecta a ese repo.
+- **Ya usas otros git hooks** (husky, `.git/hooks`, un `core.hooksPath` propio o global) →
+  `setup` no los toca: te da unas líneas para el principio de tus `commit-msg`, `pre-commit` y
+  `pre-push` (con husky, en `.husky/<hook>`). Funcionan aunque tu hook lea las refs del push,
+  como git-lfs, y no hacen nada en los repos que no tienen la Esclusa. Si ese `core.hooksPath`
+  no tiene hooks en tu repo (por ejemplo, uno global cuya carpeta no existe ahí), no hay nada
+  que encadenar: te da el comando que activa la Esclusa, que solo afecta a ese repo.
 - **No tienes jq** → deja `sentinel/settings.fragment.json` para que lo copies a mano en
   `.claude/settings.json`.
+- **Tu `.gitignore` deja fuera algo que hay que versionar** (la plantilla de Node ignora
+  `*.log`; hay repos que ignoran `.claude/`) → te dice qué fichero, qué regla lo ignora y la
+  excepción que hay que añadir.
+- **El Centinela lo deniega todo** → tu `sentinel/policy.yaml` tiene un error; `setup` te
+  muestra el motivo.
 
 El **stack propuesto** no es un pendiente: revisa `stack.proposed.yaml` y, si te vale,
 renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests con un aviso.
@@ -167,9 +177,14 @@ git commit --allow-empty -m prueba      # comprobación: la Esclusa tiene que re
 
 Y reinicia la sesión del agente para que cargue el Centinela (ver «Importante al instalar»).
 
-**Para actualizar**, vuelve a ejecutar `setup`. Actualiza lo que es del SDK (si lo habías
-tocado, guarda tu versión en `sentinel/.backup/`) y nunca toca lo tuyo: `policy.yaml`,
-`stack.yaml` ni la bitácora.
+**Cada persona que clone el repo** tiene que activar la Esclusa en su clon: `core.hooksPath`
+es configuración local y no viaja con git. Basta con `git config core.hooksPath
+sentinel/githooks` (o con ejecutar `setup`). El Centinela sí llega con el repo y, al arrancar la
+sesión, avisa si la Esclusa no está activa en ese clon.
+
+**Para actualizar**, vuelve a ejecutar `setup`. Actualiza lo que es del SDK, también el
+cableado de `.claude/settings.json` (si lo habías tocado, guarda tu versión en
+`sentinel/.backup/`), y nunca toca lo tuyo: `policy.yaml`, `stack.yaml` ni la bitácora.
 
 ## Shield · las reglas estrictas
 
@@ -186,16 +201,20 @@ en la fase 3. Cada regla vigila una acción y decide en uno de tres modos:
 | `confirm` | No se ejecuta sin aprobación humana explícita |
 | `warn` | Pasa, pero deja un aviso visible |
 
-**Reglas activas hoy**: no commitear en ramas protegidas (`main`, `development`,
+**Reglas activas hoy**: no commitear en ramas protegidas (`main`, `master`, `development`,
 `preproduction`, `production`) · no force-push · no editar CHANGELOG, lockfiles ni specs
 archivadas · no meter `.skip()`/`.only()` en tests · aviso al tocar config de cobertura ·
 aviso al editar `src/` sin cambio activo (solo en el nivel Método) · `rm -rf`/`DROP`/`reset --hard` piden
-confirmación · nada de `.env` de producción.
+confirmación · ejecutar el instalador pide confirmación · nada de `.env` de producción.
+
+**Las ramas protegidas las fija el SDK**: tu proyecto no puede cambiar esa lista. Si trabajas
+con `develop` o `staging`, de momento no quedan protegidas; ampliarla irá en un cambio aparte.
 
 **Cómo añadir una regla**: en tu proyecto, añádela a `sentinel/policy.yaml` (id único + qué
-vigila + `mode` + `reason`). Las reglas del SDK se evalúan antes que las tuyas: puedes añadir
-protección, no quitarla, y repetir un id del SDK es un error de política. Las dos políticas son
-ficheros protegidos: las cambia una persona, no el agente. En el SDK, las reglas van en
+vigila + `mode` + `reason`). Si una acción toca una regla del SDK y una tuya, gana la más
+estricta (`block` antes que `confirm`, `confirm` antes que `warn`): puedes añadir protección, no
+quitarla, y repetir un id del SDK es un error de política. Las dos políticas son ficheros
+protegidos: las cambia una persona, no el agente. En el SDK, las reglas van en
 `policy.default.yaml` y cada una lleva su caso en `fixture/hooks/cases/`. Sin test, la regla
 no entra.
 

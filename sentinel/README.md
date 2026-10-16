@@ -19,9 +19,11 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
   Arquetipos: *block* / *auto-fix* / *inject* (patrón duoclaude).
 - **Una política, dos ficheros**: las reglas viven en la política, no en N scripts (decisión
   plan §11). `policy.default.yaml` trae las del SDK y la actualiza `setup`; `policy.yaml` es la
-  del proyecto y solo **añade** reglas. El Centinela evalúa primero las del SDK, así que el
-  proyecto no puede relajarlas, y repetir un `id` del SDK es un error de política
-  (fail-closed). `sdd:` lo declara el proyecto; si no lo hace, vale el del SDK (`false`).
+  del proyecto y solo **añade** protección. En cada fichero decide la primera regla que
+  matchea; entre los dos, la decisión más estricta (`block` > `confirm` > `warn`; a igualdad,
+  la del SDK), así que el proyecto no puede relajar el SDK, y repetir un `id` del SDK es un
+  error de política (fail-closed). `sdd:` lo declara el proyecto; si no lo hace, vale el del
+  SDK (`false`).
 - **Break-glass auditado** (obligatorio desde fase 1): `SENTINEL_OVERRIDE=<motivo>` permite
   saltar una regla dejando rastro (quién/cuándo/por qué) en un log versionado; `doctor` lo
   reporta y exige revisión a posteriori. Un gate sin escape auditado acaba desinstalado.
