@@ -54,6 +54,9 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
   el directorio de hooks de git)
 - **THEN** `setup` no cambia `core.hooksPath`, termina con «pasos pendientes» (exit 3) y explica
   cómo encadenar la Esclusa a mano
+- **AND** si ese `core.hooksPath` no tiene hooks en este repo (p. ej. uno global relativo cuya
+  carpeta no existe aquí), lo dice y da el comando que activa la Esclusa, en vez de proponer
+  encadenar hooks que no existen
 
 ### Requirement: La instalación avisa de lo que no puede resolver sola
 
