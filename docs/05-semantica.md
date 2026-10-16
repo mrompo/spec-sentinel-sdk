@@ -239,7 +239,7 @@ hotfix y métricas cuando el equipo los adopte. *(Antes: "Tier 0/1/2".)*
 
 | Nombre | Fichero | Stage | Qué es |
 |---|---|---|---|
-| **La política** | `sentinel/policy.yaml` | Shield | Las reglas del Centinela: qué vigila y en qué modo |
+| **La política** | `sentinel/policy.default.yaml` + `sentinel/policy.yaml` | Shield | Las reglas del Centinela: qué vigila y en qué modo. El primer fichero trae las del SDK; el segundo, las que añade cada proyecto |
 | **La llave** | `sentinel/.override` | Shield | Vía de emergencia: un motivo escrito por una persona, de **un solo uso** |
 | **La bitácora** | `sentinel/overrides.log` | Delivery | Registro auditado de cada excepción. Sin bitácora escribible, no hay excepción |
 | **El banco** | `fixture/` | Engine | Banco de pruebas del framework: toda regla dura tiene aquí un test que la falsifica |

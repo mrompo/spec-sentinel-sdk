@@ -115,8 +115,10 @@ Si ambos están en verde, el repo está sano. Esto mismo corre en CI en cada PR
 
 ## Shield · las reglas estrictas
 
-Las reglas viven en un solo sitio, **la política**
-([`sentinel/policy.yaml`](../sentinel/policy.yaml)). Hoy se aplican en el puesto del
+Las reglas viven en **la política**, que tiene dos ficheros:
+[`sentinel/policy.default.yaml`](../sentinel/policy.default.yaml), con las del SDK (las
+actualiza `setup`), y [`sentinel/policy.yaml`](../sentinel/policy.yaml), con las de tu
+proyecto. Hoy se aplican en el puesto del
 **Centinela** (el hook que intercepta cada acción del agente); la **Esclusa** (git hooks) y la
 **Aduana** (CI) llegan en las fases 2 y 3. Cada regla vigila una acción y decide en uno de
 tres modos:
@@ -133,8 +135,12 @@ archivadas · no meter `.skip()`/`.only()` en tests · aviso al tocar config de 
 aviso al editar `src/` sin cambio activo (solo en el nivel Método) · `rm -rf`/`DROP`/`reset --hard` piden
 confirmación · nada de `.env` de producción.
 
-**Cómo añadir una regla**: edita `policy.yaml` (id único + qué vigila + `mode` + `reason`) y
-añade su caso en `fixture/hooks/cases/`. Sin test, la regla no entra.
+**Cómo añadir una regla**: en tu proyecto, añádela a `sentinel/policy.yaml` (id único + qué
+vigila + `mode` + `reason`). Las reglas del SDK se evalúan antes que las tuyas: puedes añadir
+protección, no quitarla, y repetir un id del SDK es un error de política. Las dos políticas son
+ficheros protegidos: las cambia una persona, no el agente. En el SDK, las reglas van en
+`policy.default.yaml` y cada una lleva su caso en `fixture/hooks/cases/`. Sin test, la regla
+no entra.
 
 **Si un bloqueo te frena** (vía de emergencia auditada). Escribe el motivo en un fichero
 **desde tu terminal**. La llave la crea siempre una persona: el Centinela impide que el agente

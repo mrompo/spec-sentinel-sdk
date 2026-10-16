@@ -5,7 +5,7 @@ Todo lo de esta carpeta es **stack-agnóstico** (shell POSIX + config declarativ
 
 | Puesto | Dónde | El agente… |
 |---|---|---|
-| **Centinela** | `hooks/` + `policy.yaml` | *no puede violar* |
+| **Centinela** | `hooks/` + `policy.default.yaml` + `policy.yaml` | *no puede violar* |
 | **Esclusa** | `githooks/` | *no puede commitear* |
 | **Aduana** | `ci/` | *no puede mergear* |
 
@@ -17,7 +17,11 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
 - **Bloqueo** (Centinela): leer el JSON del tool call por stdin (grep/sed, sin dependencias) y,
   para denegar, **exit 2 + motivo por stderr** — el agente recibe el porqué y puede corregir.
   Arquetipos: *block* / *auto-fix* / *inject* (patrón duoclaude).
-- **Política única**: las reglas viven en `policy.yaml`, no en N scripts (decisión plan §11).
+- **Una política, dos ficheros**: las reglas viven en la política, no en N scripts (decisión
+  plan §11). `policy.default.yaml` trae las del SDK y la actualiza `setup`; `policy.yaml` es la
+  del proyecto y solo **añade** reglas. El Centinela evalúa primero las del SDK, así que el
+  proyecto no puede relajarlas, y repetir un `id` del SDK es un error de política
+  (fail-closed). `sdd:` lo declara el proyecto; si no lo hace, vale el del SDK (`false`).
 - **Break-glass auditado** (obligatorio desde fase 1): `SENTINEL_OVERRIDE=<motivo>` permite
   saltar una regla dejando rastro (quién/cuándo/por qué) en un log versionado; `doctor` lo
   reporta y exige revisión a posteriori. Un gate sin escape auditado acaba desinstalado.
@@ -42,5 +46,5 @@ el Centinela no puede garantizar lo cierran la Esclusa y la Aduana):
 La regla práctica: **el Centinela evita el 95% de los accidentes y todo el descuido; no pretende
 detener a un adversario decidido con acceso a shell.** Para eso están los puestos de abajo.
 
-Estado: fase 1 implementada (hooks + política + break-glass auditado, 15 casos en el banco).
-Siguiente: githooks/instalador → fase 2 · ci → fase 3.
+Estado: Centinela (fase 1) y Esclusa (fase 2) implementados, con 17 y 16 casos en el banco; el
+instalador (`ai-specs/skills/setup/`, 8 casos) cierra la fase 2. Siguiente: ci → fase 3.

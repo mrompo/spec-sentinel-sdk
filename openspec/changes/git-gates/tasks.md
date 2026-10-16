@@ -38,13 +38,14 @@
 - [x] 5a. `docs/05-semantica.md`: el gate Esclusa se cierra en dos tiempos (decisión 1)
 - [x] 5. `pre-push`: tests + rama protegida (cierra el TOCTOU) + openspec validate opcional
        (SC-git-gates-04, 05)
-- [ ] 6. 👤 Separación de la política en distribuida (`policy.default.yaml`) y del consumidor
-       (SC-sdk-setup-05) — **fichero protegido**: igual que 3b. **Opción A** (decidida el
-       2026-10-12): primero la distribuida, el consumidor solo añade reglas; un id del SDK
-       repetido es error de política; `sdd:` del consumidor, o de la distribuida (que trae
-       `false`). Casos en rojo y `setup.sh` ya en la rama (SC-sentinel-guard-17..19,
-       SC-git-gates-16); falta que una persona aplique los ficheros protegidos (política,
-       Centinela, `pre-push`) y commitee con el banco en verde
+- [x] 6. 👤 Separación de la política en distribuida (`policy.default.yaml`) y del consumidor
+       (SC-sdk-setup-05, SC-sentinel-guard-17..19, SC-git-gates-16) — **fichero protegido**:
+       lo aplicó una persona el 2026-10-16 desde un parche revisado, con el banco en verde
+       (`9196c16`). **Opción A** (decidida el 2026-10-12): primero la distribuida, el
+       consumidor solo añade reglas; un id del SDK repetido es error de política; `sdd:` del
+       consumidor, o de la distribuida (que trae `false`). Límite asumido: el consumidor no
+       puede cambiar la lista de ramas protegidas (`protected-branches` es del SDK); si hace
+       falta, en un cambio aparte
 - [x] 6b. 👤 Proteger la Esclusa en la política — **fichero protegido**:
        - `self-protection` debe cubrir `sentinel/githooks/` y `sentinel/adapters/stack.sh` (los
          hooks lo cargan con `source`): hoy el agente podría desactivar la Esclusa editándolos;
@@ -73,6 +74,9 @@
        `core.hooksPath`, así que lo ejecuta una persona
 - [ ] 10. `STATUS.md` + sección
        «Instalar en tu proyecto» de `docs/guia-uso.md`
+       - 👤 tres ficheros protegidos siguen hablando de una sola política (slice 6): el mapa de
+         `AGENTS.md`, `sentinel/hooks/README.md` y el aviso de `session-start.sh`
+         («Reglas: sentinel/policy.yaml»)
 
 ## Tribunal y Delivery
 

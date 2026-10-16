@@ -4,7 +4,7 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-12 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación) en `apply`
+**Última actualización**: 2026-10-16 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación) en `apply`, con los slices 6 y 7 hechos
 
 ## Posición actual
 
@@ -37,14 +37,15 @@
 - **Semántica**: [`framework-semantics`](openspec/specs/framework-semantics/spec.md) — el
   vocabulario de [docs/05-semantica.md](docs/05-semantica.md) es contrato
   (`SC-framework-semantics-01..08`).
-- **La política**: [sentinel/policy.yaml](sentinel/policy.yaml) — **con enforcement real**
-  desde la fase 1 a través del Centinela.
+- **La política**: [sentinel/policy.default.yaml](sentinel/policy.default.yaml) (la del SDK)
+  + [sentinel/policy.yaml](sentinel/policy.yaml) (la de este repo, nivel Método) — **con
+  enforcement real** desde la fase 1 a través del Centinela.
 
 ## Salud / infraestructura
 
 | Check | Estado |
 |---|---|
-| `fixture/verify.sh` | ✅ verde — 15 casos del Centinela + 12 de la Esclusa + estructura + semántica + plantilla de PR |
+| `fixture/verify.sh` | ✅ verde — 17 casos del Centinela + 16 de la Esclusa + 8 de instalación + estructura + semántica + plantilla de PR |
 | `openspec validate --all --strict` | ✅ verde (3 specs vivas + los expedientes activos) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
 | KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log` (vacío: ninguna excepción usada) |

@@ -13,7 +13,7 @@
 | **% cambios con spec activa** | `commits amparados por un change ÷ commits totales` (excepto docs/chore) | registro de spec-guard (aunque esté en `warn`, registra) | Fase 4 |
 | **% por carril hotfix** | `changes hotfix ÷ changes totales` por ventana | `openspec/changes/archive/` (naming `hotfix-*`) | Fase 5 |
 | **Cobertura de escenarios** | `Scenarios con test vinculado ÷ Scenarios del delta` (y acumulado sobre specs vivas) | salida JSON del CLI `spec-coverage` | Fase 3 |
-| **Overrides break-glass** | recuento + motivo, por regla de `policy.yaml` | `sentinel/overrides.log` (versionado; lo escribe sentinel-guard) | Fase 1 |
+| **Overrides break-glass** | recuento + motivo, por regla de la política | `sentinel/overrides.log` (versionado; lo escribe sentinel-guard) | Fase 1 |
 
 Notas de implementación:
 
