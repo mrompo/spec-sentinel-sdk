@@ -11,7 +11,8 @@
 #     policy.yaml nace sin reglas: las del SDK viven en policy.default.yaml y se evalúan antes;
 #   - .claude/settings.json se fusiona con jq; sin jq, o si la fusión no es segura, se deja
 #     sentinel/settings.fragment.json y se explica el paso manual;
-#   - core.hooksPath solo se activa si el repo no usa ya otros git hooks.
+#   - core.hooksPath solo se activa si el repo no usa ya otros git hooks; si los usa, se dan
+#     las líneas que encadenan la Esclusa en ellos (chain.sh) y se reconoce cuando ya están.
 # Los backups van a sentinel/.backup/<fecha>/ (fuera de git).
 #
 # Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error, nada a medias.
@@ -32,7 +33,10 @@ todo() { echo "⚠ PENDIENTE: $1"; pending=1; }
 
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
 [ -f "$SDK_ROOT/sentinel/hooks/sentinel-guard.sh" ] && [ -f "$SDK_ROOT/sentinel/policy.default.yaml" ] \
-  || die "SDK incompleto en $SDK_ROOT: falta sentinel/ — ejecuta setup.sh desde una copia íntegra del SDK"
+  && [ -f "$SDK_ROOT/ai-specs/skills/setup/chain.sh" ] \
+  || die "SDK incompleto en $SDK_ROOT: falta sentinel/ o chain.sh — ejecuta setup.sh desde una copia íntegra del SDK"
+# shellcheck source=chain.sh
+source "$SDK_ROOT/ai-specs/skills/setup/chain.sh"
 [ -d "${1:-.}" ] || die "no existe el directorio ${1:-.}"
 TARGET="$(cd "${1:-.}" && pwd -P)"
 TOP="$(git -C "$TARGET" rev-parse --show-toplevel 2>/dev/null)" \
@@ -151,67 +155,129 @@ S="$TARGET/.claude/settings.json"; F="$TARGET/sentinel/settings.fragment.json"
 write_fragment() {
   [ -f "$F" ] && [ "$(cat "$F")" = "$FRAGMENT" ] || printf '%s\n' "$FRAGMENT" >"$F"
   todo "$1 — .claude/settings.json no se ha tocado. Añade a mano las entradas de
-    sentinel/settings.fragment.json dentro de \"hooks\" (o instala jq y vuelve a ejecutar setup)"
+    sentinel/settings.fragment.json dentro de \"hooks\" (o instala jq) y vuelve a ejecutar setup"
+}
+# El paso manual ya está hecho: el fragmento sobra (y no debe acabar versionado)
+drop_fragment() { [ -f "$F" ] && rm -f "$F" && note "retirado sentinel/settings.fragment.json: el cableado ya está"; return 0; }
+# wired_ok <fichero> → comprobación por texto, sin jq: cada script del SDK aparece una sola vez y
+# están los matchers actuales del fragmento
+wired_ok() {
+  local s m
+  for s in sentinel-guard post-edit session-start; do
+    [ "$(grep -o "sentinel/hooks/$s\.sh" "$1" 2>/dev/null | wc -l | tr -d ' ')" = 1 ] || return 1
+  done
+  while IFS= read -r m; do
+    [ -z "$m" ] || grep -qF "\"$m\"" "$1" || return 1
+  done <<EOF
+$(printf '%s\n' "$FRAGMENT" | sed -nE 's/.*"matcher"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p')
+EOF
 }
 if [ ! -f "$S" ]; then
   mkdir -p "$TARGET/.claude" && printf '%s\n' "$FRAGMENT" >"$S" || die "no se pudo crear .claude/settings.json"
-  ok "Centinela cableado (.claude/settings.json creado)"
+  ok "Centinela cableado (.claude/settings.json creado)"; drop_fragment
 elif ! command -v "$JQ" >/dev/null 2>&1; then
-  write_fragment "jq no está instalado y ya hay un .claude/settings.json"
+  if wired_ok "$S"; then
+    ok "Centinela ya cableado en .claude/settings.json (sin jq: comprobado por texto)"; drop_fragment
+  else
+    write_fragment "jq no está instalado y ya hay un .claude/settings.json"
+  fi
 elif ! "$JQ" -e "$SAFE" "$S" >/dev/null 2>&1; then
   write_fragment ".claude/settings.json no es JSON válido o tiene una forma inesperada: fusionar no es seguro"
 else
   merged="$("$JQ" --argjson frag "$FRAGMENT" "$MERGE" "$S")" || die "jq falló al fusionar .claude/settings.json"
   if [ "$("$JQ" -S . "$S")" = "$(printf '%s' "$merged" | "$JQ" -S .)" ]; then
-    ok "Centinela ya cableado en .claude/settings.json"
+    ok "Centinela ya cableado en .claude/settings.json"; drop_fragment
   else
     backup ".claude/settings.json"
     printf '%s\n' "$merged" >"$S" || die "no se pudo escribir .claude/settings.json"
     ok "Centinela cableado: entradas del SDK añadidas a .claude/settings.json (lo tuyo se conserva)"
+    drop_fragment
   fi
 fi
 
-# ── 4. La Esclusa: core.hooksPath ────────────────────────────────────────────────────────
-# own_hooks <dir> → « hook1 hook2…» ejecutables de <dir> (los .sample no cuentan); un dir
-# relativo se resuelve, como hace git, desde la raíz del repo
+# ── 4. La Esclusa: core.hooksPath, o encadenada en los git hooks que ya hay ──────────────
+# abs_dir <dir> → <dir> absoluto; uno relativo se resuelve, como hace git, desde la raíz del repo
+abs_dir() { case "$1" in /*) printf '%s' "${1%/}" ;; *) printf '%s' "$TARGET/${1%/}" ;; esac; }
+# own_hooks <dir> → « hook1 hook2…» ejecutables de <dir> (los .sample no cuentan)
 own_hooks() {
-  local d="$1" h list=""
-  case "$d" in /*) ;; *) d="$TARGET/$d" ;; esac
+  local d h list=""
+  d="$(abs_dir "$1")"
   for h in "$d"/*; do
     [ -f "$h" ] && [ -x "$h" ] && case "$h" in *.sample) ;; *) list="$list $(basename "$h")" ;; esac
   done
   printf '%s' "$list"
 }
+# is_esclusa <hooksPath> → apunta a la Esclusa de este repo, se escriba como se escriba
+is_esclusa() {
+  local p="${1%/}"; p="${p#./}"
+  [ "$p" = "$HOOKS_PATH" ] && return 0
+  case "$p" in /*) [ -d "$p" ] && [ "$(cd "$p" && pwd -P)" = "$TARGET/$HOOKS_PATH" ] ;; *) return 1 ;; esac
+}
+# chain_todo <situación> <dir de los hooks> → pendiente con las líneas de chain.sh para cada hook
+chain_todo() {
+  local h lines=""
+  for h in commit-msg pre-commit pre-push; do
+    lines="$lines
+    ── $2/$h (créalo ejecutable si no existe):
+$(chain_snippet "$h" | sed 's/^/      /')"
+  done
+  todo "$1
+    Encadena la Esclusa: pon estas líneas al principio de cada hook (tras el shebang). Así un
+    exit del hook no se las salta, el resto del pre-push sigue recibiendo las refs y, en un repo
+    sin la Esclusa, no hacen nada. Después vuelve a ejecutar setup.$lines"
+}
 
 cur="$(git -C "$TARGET" config --get core.hooksPath || true)"
-if [ "$cur" = "$HOOKS_PATH" ]; then
-  ok "Esclusa activa (core.hooksPath → $HOOKS_PATH)"
+if [ -n "$cur" ] && is_esclusa "$cur"; then
+  ok "Esclusa activa (core.hooksPath → $cur)"
 elif [ -n "$cur" ]; then
   # Puede venir del config global de la persona (p. ej. un escáner corporativo): tampoco se pisa
   origin="$(git -C "$TARGET" config --show-origin --get core.hooksPath 2>/dev/null | cut -f1)"
   cur_dir="$(git -C "$TARGET" config --type=path --get core.hooksPath 2>/dev/null || printf '%s' "$cur")"
-  if [ -z "$(own_hooks "$cur_dir")" ]; then
-    # Un hooksPath global y relativo (p. ej. «.githooks») sin esa carpeta aquí no ejecuta nada
-    todo "core.hooksPath → «${cur}» (definido en ${origin:-config de git}) no tiene hooks en este repo:
+  cur_dir="${cur_dir%/}"
+  scope=""
+  [ -n "$(git -C "$TARGET" config --local --get core.hooksPath 2>/dev/null)" ] \
+    || scope=" Ese core.hooksPath no es de este repo: vale para todos tus repos."
+  case "$cur_dir" in
+    .husky/_|*/.husky/_)
+      # husky v9: .husky/_ son envoltorios generados (e ignorados por git) que ejecutan .husky/<hook>
+      hsrc="${cur_dir%/_}"
+      if chain_done "$(abs_dir "$hsrc")"; then
+        ok "Esclusa encadenada en husky ($hsrc/commit-msg, pre-commit y pre-push)"
+      else
+        chain_todo "el repo usa husky (core.hooksPath → «${cur}»). Los envoltorios de «${cur}» los
+    genera husky y git los ignora: los hooks están en $hsrc/<hook>, y ahí va la Esclusa. setup
+    no cambia core.hooksPath." "$hsrc"
+      fi ;;
+    *)
+      if [ -z "$(own_hooks "$cur_dir")" ]; then
+        # Un hooksPath global y relativo (p. ej. «.githooks») sin esa carpeta aquí no ejecuta nada
+        todo "core.hooksPath → «${cur}» (definido en ${origin:-config de git}) no tiene hooks en este repo:
     hoy no ejecuta nada aquí, así que activar la Esclusa no silencia nada. setup no cambia
     configuración de git que no es suya; actívala tú (solo afecta a este repo):
     git config core.hooksPath $HOOKS_PATH"
-  else
-    todo "el repo ya usa core.hooksPath → «${cur}» (definido en ${origin:-config de git}); no se
-    cambia para no silenciar esos hooks.
-    Encadena la Esclusa: al final de cada hook de «${cur}» (commit-msg, pre-commit, pre-push) añade
-    «$HOOKS_PATH/<hook> \"\$@\" || exit 1» — o, si ya no los necesitas: git config core.hooksPath $HOOKS_PATH"
-  fi
+      elif chain_done "$(abs_dir "$cur_dir")" exec; then
+        ok "Esclusa encadenada en los hooks de «${cur}»"
+      elif git -C "$TARGET" check-ignore -q -- "$cur_dir/pre-commit" 2>/dev/null; then
+        chain_todo "core.hooksPath → «${cur}» está ignorado por git: lo genera una herramienta y lo que
+    pongas ahí se perderá. Pon las líneas en los hooks fuente de esa herramienta, no en «${cur}»." "<hooks fuente>"
+      else
+        chain_todo "el repo ya usa core.hooksPath → «${cur}» (definido en ${origin:-config de git}); no se
+    cambia para no silenciar esos hooks.${scope} Si en este repo no los necesitas, la
+    alternativa es activar la Esclusa solo aquí: git config core.hooksPath $HOOKS_PATH" "$cur"
+      fi ;;
+  esac
 else
   hd="$(git -C "$TARGET" rev-parse --git-path hooks)"
   own="$(own_hooks "$hd")"
-  if [ -n "$own" ]; then
-    todo "hay git hooks propios en $hd:$own. Activar la Esclusa (core.hooksPath) los dejaría
-    sin ejecutarse, así que no se activa. Muévelos a $HOOKS_PATH encadenados con los de la Esclusa,
-    o llama a la Esclusa desde ellos, y después: git config core.hooksPath $HOOKS_PATH"
-  else
+  if [ -z "$own" ]; then
     git -C "$TARGET" config core.hooksPath "$HOOKS_PATH" || die "no se pudo configurar core.hooksPath"
     ok "Esclusa activada (core.hooksPath → $HOOKS_PATH)"
+  elif chain_done "$(abs_dir "$hd")" exec; then
+    ok "Esclusa encadenada en los hooks de $hd (core.hooksPath no se activa: los silenciaría)"
+  else
+    chain_todo "hay git hooks propios en $hd:$own. Activar core.hooksPath los dejaría sin
+    ejecutarse, así que no se activa: la Esclusa se encadena en ellos, donde están." "$hd"
   fi
 fi
 
