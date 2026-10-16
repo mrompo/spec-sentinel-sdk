@@ -32,3 +32,27 @@ settings_count() {
 
 # assert_out_contains → alias legible: la salida del instalador va por stdout y stderr
 assert_out_contains() { assert_err_contains "$1"; }
+
+# assert_out_lacks <texto> → la salida del instalador NO contiene <texto>
+assert_out_lacks() {
+  printf '%s' "$RH_ERR" | grep -qF -- "$1" || return 0
+  echo "    la salida contiene «$1» y no debería" >&2; return 1
+}
+
+# chain_into <fichero> <hook> → hace lo que setup pide a la persona: pone las líneas de
+# encadenado (las mismas que imprime setup, de chain.sh) al principio del hook, tras el shebang
+# si lo hay; si el hook no existe, lo crea ejecutable
+CHAIN="$REPO_ROOT/ai-specs/skills/setup/chain.sh"
+chain_into() {
+  local f="$1" h="$2" tmp
+  [ -f "$CHAIN" ] || { echo "    falta $CHAIN (las líneas de encadenado de setup)" >&2; return 1; }
+  tmp="$(mktemp)"
+  {
+    if [ -f "$f" ] && head -1 "$f" | grep -q '^#!'; then head -1 "$f"; else printf '#!/bin/sh\n'; fi
+    ( source "$CHAIN" && chain_snippet "$h" )
+    if [ -f "$f" ]; then
+      if head -1 "$f" | grep -q '^#!'; then tail -n +2 "$f"; else cat "$f"; fi
+    fi
+  } >"$tmp" || { rm -f "$tmp"; return 1; }
+  mkdir -p "$(dirname "$f")" && mv "$tmp" "$f" && chmod +x "$f"
+}

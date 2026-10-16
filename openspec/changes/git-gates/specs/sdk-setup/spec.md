@@ -22,6 +22,8 @@ invocación: copia del enforcement, `core.hooksPath`, cableado del Centinela en
 - **WHEN** se ejecuta `setup` dos veces seguidas en el mismo repo
 - **THEN** la segunda ejecución no modifica ningún fichero ni duplica entradas en
   `.claude/settings.json`
+- **AND** también sin `jq`: si `.claude/settings.json` ya tiene el cableado del SDK, no se
+  escribe el fragmento ni queda nada pendiente
 
 ### Requirement: La configuración del consumidor no se pisa
 
@@ -50,13 +52,19 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
 
 #### Scenario: Git hooks previos del consumidor (SC-sdk-setup-08)
 
-- **WHEN** se instala en un repo que ya usa otros git hooks (`core.hooksPath` propio o hooks en
-  el directorio de hooks de git)
-- **THEN** `setup` no cambia `core.hooksPath`, termina con «pasos pendientes» (exit 3) y explica
-  cómo encadenar la Esclusa a mano
+- **WHEN** se instala en un repo que ya usa otros git hooks (`core.hooksPath` propio o global,
+  husky, o hooks en el directorio de hooks de git)
+- **THEN** `setup` no cambia `core.hooksPath` ni esos hooks, termina con «pasos pendientes»
+  (exit 3) y da las líneas que encadenan la Esclusa **al principio** de `commit-msg`,
+  `pre-commit` y `pre-push` en los hooks fuente (con husky, `.husky/<hook>`): conservan las refs
+  de stdin para el resto del hook y no afectan a los repos que no tienen la Esclusa
+- **AND** con esas líneas puestas, la Esclusa rechaza lo mismo que sola (p. ej. un push a
+  `main`) y la siguiente ejecución de `setup` reconoce el encadenado y termina con 0
 - **AND** si ese `core.hooksPath` no tiene hooks en este repo (p. ej. uno global relativo cuya
   carpeta no existe aquí), lo dice y da el comando que activa la Esclusa, en vez de proponer
   encadenar hooks que no existen
+- **AND** un `core.hooksPath` que ya apunta a la Esclusa escrito de otra forma
+  (`./sentinel/githooks`, con barra final o ruta absoluta) cuenta como activo
 
 ### Requirement: La instalación avisa de lo que no puede resolver sola
 

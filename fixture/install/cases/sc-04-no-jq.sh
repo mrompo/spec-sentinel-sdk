@@ -26,3 +26,31 @@ assert_exit 3 || fail_case "con settings.json ilegible debería terminar con 3"
 [ "$(cat "$S")" = "$orig" ] || fail_case "un settings.json ilegible no se toca"
 [ -f "$F" ] || fail_case "con settings.json ilegible debería escribirse el fragmento"
 cleanup_git_workspace
+
+# SC-sdk-setup-02 sin jq: con el cableado ya puesto, reinstalar no escribe el fragmento ni deja
+# nada pendiente (A1)
+mk_git_workspace
+F="$WS/sentinel/settings.fragment.json"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 0 || fail_case "sin jq ni settings.json previo, la instalación debería terminar con 0"
+before="$(ws_snapshot)"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 0 || fail_case "sin jq, reinstalar con el cableado ya puesto debería terminar con 0: $RH_ERR"
+[ ! -e "$F" ] || fail_case "sin jq y ya cableado, no debe escribirse el fragmento"
+[ "$before" = "$(ws_snapshot)" ] || fail_case "sin jq, la reinstalación cambió el workspace"
+cleanup_git_workspace
+
+# Sin jq, la persona hace el paso manual (copia el fragmento): el siguiente setup lo reconoce,
+# sale con 0 y retira el fragmento sobrante (P3)
+mk_git_workspace
+S="$WS/.claude/settings.json"; F="$WS/sentinel/settings.fragment.json"; mkdir -p "$WS/.claude"
+printf '{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo hook-propio"}]}]}}\n' >"$S"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 3 || fail_case "sin jq y con settings.json previo debería terminar con 3"
+jq -s '.[0] as $own | .[1] as $frag
+       | $own | .hooks = reduce ($frag.hooks | to_entries[]) as $e (.hooks; .[$e.key] = ((.[$e.key] // []) + $e.value))' \
+  "$S" "$F" >"$S.new" && mv "$S.new" "$S"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 0 || fail_case "sin jq, con el fragmento ya fusionado a mano, setup debería terminar con 0: $RH_ERR"
+[ ! -e "$F" ] || fail_case "con el paso manual hecho, el fragmento sobrante debería retirarse"
+cleanup_git_workspace
