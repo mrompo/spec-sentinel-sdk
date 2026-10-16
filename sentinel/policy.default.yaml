@@ -1,14 +1,15 @@
 # sentinel/policy.default.yaml — LA política distribuida del SDK (puesto Centinela)
 #
 # Viene con el SDK y `setup` la actualiza: no la edites en tu proyecto (se sobrescribe, con
-# backup). Tus reglas van en sentinel/policy.yaml, que se evalúa DESPUÉS de esta: el consumidor
-# solo puede AÑADIR reglas, nunca relajar las del SDK, y repetir aquí un id es un error de
-# política (opción A del slice 6 de git-gates, SC-sentinel-guard-17..19).
+# backup). Tus reglas van en sentinel/policy.yaml. En cada política decide la primera regla que
+# matchea y, entre las dos, la decisión más estricta (block > confirm > warn; a igualdad, esta):
+# el consumidor solo puede AÑADIR protección, nunca quitarla, y repetir aquí un id es un error
+# de política (opción A del slice 6 de git-gates, SC-sentinel-guard-17..20).
 #
 # Esquema v1 (plano, parseable con bash+sed — sin dependencias), igual en las dos políticas:
 #   sdd: true|false            → nivel Método activo (habilita reglas con requires_sdd). Lo
 #                                declara el consumidor; si no lo hace, vale el de este fichero
-#   rules:                     → lista ordenada; LA PRIMERA REGLA QUE MATCHEA DECIDE
+#   rules:                     → lista ordenada; en cada política, LA PRIMERA REGLA QUE MATCHEA DECIDE
 #     - id:            único y obligatorio en las dos políticas (lo referencia overrides.log)
 #       tool:          regex sobre tool_name (Bash, Edit|Write, …)
 #       command_re:    regex sobre el comando (solo tool Bash)
@@ -44,9 +45,19 @@ rules:
 
   - id: no-hook-disabling
     tool: Bash
-    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_(OVERRIDE|CONFIRM|POLICY(_DEFAULT)?|OVERRIDES_LOG|GITLEAKS_BIN|OPENSPEC_BIN|STACK)=)
+    # Cualquier SENTINEL_* (override, políticas, binarios de prueba, el jq del instalador…):
+    # una lista cerrada se queda corta en cuanto aparece una variable nueva (SC-sentinel-guard-13)
+    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_[A-Z_]+=)
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
+
+  # Instalar o actualizar reescribe el enforcement y el cableado: lo aprueba una persona
+  # (SC-sentinel-guard-21). Solo al ejecutarlo; leerlo o buscar en él no lo pide.
+  - id: install-needs-human
+    tool: Bash
+    command_re: (^|[;&|(]|&&)[[:space:]]*(env[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*((bash|sh|zsh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?[^[:space:];&|]*ai-specs/skills/setup/setup\.sh
+    mode: confirm
+    reason: Instalar o actualizar el SDK reescribe el enforcement y el cableado — lo aprueba una persona
 
   # ── gitflow ────────────────────────────────────────────────────────────────
   - id: protected-branches

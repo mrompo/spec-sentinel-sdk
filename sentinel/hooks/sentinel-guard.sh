@@ -5,11 +5,12 @@
 #   exit 0            → la acción pasa (con JSON en stdout si hay aviso que el agente debe ver)
 #   exit 2 + stderr   → denegada, con motivo (stderr sí se reinyecta al agente en exit 2)
 #   stdout JSON ask   → requiere aprobación humana (permissionDecision del harness)
-# Reglas (esquema v1 plano), en este orden — la primera que matchea decide:
+# Reglas (esquema v1 plano) en dos políticas:
 #   1) sentinel/policy.default.yaml — la distribuida (viene con el SDK, la actualiza setup)
-#   2) sentinel/policy.yaml         — la del consumidor (opcional; solo AÑADE reglas)
-# El consumidor no puede relajar el SDK: sus reglas van después y un id repetido es un error de
-# política (opción A del slice 6 de git-gates, SC-sentinel-guard-17..19).
+#   2) sentinel/policy.yaml         — la del consumidor (opcional; solo AÑADE protección)
+# En cada una decide la primera regla que matchea; entre las dos gana la decisión más estricta
+# (block > confirm > warn) y, a igualdad, la del SDK. Un id repetido es un error de política
+# (opción A del slice 6 de git-gates, SC-sentinel-guard-17..20).
 # Sin dependencias: bash + grep/sed. Endurecido tras el panel adversarial (ver §Limitaciones
 # en sentinel/README.md: lo que este puesto NO puede garantizar lo cubren Esclusa y Aduana).
 set -uo pipefail
@@ -153,12 +154,13 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
 # ── Evaluación de reglas ─────────────────────────────────────────────────────────────────
 reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; }
 
+# apply_rule → 0 si la regla en curso matchea (queda en m_id, m_mode, m_reason, m_policy); 1 si no
 apply_rule() {
-  [ -n "$r_id" ] || return 0
+  [ -n "$r_id" ] || return 1
   # Regla malformada = error de política, no permiso silencioso (fail-closed)
   [ -n "$r_mode" ] || deny "[${r_id}] regla sin 'mode:' en la política — corrige $CUR_POLICY"
-  if [ "$r_requires_sdd" = "true" ] && [ "$POLICY_SDD" != "true" ]; then return 0; fi
-  if [ "$r_no_active" = "true" ] && [ -n "$ACTIVE_CHANGE" ]; then return 0; fi
+  if [ "$r_requires_sdd" = "true" ] && [ "$POLICY_SDD" != "true" ]; then return 1; fi
+  if [ "$r_no_active" = "true" ] && [ -n "$ACTIVE_CHANGE" ]; then return 1; fi
   # match: 0 = matchea · 1 = no matchea · 2+ = regex inválida → error de política (fail-closed),
   # nunca "regla que no aplica" en silencio.
   match() { # $1=texto $2=regex [$3=-i]
@@ -168,20 +170,25 @@ apply_rule() {
     deny "[${r_id}] regex inválida en la política ('$2') — corrige $CUR_POLICY"
   }
 
-  if [ -n "$r_tool" ]; then match "$TOOL_NAME" "^($r_tool)$" || return 0; fi
+  if [ -n "$r_tool" ]; then match "$TOOL_NAME" "^($r_tool)$" || return 1; fi
   if [ -n "$r_command_re" ]; then
-    [ -n "$COMMAND" ] || return 0
-    match "$COMMAND" "$r_command_re" || return 0
+    [ -n "$COMMAND" ] || return 1
+    match "$COMMAND" "$r_command_re" || return 1
   fi
   if [ -n "$r_path_re" ]; then
-    match "$PATH_SURFACE" "$r_path_re" -i || return 0
+    match "$PATH_SURFACE" "$r_path_re" -i || return 1
   fi
   if [ -n "$r_content_re" ]; then
     # solo contra lo que se escribe (+ comando en Bash), nunca contra old_string
-    match "$(printf '%s\n%s' "$NEW_CONTENT" "$COMMAND")" "$r_content_re" || return 0
+    match "$(printf '%s\n%s' "$NEW_CONTENT" "$COMMAND")" "$r_content_re" || return 1
   fi
-  if [ -n "$r_branch_re" ]; then match "$BRANCH" "$r_branch_re" || return 0; fi
-  rule_matched "$r_id" "$r_mode" "$r_reason"   # no retorna
+  if [ -n "$r_branch_re" ]; then match "$BRANCH" "$r_branch_re" || return 1; fi
+  case "$r_mode" in
+    block|confirm|warn) ;;
+    *) deny "[$r_id] modo desconocido '$r_mode' en la política — corrige $CUR_POLICY" ;;
+  esac
+  m_id="$r_id"; m_mode="$r_mode"; m_reason="$r_reason"; m_policy="$CUR_POLICY"
+  return 0
 }
 
 # Parser v1: clave al inicio de línea (tras indentación); comentarios en cualquier columna
@@ -197,16 +204,18 @@ val() {
   printf '%s' "$v"
 }
 
-# eval_policy <fichero> → evalúa sus reglas en orden; si una matchea, no retorna
+# eval_policy <fichero> → la primera regla del fichero que matchea queda en m_* (m_id vacío si
+# ninguna). Se detiene en ella: dentro de cada política, la primera que matchea decide.
 eval_policy() {
-  CUR_POLICY="$1"
+  CUR_POLICY="$1"; m_id=""; m_mode=""; m_reason=""; m_policy=""
   reset_rule
   while IFS= read -r raw || [ -n "$raw" ]; do
     line="${raw#"${raw%%[![:space:]]*}"}"          # sin indentación
     case "$line" in \#*|"") continue ;; esac        # comentario en cualquier columna
     case "$line" in
       "- id:"*|"-  id:"*)
-        apply_rule; reset_rule; r_id="$(val "${line#-}")" ;;
+        apply_rule && return 0
+        reset_rule; r_id="$(val "${line#-}")" ;;
       *)
         if   kv "$line" "tool";                     then r_tool="$(val "$line")"
         elif kv "$line" "command_re";               then r_command_re="$(val "$line")"
@@ -220,12 +229,26 @@ eval_policy() {
         fi ;;
     esac
   done < "$1"
-  apply_rule
+  apply_rule || true
 }
 
-# Primero las del SDK, después las del consumidor: el consumidor solo añade (SC-17, SC-18)
+# rank <modo> → cuánto restringe, para quedarse con la decisión más estricta
+rank() { case "$1" in block) echo 3 ;; confirm) echo 2 ;; warn) echo 1 ;; *) echo 0 ;; esac; }
+
+# Cada política decide por su primera regla; entre las dos gana la más estricta y, a igualdad,
+# la del SDK: el consumidor añade protección, nunca la quita (SC-17, SC-18, SC-20)
 eval_policy "$DEFAULT_POLICY"
-[ -f "$POLICY" ] && eval_policy "$POLICY"
+d_id="$m_id"; d_mode="$m_mode"; d_reason="$m_reason"; d_policy="$m_policy"
+c_id=""; c_mode=""; c_reason=""; c_policy=""
+if [ -f "$POLICY" ]; then
+  eval_policy "$POLICY"
+  c_id="$m_id"; c_mode="$m_mode"; c_reason="$m_reason"; c_policy="$m_policy"
+fi
+if [ -n "$c_id" ] && [ "$(rank "$c_mode")" -gt "$(rank "$d_mode")" ]; then
+  CUR_POLICY="$c_policy"; rule_matched "$c_id" "$c_mode" "$c_reason"
+elif [ -n "$d_id" ]; then
+  CUR_POLICY="$d_policy"; rule_matched "$d_id" "$d_mode" "$d_reason"
+fi
 
 # Ninguna regla matchea → pasa (SC-01)
 exit 0

@@ -1,7 +1,8 @@
 # sentinel/policy.yaml — la política de ESTE proyecto (puesto Centinela).
-# Las reglas del SDK viven en sentinel/policy.default.yaml: se evalúan antes que estas y setup
-# las actualiza. Aquí solo se AÑADEN reglas propias (mismo esquema); un id del SDK repetido es
-# un error de política. Fichero protegido: se cambia en un cambio revisado por una persona.
+# Las reglas del SDK viven en sentinel/policy.default.yaml y setup las actualiza. Aquí solo se
+# AÑADEN reglas propias (mismo esquema): entre las dos políticas gana la decisión más estricta,
+# y un id del SDK repetido es un error de política. Fichero protegido: se cambia en un cambio
+# revisado por una persona.
 version: 1
 # Este repo trabaja con OpenSpec: nivel Método
 sdd: true
