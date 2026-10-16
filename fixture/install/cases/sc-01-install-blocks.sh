@@ -40,10 +40,19 @@ _capture env CLAUDE_PROJECT_DIR="$WS" bash -c \
   "printf '%s' '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git push --force origin x\"}}' | $cmd"
 assert_exit 2 || fail_case "el Centinela instalado no bloqueó un force-push"
 
-# Fuera de un repo git: fallo duro, sin escribir nada
-nogit="$WS.nogit"; mkdir -p "$nogit"
+# Fuera de un repo git (de verdad: fuera también del SDK, que lo es): fallo duro, sin escribir nada
+nogit="$(mktemp -d "${TMPDIR:-/tmp}/sentinel-nogit.XXXXXX")"
+git -C "$nogit" rev-parse --git-dir >/dev/null 2>&1 && { rm -rf "$nogit"; fail_case "el directorio temporal está dentro de un repo git: el caso no probaría nada"; }
 _capture env "$(gl_ok)" bash "$SETUP" "$nogit"
 [ "$RH_EXIT" -eq 1 ] || { rm -rf "$nogit"; fail_case "fuera de un repo git debería salir con 1 (salió $RH_EXIT)"; }
+assert_err_contains "no es un repo git" || { rm -rf "$nogit"; fail_case "el fallo debería decir que no es un repo git"; }
 [ -z "$(ls -A "$nogit")" ] || { rm -rf "$nogit"; fail_case "fuera de un repo git no debe escribir nada"; }
 rm -rf "$nogit"
+
+# En un subdirectorio del repo: fallo duro (la instalación caería en otro sitio), sin escribir nada
+mkdir -p "$WS/sub"
+_capture env "$(gl_ok)" bash "$SETUP" "$WS/sub"
+[ "$RH_EXIT" -eq 1 ] || fail_case "en un subdirectorio debería salir con 1 (salió $RH_EXIT)"
+assert_err_contains "no es la raíz del repo" || fail_case "el fallo debería decir que no es la raíz"
+[ -z "$(ls -A "$WS/sub")" ] || fail_case "en un subdirectorio no debe escribir nada"
 cleanup_git_workspace

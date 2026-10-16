@@ -100,3 +100,16 @@ nunca con éxito silencioso.
 - **WHEN** se instala en una máquina sin gitleaks
 - **THEN** la instalación se completa, la salida da la instrucción de instalación de gitleaks
   y `setup` termina con exit 3
+
+#### Scenario: Lo que hay que versionar no está ignorado (SC-sdk-setup-11)
+
+- **WHEN** el `.gitignore` del repo ignora algo que la instalación necesita versionar (la
+  bitácora, las políticas, `.claude/settings.json`, el enforcement)
+- **THEN** `setup` termina con exit 3 nombrando cada fichero, la regla que lo ignora y la
+  excepción que hay que añadir; cuando ya no están ignorados, termina con 0
+
+#### Scenario: El Centinela instalado funciona (SC-sdk-setup-12)
+
+- **WHEN** al terminar, el Centinela instalado deniega una acción inocua (p. ej. una política
+  del consumidor ilegible o con una regla sin `mode:`)
+- **THEN** `setup` termina con exit 3 y muestra el motivo que da el Centinela
