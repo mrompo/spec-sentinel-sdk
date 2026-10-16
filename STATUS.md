@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-16 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación) con todos sus slices hechos; falta la revisión adversarial
+**Última actualización**: 2026-10-16 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación): el panel dio `HOLD`, la ronda 2 de arreglos está hecha y se relanza el panel
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `apply` (PR 3/3) |
-| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` (#3) · PR 2/3 (ficheros protegidos) ✅ en `main` (#4) · **PR 3/3 (instalación): `apply` terminado, toca `review`** |
+| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` (#3) · PR 2/3 (ficheros protegidos) ✅ en `main` (#4) · **PR 3/3 (instalación): `review` dio `HOLD` ([review/](openspec/changes/git-gates/review/README.md)), ronda 2 de `apply` hecha, se relanza `review`** |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -22,7 +22,7 @@
 | 1 | `sentinel-guard` | 0 | ✅ Archivada (`2026-08-05`) — hook único + política + break-glass auditado; 15 casos en el fixture; endurecida tras panel adversarial |
 | — | `framework-semantics` | — | ✅ Archivada (`2026-09-28`, en `main` por la PR #1) — vocabulario del framework en `docs/05-semantica.md`; 8 escenarios, verificados por el banco |
 | — | `pr-format` | — | ✅ Archivada (`2026-09-29`, en `main` por la PR #2) — título en Conventional Commits + diez secciones fijas; la plantilla la verifica el banco. Adelanta la plantilla de la fase 5 |
-| 2 | `git-gates` | 0 | 🔄 **Apply** — gates Intención, Claridad y Plan aprobados (2026-09-29); PRs 1/3 y 2/3 en `main`; la 3/3 (instalación) tiene todos sus slices hechos y le falta la revisión adversarial |
+| 2 | `git-gates` | 0 | 🔄 **Apply** — gates Intención, Claridad y Plan aprobados (2026-09-29); PRs 1/3 y 2/3 en `main`; la 3/3 (instalación) pasó por el panel (`HOLD`), tiene hecha la ronda de arreglos y vuelve al panel |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |
 | 5 | `release-hotfix` | 1 | Pendiente |
@@ -45,7 +45,7 @@
 
 | Check | Estado |
 |---|---|
-| `fixture/verify.sh` | ✅ verde — 17 casos del Centinela + 16 de la Esclusa + 9 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR |
+| `fixture/verify.sh` | ✅ verde — 19 casos del Centinela + 16 de la Esclusa + 12 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR |
 | `openspec validate --all --strict` | ✅ verde (3 specs vivas + los expedientes activos) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
 | KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log` (vacío: ninguna excepción usada) |

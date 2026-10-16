@@ -103,22 +103,23 @@
        de stdin, va al principio, `[ -x … ]` para los demás repos), husky v9 en
        `.husky/<hook>`, los de `.git/hooks` se encadenan donde están — `chain.sh`, la fuente
        que imprime `setup` y aplica el banco (sc-08, sc-10, con husky v9 y un pre-push tipo LFS)
-- [ ] R3. 👤 Las dos políticas (A2): cada una decide por su primera regla y gana la decisión
-       más estricta — Centinela (**fichero protegido**)
-- [ ] R4. El instalador no descablea (A4, V1, V3): `setup` valida el resultado de la fusión e
-       ignora un jq dentro del repo (✓ `dc427b5` en rojo, `600d3c9`, sc-11); 👤 en la
-       política, `SENTINEL_[A-Z_]+=` en `no-hook-disabling` y `confirm` para ejecutar
-       `setup.sh` (casos en rojo en `06b2bbc`, va en R8)
-- [ ] R5. Lo que llega al equipo (A5 = P6, P5): `setup` avisa si el `.gitignore` deja fuera lo
-       que hay que versionar (✓ `0138513` en rojo, `d57b1c5`, sc-12); la guía explica el paso
-       por clon (✓); 👤 `session-start` avisa si la Esclusa no está activa en el clon (caso en
-       rojo en `06b2bbc`, va en R8)
+- [x] R3. 👤 Las dos políticas (A2): cada una decide por su primera regla y gana la decisión
+       más estricta — Centinela (**fichero protegido**; `06b2bbc` en rojo, aplicado en R8)
+- [x] R4. El instalador no descablea (A4, V1, V3): `setup` valida el resultado de la fusión e
+       ignora un jq dentro del repo (`dc427b5` en rojo, `600d3c9`, sc-11); 👤 en la política,
+       `SENTINEL_[A-Z_]+=` en `no-hook-disabling` y `confirm` para ejecutar `setup.sh`
+       (`06b2bbc` en rojo, aplicado en R8)
+- [x] R5. Lo que llega al equipo (A5 = P6, P5): `setup` avisa si el `.gitignore` deja fuera lo
+       que hay que versionar (`0138513` en rojo, `d57b1c5`, sc-12); la guía explica el paso por
+       clon; 👤 `session-start` avisa si la Esclusa no está activa en el clon (`06b2bbc` en
+       rojo, aplicado en R8)
 - [x] R6. Actualizar el cableado (P8, A8): las entradas del SDK se reconocen por la ruta del
        script y se sustituyen; SAFE endurecido; si la fusión falla, fragmento y no `die`; el
        fragmento sale del `.claude/settings.json` del SDK (`dc427b5` en rojo, `600d3c9`)
 - [x] R7. Menores (A6, A9, P9, P10, A10) + la nota de P7 en la guía (`0138513` en rojo,
        `d57b1c5` y la documentación)
-- [ ] R8. 👤 Parche de ficheros protegidos (R3, R4 y R5) aplicado por una persona, banco en verde
+- [x] R8. 👤 Parche de ficheros protegidos (R3, R4 y R5) aplicado por una persona, banco en verde
+       (`75ea1bd`, el 2026-10-16: Centinela, política del SDK, `session-start` y sus textos)
 - [ ] R9. Relanzar el panel → **Veredicto**
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
