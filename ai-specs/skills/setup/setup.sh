@@ -55,6 +55,13 @@ backup() {
   note "backup de $rel en sentinel/.backup/$STAMP/"
 }
 
+# dist_files → lo que el SDK distribuye (rutas relativas): lo que se copia y lo que tiene que
+# poder versionarse
+dist_files() {
+  (cd "$SDK_ROOT" && find sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters \
+     -type f ! -name '.*' ! -name stack.yaml ! -name stack.proposed.yaml | LC_ALL=C sort)
+}
+
 echo "Instalando el nivel Guardia en $TARGET"
 
 # ── 1. Enforcement distribuido (se actualiza) ────────────────────────────────────────────
@@ -72,8 +79,7 @@ else
     mkdir -p "$(dirname "$dst")" && cp "$src" "$dst" || die "no se pudo copiar $rel"
     [ -x "$src" ] && chmod +x "$dst"
     updated=$((updated + 1))
-  done < <(cd "$SDK_ROOT" && find sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters \
-             -type f ! -name '.*' ! -name stack.yaml ! -name stack.proposed.yaml | LC_ALL=C sort)
+  done < <(dist_files)
   [ "$updated" -gt 0 ] && ok "enforcement instalado o actualizado ($updated ficheros en sentinel/)" \
     || ok "enforcement al día"
 fi
@@ -323,21 +329,58 @@ else
 fi
 
 # ── 7. Lo que tiene que viajar con el repo no puede estar ignorado ───────────────────────
-ignored=""
-for f in sentinel/overrides.log sentinel/policy.yaml sentinel/policy.default.yaml .claude/settings.json \
-         sentinel/hooks/sentinel-guard.sh sentinel/githooks/pre-commit; do
+# Todo lo que se instala (no una muestra: la librería de la Esclusa también) y lo del consumidor
+versioned() {
+  dist_files
+  printf '%s\n' sentinel/policy.yaml sentinel/overrides.log .claude/settings.json
+  [ ! -f "$TARGET/sentinel/adapters/stack.yaml" ] || echo sentinel/adapters/stack.yaml
+}
+# exception_for <fichero> → las líneas que lo reincluyen desde el .gitignore del repo (que manda
+# sobre core.excludesFile). Si se ignora una carpeta que lo contiene, git no mira dentro: hay que
+# reincluir la carpeta. De .claude/, solo settings.json: lo demás suele ser local de cada persona.
+exception_for() {
+  local f="$1" d top=""
+  case "$f" in .claude/settings.json) printf '%s\n' '!.claude/' '.claude/*' '!.claude/settings.json'; return 0 ;; esac
+  d="$(dirname "$f")"
+  while [ "$d" != "." ]; do
+    git -C "$TARGET" check-ignore -q -- "$d/" 2>/dev/null && top="$d"
+    d="$(dirname "$d")"
+  done
+  if [ -n "$top" ]; then printf '!%s/\n' "$top"; else printf '!%s\n' "$f"; fi
+}
+ignored=""; exceptions=""
+while IFS= read -r f; do
   # -q decide (una excepción «!…» también aparece en -v, pero no ignora); -v solo dice qué regla
   git -C "$TARGET" check-ignore -q -- "$f" 2>/dev/null || continue
   why="$(git -C "$TARGET" check-ignore -v -- "$f" 2>/dev/null | cut -f1)"
   rest="${why#*:}"
   ignored="$ignored
       $f — lo ignora «${rest#*:}» (${why%%:*}, línea ${rest%%:*})"
-done
-[ -z "$ignored" ] || todo "el .gitignore deja fuera ficheros que hay que versionar:$ignored
-    Sin ellos en git, tus compañeros no reciben el Centinela o la bitácora se queda en tu máquina.
-    Añade al final del .gitignore una excepción por fichero (p. ej. «!sentinel/overrides.log»).
-    Si se ignora una carpeta entera (p. ej. «.claude/»), git no mira dentro: cámbiala por
-    «.claude/*» y añade «!.claude/settings.json». Compruébalo con: git check-ignore -v <fichero>"
+  exceptions="$exceptions
+$(exception_for "$f")"
+done < <(versioned)
+if [ -n "$ignored" ]; then
+  exceptions="$(printf '%s\n' "$exceptions" | awk 'NF && !seen[$0]++' | sed 's/^/      /')"
+  todo "el .gitignore deja fuera ficheros que hay que versionar:$ignored
+    Sin ellos en git, tus compañeros no reciben el Centinela o la Esclusa, o la bitácora se queda
+    en tu máquina. Añade al final del .gitignore del repo (vale aunque la regla venga de fuera,
+    p. ej. de core.excludesFile):
+$exceptions
+    Compruébalo con: git check-ignore -v <fichero>"
+fi
+
+# Con core.fileMode=false git no guarda el permiso de ejecución: en los clones ignoraría los hooks
+if [ "$(git -C "$TARGET" config --bool core.fileMode 2>/dev/null)" = "false" ]; then
+  noexec=""
+  while IFS= read -r f; do
+    [ -x "$SDK_ROOT/$f" ] || continue
+    [ "$(git -C "$TARGET" ls-files -s -- "$f" | cut -d' ' -f1)" = 100755 ] || noexec="$noexec $f"
+  done < <(dist_files)
+  [ -z "$noexec" ] || todo "este repo tiene core.fileMode=false: git no guarda el permiso de ejecución
+    y en los clones ignora los hooks que no lo tienen (la Esclusa no correría). Después del git
+    add, márcalos como ejecutables en el índice:
+    git add --chmod=+x$noexec"
+fi
 
 # ── 8. El Centinela instalado tiene que dejar pasar lo inocuo ────────────────────────────
 # (con ids duplicados ya hay un pendiente que explica el bloqueo)
