@@ -17,5 +17,5 @@ if [ -d "$ROOT/openspec/changes" ]; then
   [ -n "${names% }" ] && ACTIVE="cambio(s) activo(s): ${names% } — trabaja dentro y marca tasks.md"
 fi
 
-echo "[sentinel] Rama: $BRANCH · $ACTIVE · Estado: STATUS.md · Reglas: sentinel/policy.yaml"
+echo "[sentinel] Rama: $BRANCH · $ACTIVE · Estado: STATUS.md · Reglas: sentinel/policy.default.yaml (SDK) + sentinel/policy.yaml (proyecto)"
 exit 0
