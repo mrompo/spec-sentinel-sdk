@@ -38,5 +38,20 @@ run_setup PATH="$WS/tools:$PATH"
 assert_exit 0 || fail_case "con un jq del repo en el PATH (ignorado) debería terminar con 0: $RH_ERR"
 [ "$(cat "$S")" = "$orig" ] || fail_case "setup usó un jq del repo encontrado por el PATH"
 
+# c) fuera del repo, un jq que conserva los textos del cableado pero lo saca de su evento (todo en
+#    SessionStart, nada en PreToolUse): la comprobación es de estructura, así que no se escribe
+jq '{hooks: {SessionStart: [.hooks[][]]}}' "$REPO_ROOT/.claude/settings.json" >"$WS.bin/moved.json" \
+  || fail_case "no se pudo preparar el resultado desplazado"
+cat >"$WS.bin/jq-moved" <<EOF
+#!/usr/bin/env bash
+for a in "\$@"; do [ "\$a" = --argjson ] && { cat "$WS.bin/moved.json"; exit 0; }; done
+case " \$* " in *" -e "*) echo true; exit 0 ;; esac
+last="\${!#}"; if [ -f "\$last" ]; then cat "\$last"; else cat; fi
+EOF
+chmod +x "$WS.bin/jq-moved"
+run_setup SENTINEL_SETUP_JQ="$WS.bin/jq-moved"
+assert_exit 3 || fail_case "con un resultado que saca el Centinela de PreToolUse debería terminar con 3"
+[ "$(cat "$S")" = "$orig" ] || fail_case "setup escribió un settings.json con el Centinela fuera de su evento"
+
 rm -rf "$WS.bin"
 cleanup_git_workspace

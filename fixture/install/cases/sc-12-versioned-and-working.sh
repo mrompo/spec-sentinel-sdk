@@ -38,6 +38,11 @@ assert_out_contains "mode:" || fail_case "no muestra el motivo que da el Centine
 run_setup
 assert_exit 3 || fail_case "con la política del consumidor vacía debería terminar con 3"
 assert_out_contains "ilegible" || fail_case "no muestra el motivo que da el Centinela (política ilegible)"
+# una regla para tools de fichero con una regex inválida: deniega todo Read y Edit (A2-7)
+printf 'version: 1\nrules:\n  - id: no-secrets-dir\n    tool: Read|Edit|Write\n    path_re: (secrets/\n    mode: block\n    reason: x\n' >"$WS/sentinel/policy.yaml"
+run_setup
+assert_exit 3 || fail_case "con un Centinela que deniega las lecturas y ediciones debería terminar con 3"
+assert_out_contains "regex inválida" || fail_case "no muestra el motivo que da el Centinela (regex inválida)"
 cleanup_git_workspace
 
 # d) «lib/» (plantilla de Python, outDir de TypeScript) ignora la librería de la Esclusa: se

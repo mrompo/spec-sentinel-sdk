@@ -54,3 +54,17 @@ run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
 assert_exit 0 || fail_case "sin jq, con el fragmento ya fusionado a mano, setup debería terminar con 0: $RH_ERR"
 [ ! -e "$F" ] || fail_case "con el paso manual hecho, el fragmento sobrante debería retirarse"
 cleanup_git_workspace
+
+# Sin jq y con un cableado anterior (matcher sin Read|Grep|Glob): no basta con que estén los
+# textos; el pendiente pide sustituir las entradas del SDK, no añadir otras (P2-9, V2-4)
+mk_git_workspace
+S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
+jq '.hooks.PreToolUse[0].matcher = "Bash|Edit|Write|MultiEdit|NotebookEdit"' "$REPO_ROOT/.claude/settings.json" >"$S"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 3 || fail_case "sin jq y con el matcher antiguo debería terminar con 3"
+assert_out_contains "sustituye" || fail_case "con el cableado antiguo, el pendiente debería pedir sustituir las entradas del SDK"
+jq '.hooks.PreToolUse[0].matcher' "$REPO_ROOT/.claude/settings.json" >/dev/null
+cp "$REPO_ROOT/.claude/settings.json" "$S"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 0 || fail_case "sin jq, con las entradas sustituidas, setup debería terminar con 0: $RH_ERR"
+cleanup_git_workspace

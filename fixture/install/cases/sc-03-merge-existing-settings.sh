@@ -66,6 +66,16 @@ before="$(ws_snapshot)"; run_setup
 assert_exit 0 && [ "$before" = "$(ws_snapshot)" ] || fail_case "tras actualizar, reinstalar debería ser idempotente"
 cleanup_git_workspace
 
+# SC-sdk-setup-10: que otra clave nombre un script del SDK (una regla de permisos) no impide cablear (A2-3)
+mk_git_workspace
+S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
+printf '{"permissions":{"deny":["Edit(sentinel/hooks/sentinel-guard.sh)"]}}\n' >"$S"
+run_setup
+assert_exit 0 || fail_case "con una regla de permisos que nombra el guard debería cablear y terminar con 0: $RH_ERR"
+[ "$(settings_count "$S" sentinel-guard)" -eq 1 ] || fail_case "el Centinela debería quedar cableado una vez"
+[ "$(jq -r '.permissions.deny[0]' "$S")" = "Edit(sentinel/hooks/sentinel-guard.sh)" ] || fail_case "se perdió la regla de permisos"
+cleanup_git_workspace
+
 # SC-sdk-setup-09: una forma que no se puede fusionar con seguridad → fragmento y pendiente, no error
 mk_git_workspace
 S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"

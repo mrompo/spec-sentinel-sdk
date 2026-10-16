@@ -59,6 +59,9 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
   está dentro del repo destino (por `SENTINEL_SETUP_JQ` o por el `PATH`)
 - **THEN** `.claude/settings.json` conserva el cableado del Centinela: el `jq` del repo se ignora
   y un resultado sin el cableado no se escribe (queda pendiente)
+- **AND** la comprobación es de estructura, sin `jq`: cada grupo del cableado del SDK tiene que
+  estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio. La misma
+  comprobación vale sin `jq` para el cableado que la persona pega a mano
 
 #### Scenario: Actualización sin pisar la política (SC-sdk-setup-05)
 
@@ -80,7 +83,7 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
   carpeta no existe aquí), lo dice y da el comando que activa la Esclusa, en vez de proponer
   encadenar hooks que no existen
 - **AND** un `core.hooksPath` que ya apunta a la Esclusa escrito de otra forma
-  (`./sentinel/githooks`, con barra final o ruta absoluta) cuenta como activo
+  (`./sentinel/githooks`, con barra final, ruta absoluta o con `~`) cuenta como activo
 
 ### Requirement: La instalación avisa de lo que no puede resolver sola
 
@@ -114,6 +117,13 @@ nunca con éxito silencioso.
 
 #### Scenario: El Centinela instalado funciona (SC-sdk-setup-12)
 
-- **WHEN** al terminar, el Centinela instalado deniega una acción inocua (p. ej. una política
-  del consumidor ilegible o con una regla sin `mode:`)
+- **WHEN** al terminar, el Centinela instalado deniega una acción inocua de shell, de lectura o
+  de edición (p. ej. una política del consumidor ilegible, con una regla sin `mode:` o con una
+  regex inválida)
 - **THEN** `setup` termina con exit 3 y muestra el motivo que da el Centinela
+
+#### Scenario: Desde la skill expuesta con un enlace (SC-sdk-setup-13)
+
+- **WHEN** se ejecuta `setup.sh` a través de un enlace simbólico a la carpeta de la skill (p. ej.
+  `~/.claude/skills/setup`)
+- **THEN** encuentra el SDK real e instala igual que ejecutado desde el SDK

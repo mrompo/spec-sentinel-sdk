@@ -80,4 +80,11 @@ for hp in "./sentinel/githooks" "sentinel/githooks/" "$WS/sentinel/githooks"; do
   assert_exit 0 || fail_case "con core.hooksPath=«${hp}» la Esclusa ya está activa: debería terminar con 0"
   assert_out_lacks "PENDIENTE" || fail_case "con core.hooksPath=«${hp}» no debería quedar nada pendiente"
 done
+# también con «~» (git lo expande): HOME de prueba con un enlace a la Esclusa (A2-8)
+mkdir -p "$WS.home" && ln -s "$WS/sentinel/githooks" "$WS.home/esclusa"
+git_in_ws config core.hooksPath "~/esclusa"
+run_setup HOME="$WS.home"
+assert_exit 0 || { rm -rf "$WS.home"; fail_case "con core.hooksPath=«~/esclusa» la Esclusa ya está activa: debería terminar con 0"; }
+assert_out_lacks "PENDIENTE" || { rm -rf "$WS.home"; fail_case "con core.hooksPath=«~/esclusa» no debería quedar nada pendiente"; }
+rm -rf "$WS.home"
 cleanup_git_workspace
