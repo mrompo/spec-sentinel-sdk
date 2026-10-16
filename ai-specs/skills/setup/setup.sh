@@ -33,8 +33,8 @@ todo() { echo "⚠ PENDIENTE: $1"; pending=1; }
 
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
 [ -f "$SDK_ROOT/sentinel/hooks/sentinel-guard.sh" ] && [ -f "$SDK_ROOT/sentinel/policy.default.yaml" ] \
-  && [ -f "$SDK_ROOT/ai-specs/skills/setup/chain.sh" ] \
-  || die "SDK incompleto en $SDK_ROOT: falta sentinel/ o chain.sh — ejecuta setup.sh desde una copia íntegra del SDK"
+  && [ -f "$SDK_ROOT/ai-specs/skills/setup/chain.sh" ] && [ -f "$SDK_ROOT/.claude/settings.json" ] \
+  || die "SDK incompleto en $SDK_ROOT: falta sentinel/, chain.sh o .claude/settings.json — ejecuta setup.sh desde una copia íntegra del SDK"
 # shellcheck source=chain.sh
 source "$SDK_ROOT/ai-specs/skills/setup/chain.sh"
 [ -d "${1:-.}" ] || die "no existe el directorio ${1:-.}"
@@ -116,40 +116,35 @@ done
 [ -n "$gi_added" ] && ok ".gitignore:$gi_added"
 
 # ── 3. Cableado del Centinela en .claude/settings.json ───────────────────────────────────
-FRAGMENT='{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob",
-        "hooks": [
-          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/sentinel/hooks/sentinel-guard.sh\"" }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/sentinel/hooks/post-edit.sh\"" }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/sentinel/hooks/session-start.sh\"" }
-        ]
-      }
-    ]
-  }
-}'
-# Fusión conservadora: por cada evento, se añaden las entradas del SDK cuyo comando no esté ya
+# El fragmento es el cableado del propio SDK (su .claude/settings.json, que solo tiene «hooks»):
+# una sola fuente, así un cambio de matcher llega a los consumidores al actualizar.
+FRAGMENT="$(cat "$SDK_ROOT/.claude/settings.json")"
+SCRIPTS='["sentinel/hooks/sentinel-guard.sh","sentinel/hooks/post-edit.sh","sentinel/hooks/session-start.sh"]'
+# Fusión segura solo si cada evento es una lista de grupos y cada grupo una lista de hooks
 SAFE='type == "object" and ((.hooks // {}) | type == "object")
-      and ([(.hooks // {})[] | type == "array"] | all)'
-MERGE='reduce ($frag.hooks | to_entries[]) as $e (.;
-         (.hooks[$e.key] // []) as $cur
-         | .hooks[$e.key] = $cur + [ $e.value[]
-             | select(.hooks[0].command as $c | any($cur[]?.hooks[]?.command; . == $c) | not) ])'
+      and ([ (.hooks // {})[] | type == "array" and all(.[]; type == "object"
+               and ((.hooks // []) | type == "array") and all((.hooks // [])[]; type == "object")) ] | all)'
+# Las entradas del SDK se reconocen por la ruta de su script (de cualquier versión, con o sin
+# comillas): se quitan donde estén, sin tocar los hooks del consumidor de su mismo grupo, y se
+# añaden las actuales al final de cada evento
+MERGE='def is_sdk: (.command // "") as $c
+         | ($c | type) == "string" and ([ $scripts[] as $s | $c | contains($s) ] | any);
+       def strip_sdk:
+         [ .[] | ((.hooks // []) | length) as $n
+               | ([ (.hooks // [])[] | select(is_sdk | not) ]) as $k
+               | if $n == ($k | length) then . elif ($k | length) == 0 then empty else .hooks = $k end ];
+       .hooks = ((.hooks // {}) | with_entries(.value |= strip_sdk))
+       | reduce ($frag.hooks | to_entries[]) as $e (.; .hooks[$e.key] = ((.hooks[$e.key] // []) + $e.value))'
+
+# jq: el de SENTINEL_SETUP_JQ o el del PATH, nunca uno que viva dentro del repo destino (el
+# agente podría poner ahí uno que «fusione» quitando el cableado)
+JQ_BIN="$(command -v "$JQ" 2>/dev/null || true)"
+if [ -n "$JQ_BIN" ]; then
+  jq_dir="$(cd "$(dirname "$JQ_BIN")" 2>/dev/null && pwd -P)"
+  case "$jq_dir/" in
+    "$TARGET"/*) note "se ignora el jq de $JQ_BIN: está dentro del repo destino"; JQ_BIN="" ;;
+  esac
+fi
 
 S="$TARGET/.claude/settings.json"; F="$TARGET/sentinel/settings.fragment.json"
 write_fragment() {
@@ -172,25 +167,37 @@ wired_ok() {
 $(printf '%s\n' "$FRAGMENT" | sed -nE 's/.*"matcher"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p')
 EOF
 }
+# merged_ok <json> → el resultado de una fusión es un objeto JSON y conserva el cableado
+merged_ok() {
+  local t rc
+  case "$1" in "{"*) ;; *) return 1 ;; esac
+  t="$(mktemp)" || return 1
+  printf '%s\n' "$1" >"$t"; wired_ok "$t"; rc=$?
+  rm -f "$t"; return $rc
+}
 if [ ! -f "$S" ]; then
   mkdir -p "$TARGET/.claude" && printf '%s\n' "$FRAGMENT" >"$S" || die "no se pudo crear .claude/settings.json"
   ok "Centinela cableado (.claude/settings.json creado)"; drop_fragment
-elif ! command -v "$JQ" >/dev/null 2>&1; then
+elif [ -z "$JQ_BIN" ]; then
   if wired_ok "$S"; then
     ok "Centinela ya cableado en .claude/settings.json (sin jq: comprobado por texto)"; drop_fragment
   else
-    write_fragment "jq no está instalado y ya hay un .claude/settings.json"
+    write_fragment "jq no está disponible y ya hay un .claude/settings.json"
   fi
-elif ! "$JQ" -e "$SAFE" "$S" >/dev/null 2>&1; then
+elif ! "$JQ_BIN" -e "$SAFE" "$S" >/dev/null 2>&1; then
   write_fragment ".claude/settings.json no es JSON válido o tiene una forma inesperada: fusionar no es seguro"
+elif ! merged="$("$JQ_BIN" --argjson frag "$FRAGMENT" --argjson scripts "$SCRIPTS" "$MERGE" "$S" 2>/dev/null)"; then
+  write_fragment "jq no pudo fusionar .claude/settings.json"
+elif ! merged_ok "$merged"; then
+  # Lo que se va a escribir tiene que conservar el cableado: se comprueba en bash, sin fiarse de jq
+  write_fragment "el resultado de la fusión no conserva el cableado del Centinela"
 else
-  merged="$("$JQ" --argjson frag "$FRAGMENT" "$MERGE" "$S")" || die "jq falló al fusionar .claude/settings.json"
-  if [ "$("$JQ" -S . "$S")" = "$(printf '%s' "$merged" | "$JQ" -S .)" ]; then
+  if [ "$("$JQ_BIN" -S . "$S")" = "$(printf '%s' "$merged" | "$JQ_BIN" -S .)" ]; then
     ok "Centinela ya cableado en .claude/settings.json"; drop_fragment
   else
     backup ".claude/settings.json"
     printf '%s\n' "$merged" >"$S" || die "no se pudo escribir .claude/settings.json"
-    ok "Centinela cableado: entradas del SDK añadidas a .claude/settings.json (lo tuyo se conserva)"
+    ok "Centinela cableado en .claude/settings.json: entradas del SDK al día, lo tuyo se conserva"
     drop_fragment
   fi
 fi
