@@ -120,7 +120,10 @@
        `d57b1c5` y la documentación)
 - [x] R8. 👤 Parche de ficheros protegidos (R3, R4 y R5) aplicado por una persona, banco en verde
        (`75ea1bd`, el 2026-10-16: Centinela, política del SDK, `session-start` y sus textos)
-- [ ] R9. Relanzar el panel → **Veredicto**
+- [x] R9. Relanzar el panel → **Veredicto**: **`HOLD`** otra vez el 2026-10-16
+       ([`review/round2/`](review/round2/README.md)): 19 de los 21 validados de la primera
+       ronda resueltos; un bloqueante nuevo (`lib/` ignorado) y 8 graves, la mitad por
+       convivir con otros gestores de hooks. Pendiente la **Resolución** 👤
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 

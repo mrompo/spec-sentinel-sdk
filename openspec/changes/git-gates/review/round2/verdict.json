@@ -1,0 +1,359 @@
+{
+  "verdict": "HOLD",
+  "counts": {
+    "blocker": {
+      "total": 2,
+      "validated": 2
+    },
+    "major": {
+      "total": 10,
+      "validated": 10
+    },
+    "minor": {
+      "total": 14,
+      "validated": 14
+    },
+    "nit": {
+      "total": 2,
+      "validated": 2
+    }
+  },
+  "findings": [
+    {
+      "id": "A2-2",
+      "lens": "auditor",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 327,
+      "title": "SC-sdk-setup-11 incumplido: del enforcement solo se comprueban sentinel-guard.sh y githooks/pre-commit; con «lib/» en el .gitignore la librería de la Esclusa no se versiona, setup sale con 0 y los compañeros no pueden commitear"
+    },
+    {
+      "id": "P2-1",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 327,
+      "title": "Con la plantilla .gitignore de Python (lib/), sentinel/githooks/lib/breakglass.sh no se versiona, setup sale con 0 y a los compañeros la Esclusa les rechaza todos los commits"
+    },
+    {
+      "id": "A2-1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 56,
+      "title": "install-needs-human (confirm) va antes de las reglas block del SDK: con primera coincidencia por política, todo comando que también ejecute setup.sh pasa de block a «ask»"
+    },
+    {
+      "id": "A2-prevA4",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 175,
+      "title": "El instalador sigue sirviendo para descablear el Centinela: merged_ok solo comprueba por texto, así que un jq de fuera del repo puede sacar el guard de PreToolUse"
+    },
+    {
+      "id": "P2-2",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 290,
+      "title": "Con lefthook o el framework pre-commit, las líneas que setup manda poner en .git/hooks se pierden al regenerar los hooks, y gitleaks deja de ejecutarse sin aviso"
+    },
+    {
+      "id": "P2-3",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 38,
+      "title": "En el clon de un compañero, session-start y la guía mandan activar core.hooksPath aunque el repo dependa de hooks de .git/hooks: con git-lfs se suben punteros sin objetos y con pre-commit sus hooks dejan de correr"
+    },
+    {
+      "id": "P2-5",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 253,
+      "title": "Encadenada en husky, la Esclusa también corre en CI (npm ci instala los hooks): los commits y pushes de release (semantic-release con @semantic-release/git) fallan"
+    },
+    {
+      "id": "P2-7",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 357,
+      "title": "Con core.fileMode=false (WSL en /mnt/c, o global), los hooks se versionan como 100644: en los clones git los ignora y nadie avisa"
+    },
+    {
+      "id": "V2-1",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 56,
+      "title": "install-needs-human (confirm) va antes que las reglas block del SDK: nombrar el instalador, aunque sea en un comentario, convierte cualquier block posterior en un «ask» con el motivo de instalar y sin pasar por la bitácora"
+    },
+    {
+      "id": "V2-2",
+      "lens": "adversary",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 42,
+      "title": "La Esclusa encadenada vive en ficheros que self-protection no cubre (.husky/<hook>, .git/hooks/<hook>, el hooksPath ajeno): un Edit la desarma, y setup y session-start siguen diciendo que está activa"
+    },
+    {
+      "id": "V2-5",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 40,
+      "title": "El instalador (setup.sh y chain.sh, que setup carga con source) no está protegido: el agente lo edita y la aprobación humana de install-needs-human ejecuta su código, que relaja la política del SDK mientras setup dice «✓ Nivel Guardia instalado»"
+    },
+    {
+      "id": "V2-prevA4",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 163,
+      "title": "El instalador sigue sirviendo para descablear: merged_ok/wired_ok comprueban texto, y un jq fuera del repo (un directorio del PATH escribible: ~/.local/bin va antes que /usr/bin en esta máquina) devuelve un JSON con las rutas y los matchers en un string y sin cableado; setup lo escribe y dice «✓ Centinela cableado»"
+    },
+    {
+      "id": "A2-3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 166,
+      "title": "wired_ok exige exactamente una aparición de cada script en todo settings.json: al actualizar sin jq, seguir el pendiente deja exit 3 para siempre; y una regla de permisos que nombre un script impide cablear incluso con jq"
+    },
+    {
+      "id": "A2-4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 36,
+      "title": "session-start da la Esclusa por encadenada si pre-commit contiene la línea, sin mirar si es ejecutable (git lo ignora) ni commit-msg/pre-push"
+    },
+    {
+      "id": "A2-5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 24,
+      "title": "Con la skill expuesta como recomienda la guía (symlink en ~/.claude/skills/setup), setup.sh falla con «SDK incompleto en $HOME», y esa ruta tampoco pide aprobación"
+    },
+    {
+      "id": "A2-6",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 58,
+      "title": "install-needs-human no reconoce formas normales de ejecutar el instalador (SC-sentinel-guard-21)"
+    },
+    {
+      "id": "A2-7",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 344,
+      "title": "La prueba de humo solo prueba Bash «true»: una regla del consumidor para tools de fichero con regex inválida deniega todo Read/Edit y setup sale con 0"
+    },
+    {
+      "id": "P2-10",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 339,
+      "title": "Si .claude/ está en el excludesFile global, la excepción que propone setup no funciona en el .gitignore del repo"
+    },
+    {
+      "id": "P2-4",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 284,
+      "title": "En un repo husky antes de npm install, setup activa core.hooksPath y sale con 0; el primer npm install se lo quita y la Esclusa queda apagada"
+    },
+    {
+      "id": "P2-6",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 24,
+      "title": "Expuesta la skill con el symlink que propone la guía, setup.sh ejecutado desde ~/.claude/skills/setup falla con «SDK incompleto en $HOME» y el Centinela no pide aprobación para esa ruta"
+    },
+    {
+      "id": "P2-8",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/SKILL.md",
+      "line": 42,
+      "title": "«Versiona sentinel/, .claude/settings.json y .gitignore» deja fuera las líneas de encadenado de .husky/<hook>: el compañero no recibe la Esclusa"
+    },
+    {
+      "id": "P2-9",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 156,
+      "title": "Sin jq y con el cableado de una versión anterior, el pendiente dice «Añade a mano las entradas»: hacerlo duplica el Centinela y setup sale con 3 para siempre"
+    },
+    {
+      "id": "V2-3",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 50,
+      "title": "Encadenada en husky, la Esclusa hereda los interruptores de husky: HUSKY=\"0\" y ~/.config/husky/init.sh la apagan y no-hook-disabling solo ve el literal HUSKY=0"
+    },
+    {
+      "id": "V2-4",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 154,
+      "title": "Sin jq, la persona copia a mano sentinel/settings.fragment.json, que el agente puede editar, y wired_ok certifica por texto un cableado que no protege nada (exit 0, «ya cableado»)"
+    },
+    {
+      "id": "V2-6",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 50,
+      "title": "no-hook-disabling se salta con «+=» y con la clave de git en minúsculas: el agente se concede la excepción de sesión o apaga la Esclusa sin ninguno de los literales"
+    },
+    {
+      "id": "V2-prevV1",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 58,
+      "title": "install-needs-human solo reconoce el instalador al principio del comando y con la ruta entera: cd + ./setup.sh, /bin/bash, source, ., time, command, nohup, env -i o una doble barra lo ejecutan sin pedir aprobación"
+    },
+    {
+      "id": "A2-8",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 222,
+      "title": "is_esclusa compara texto: un core.hooksPath con «~» que apunta a la Esclusa se toma por ajeno y session-start avisa en falso"
+    },
+    {
+      "id": "V2-7",
+      "lens": "adversary",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 38,
+      "title": "El aviso de Esclusa inactiva se lo da al agente con un comando que el Centinela le bloquea («git config core.hooksPath…») o con «ejecuta setup», lo que empuja a buscar la grafía que pasa"
+    }
+  ]
+}

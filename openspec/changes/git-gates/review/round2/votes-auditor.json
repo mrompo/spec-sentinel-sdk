@@ -1,0 +1,21 @@
+{"lens":"auditor","votes":[
+{"id":"V2-1","agree":true,"severity":"major","note":"Coincide con mi A2-1 (s/g1.sh). El ejemplo con el instalador en un comentario agrava el caso: basta con nombrarlo."},
+{"id":"V2-2","agree":true,"severity":"major","note":"Lo reproduje (s/cr1.sh): con la guarda cambiada, setup dice «✓ Esclusa encadenada» con exit 0 y un commit no conforme entra. Lo dejo en grave: editar .git/config ya desarmaba core.hooksPath antes del cambio y hace falta un agente que lo busque."},
+{"id":"V2-3","agree":true,"severity":"minor","note":"Real que la Esclusa encadenada en husky hereda HUSKY=0 e init.sh, pero las grafías con comillas caen en el límite documentado «Regex evadibles». Conviene documentarlo."},
+{"id":"V2-prevA4","agree":true,"severity":"major","note":"Coincide con mi A2-prevA4 (s/e2-eviljq.sh, con el guard movido a SessionStart)."},
+{"id":"V2-prevV1","agree":true,"severity":"minor","note":"Coincide con mi A2-6: /bin/bash, cd + bash setup.sh, env -i, bash -c y time pasan sin ask."},
+{"id":"V2-4","agree":true,"severity":"minor","note":"Mismo origen que A2-prevA4 (wired_ok comprueba texto); además hace falta que la persona pegue sin mirar un fragmento manipulado."},
+{"id":"V2-5","agree":true,"severity":"major","note":"Por lectura de la política es correcto: self-protection no cubre ai-specs/skills/setup/ y setup carga chain.sh con source. No lo ejecuté."},
+{"id":"V2-6","agree":true,"severity":"minor","note":"La regex lo confirma: «SENTINEL_X+=» no coincide y la parte de core.hooksPath distingue mayúsculas aunque git no."},
+{"id":"V2-7","agree":true,"severity":"nit","note":"El aviso de session-start y la verificación de SKILL.md proponen al agente un comando que el Centinela le bloquea."},
+{"id":"P2-1","agree":true,"severity":"blocker","note":"Coincide con mi A2-2 (s/e3-libignored.sh en macOS); ahora reproducido también en Linux."},
+{"id":"P2-2","agree":true,"severity":"major","note":"pre-commit install y lefthook reescriben .git/hooks; sus hooks fuente son su yaml, así que SC-sdk-setup-08 no se cumple."},
+{"id":"P2-3","agree":true,"severity":"major","note":"session-start propone core.hooksPath sin ver que .git/hooks tiene hooks propios (LFS); activarlo los silencia."},
+{"id":"P2-4","agree":true,"severity":"minor","note":"Coherente con husky v9 (prepare reescribe core.hooksPath); session-start lo avisa en la sesión siguiente."},
+{"id":"P2-5","agree":true,"severity":"major","note":"pre-commit exige gitleaks también en commits de release y pre-push rechaza el push de release a main; con husky la Esclusa llega a CI. No lo ejecuté."},
+{"id":"P2-6","agree":true,"severity":"minor","note":"Coincide con mi A2-5: exit 1 y nada escrito."},
+{"id":"P2-7","agree":true,"severity":"major","note":"Con core.fileMode=false los ficheros nuevos se versionan como 100644 y git ignora los hooks; misma laguna de ejecutabilidad que mi A2-4."},
+{"id":"P2-8","agree":true,"severity":"minor","note":"El mensaje final y el paso 6 de SKILL.md no nombran .husky/<hook>."},
+{"id":"P2-9","agree":true,"severity":"minor","note":"Coincide con la parte (a) de mi A2-3."},
+{"id":"P2-10","agree":true,"severity":"minor","note":"Lo reproduje: con «.claude/» en core.excludesFile hace falta «!.claude/» en el .gitignore del repo."}
+]}

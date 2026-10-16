@@ -1,0 +1,21 @@
+{"lens":"adversary","votes":[
+{"id":"A2-1","agree":true,"severity":"major","note":"Coincide con V2-1: install-needs-human (confirm) delante de los block convierte cualquier block en «ask» sin bitácora; mismo caso y mismo arreglo."},
+{"id":"A2-2","agree":true,"severity":"major","note":"Real e incumple SC-sdk-setup-11, pero falla cerrado y de forma visible (no abre una vía de salto); el daño es que un gate que lo rechaza todo invita a desactivarlo. Coincide con P2-1."},
+{"id":"A2-prevA4","agree":true,"severity":"major","note":"Coincide con V2-prevA4: merged_ok cuenta texto y un jq fuera del repo descablea; la misma causa."},
+{"id":"A2-3","agree":true,"severity":"minor","note":"Es el falso negativo del mismo conteo de texto: un exit 3 perpetuo, no una vía de salto. Coincide en parte con P2-9."},
+{"id":"A2-4","agree":true,"severity":"minor","note":"Misma familia que V2-2: session-start se fía del texto; un chmod -x de .git/hooks/pre-commit apaga la Esclusa encadenada sin aviso."},
+{"id":"A2-5","agree":true,"severity":"minor","note":"Hoy falla con exit 1 (sin daño); al arreglar cd -P, que esa ruta no pida aprobación pasa a ser otro hueco de install-needs-human. Coincide con P2-6."},
+{"id":"A2-6","agree":true,"severity":"minor","note":"Coincide con V2-prevV1: la regex del instalador no ve cd + setup.sh, /bin/bash, env -i, time…"},
+{"id":"A2-7","agree":true,"severity":"minor","note":"Real, pero falla cerrado (deniega Read/Edit): no abre vía de salto; ampliar la prueba de humo es barato."},
+{"id":"A2-8","agree":true,"severity":"nit","note":"Falso positivo seguro (avisa de más), sin impacto en los gates."},
+{"id":"P2-1","agree":true,"severity":"major","note":"Mismo defecto que A2-2 (lib/ ignorado): falla cerrado y visible, no es un salto; lo dejo en major."},
+{"id":"P2-2","agree":true,"severity":"major","note":"Misma familia que V2-2: el encadenado vive en ficheros que otras herramientas (o el agente con 'pre-commit install', no bloqueado) reescriben, y gitleaks deja de correr."},
+{"id":"P2-3","agree":true,"severity":"major","note":"No es un salto, pero el consejo causa pérdida de objetos LFS; además el aviso se dirige al agente con un comando bloqueado (coincide en parte con V2-7)."},
+{"id":"P2-4","agree":true,"severity":"minor","note":"Esclusa apagada tras npm install, pero session-start lo detecta en la siguiente sesión: mitigación parcial."},
+{"id":"P2-5","agree":true,"severity":"minor","note":"Real y visible (falla en CI); el arreglo HUSKY=0 debe limitarse a CI, porque es el mismo interruptor que apaga la Esclusa encadenada (V2-3)."},
+{"id":"P2-6","agree":true,"severity":"minor","note":"Mismo defecto que A2-5; falla con exit 1, sin daño hasta que se arregle."},
+{"id":"P2-7","agree":true,"severity":"major","note":"Esclusa apagada en silencio en los clones (hooks 100644 ignorados por git) y session-start no lo ve."},
+{"id":"P2-8","agree":true,"severity":"minor","note":"Real; en el clon del compañero session-start sí avisa, así que la mitigación es parcial."},
+{"id":"P2-9","agree":true,"severity":"minor","note":"Mismo conteo de texto que A2-3 y V2-prevA4: exit 3 perpetuo, no un salto."},
+{"id":"P2-10","agree":true,"severity":"minor","note":"Real, pero setup se queda en exit 3 y lo dice: fallo visible sin impacto en los gates."}
+]}

@@ -1,0 +1,193 @@
+{
+  "lens": "auditor",
+  "findings": [
+    {
+      "id": "A2-1",
+      "severity": "major",
+      "file": "sentinel/policy.default.yaml",
+      "line": 56,
+      "title": "install-needs-human (confirm) va antes de las reglas block del SDK: con primera coincidencia por política, todo comando que también ejecute setup.sh pasa de block a «ask»",
+      "evidence": "s/g1.sh en un repo desechable en main, sin política del consumidor: «git commit -m x» → exit 2 [protected-branches], pero «git commit -m x; bash ../sdk/ai-specs/skills/setup/setup.sh .» → ask. Igual con «… && git push --force origin main» (no-force-push), «…; cat .env.production» (isolation-env), «… && rm tests/a.test.js» (protect-tests-bash) y «… && echo x >> CHANGELOG.md» (managed-files). La persona aprueba «Instalar o actualizar el SDK…» y se ejecuta también lo que era block, sin pasar por la excepción auditada ni dejar línea en overrides.log.",
+      "fix": "Mover install-needs-human detrás de la última regla block, y añadir a sc-18 un caso «bash …/setup.sh . && git push --force origin x» → exit 2. Para que no vuelva a pasar, que dentro de cada política gane también la decisión más estricta (requiere tocar la spec)."
+    },
+    {
+      "id": "A2-2",
+      "severity": "blocker",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 327,
+      "title": "SC-sdk-setup-11 incumplido: del enforcement solo se comprueban sentinel-guard.sh y githooks/pre-commit; con «lib/» en el .gitignore la librería de la Esclusa no se versiona, setup sale con 0 y los compañeros no pueden commitear",
+      "evidence": "s/e3-libignored.sh: .gitignore con «lib/» (plantilla Python de GitHub; habitual como outDir de TypeScript) → setup exit 0; git check-ignore -v: «.gitignore:4:lib/ sentinel/githooks/lib/breakglass.sh»; tras git add -A, git ls-files sentinel/githooks no incluye lib/. En un clon, con core.hooksPath=sentinel/githooks, «git commit -m \"feat: algo\"» → rc=1 «✗ [Esclusa] pre-commit: falta …/sentinel/githooks/lib/breakglass.sh». Tampoco se comprueban commit-msg, pre-push, adapters/stack.sh, post-edit.sh, session-start.sh ni stack.yaml.",
+      "fix": "En el paso 7 recorrer la misma lista de ficheros que copia el paso 1, más policy.yaml, overrides.log, .claude/settings.json y stack.yaml si existe. Caso en sc-12 con «lib/»."
+    },
+    {
+      "id": "A2-prevA4",
+      "severity": "major",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 175,
+      "title": "El instalador sigue sirviendo para descablear el Centinela: merged_ok solo comprueba por texto, así que un jq de fuera del repo puede sacar el guard de PreToolUse",
+      "evidence": "s/e2-eviljq.sh: un jq falso fuera del repo, en el PATH, devuelve al fusionar los tres comandos y matchers bajo SessionStart. setup hace backup, lo escribe y sale con 0; .hooks.PreToolUse = null. La prueba de humo ejecuta el guard directamente y no lo ve. «PATH=/tmp/e:$PATH /bin/bash ../sdk/ai-specs/skills/setup/setup.sh .» pasa sin pedir aprobación. sc-11 solo prueba un jq que devuelve {\"hooks\":{}}.",
+      "fix": "Que merged_ok compruebe la estructura sin fiarse del jq: por cada evento del fragmento, que el grupo del SDK aparezca dentro del array de ESE evento. Caso en sc-11 con el jq que mueve el guard de evento; ampliar install-needs-human a /bin/bash."
+    },
+    {
+      "id": "A2-3",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 166,
+      "title": "wired_ok exige exactamente una aparición de cada script en todo settings.json: al actualizar sin jq, seguir el pendiente deja exit 3 para siempre; y una regla de permisos que nombre un script impide cablear incluso con jq",
+      "evidence": "s/e12-stale-nojq.sh: sin jq y con el cableado anterior → exit 3; al añadir las entradas como dice, quedan dos guard y dos post-edit → exit 3 otra vez. s/e4-mention.sh: permissions.deny [\"Edit(sentinel/hooks/sentinel-guard.sh)\"] con jq → exit 3 «el resultado de la fusión no conserva el cableado» en cada ejecución.",
+      "fix": "Contar solo apariciones en valores \"command\", y en el pendiente sin jq decir «sustituye las entradas que ya llamen a sentinel/hooks/*.sh por las del fragmento». Casos en sc-04 y sc-03."
+    },
+    {
+      "id": "A2-4",
+      "severity": "minor",
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 36,
+      "title": "session-start da la Esclusa por encadenada si pre-commit contiene la línea, sin mirar si es ejecutable (git lo ignora) ni commit-msg/pre-push",
+      "evidence": "s/e9-session.sh: con las líneas de chain.sh en .git/hooks/{commit-msg,pre-commit,pre-push} sin chmod +x → session-start no avisa y «git commit -m \"arreglado el bug\"» entra (hint ignoredHook). setup, con chain_done … exec, sí lo marcaría pendiente.",
+      "fix": "El mismo criterio que setup: los tres hooks contienen la línea y son ejecutables (salvo husky). Caso en sc-19."
+    },
+    {
+      "id": "A2-5",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 24,
+      "title": "Con la skill expuesta como recomienda la guía (symlink en ~/.claude/skills/setup), setup.sh falla con «SDK incompleto en $HOME», y esa ruta tampoco pide aprobación",
+      "evidence": "s/e11-symlink.sh: ln -s <sdk>/ai-specs/skills/setup ~/.claude/skills/setup; «bash ~/.claude/skills/setup/setup.sh .» → exit 1 «SDK incompleto en <HOME>». cd resuelve «…/setup/../../..» de forma lógica. Con el Centinela, esa ruta pasa sin «ask».",
+      "fix": "SDK_ROOT resolviendo el symlink antes de subir (cd -P), y que install-needs-human acepte «skills/setup/setup\\.sh» sin el prefijo ai-specs/. Caso con el symlink."
+    },
+    {
+      "id": "A2-6",
+      "severity": "minor",
+      "file": "sentinel/policy.default.yaml",
+      "line": 58,
+      "title": "install-needs-human no reconoce formas normales de ejecutar el instalador (SC-sentinel-guard-21)",
+      "evidence": "s/g1.sh y s/e13-v3.sh: pasan sin «ask» la ruta con espacios entre comillas, «cd ../sdk/ai-specs/skills/setup && bash setup.sh ../../../../app», «/bin/bash …/setup.sh .», «env -i bash …», «bash -c \"bash …/setup.sh .\"» y «time bash …».",
+      "fix": "Ampliar la regex: shell con ruta, opciones de env, prefijos command/time/exec/nohup, ruta entre comillas, y setup.sh tras cd a skills/setup. Casos en sc-18."
+    },
+    {
+      "id": "A2-7",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 344,
+      "title": "La prueba de humo solo prueba Bash «true»: una regla del consumidor para tools de fichero con regex inválida deniega todo Read/Edit y setup sale con 0",
+      "evidence": "s/e14-smoke.sh: regla con tool: Read|Edit|Write, path_re: (secrets/ y mode: block → setup exit 0; el guard deniega Read y Edit de README.md «regex inválida en la política».",
+      "fix": "Probar también un Read y un Edit sobre un fichero inocuo y mostrar el motivo del primero que se deniegue."
+    },
+    {
+      "id": "A2-8",
+      "severity": "nit",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 222,
+      "title": "is_esclusa compara texto: un core.hooksPath con «~» que apunta a la Esclusa se toma por ajeno y session-start avisa en falso",
+      "evidence": "s/e5-hookspath.sh: core.hooksPath=«~/../tmp/e5/sentinel/githooks» → setup exit 3 con líneas para encadenar la Esclusa en sí misma; session-start avisa. Las formas de la spec (./, barra final, absoluta) sí funcionan.",
+      "fix": "Comparar el directorio físico (cd -P) de «git config --type=path --get core.hooksPath» resuelto desde la raíz con el de sentinel/githooks, en setup y en session-start."
+    }
+  ],
+  "prior": [
+    {
+      "id": "A1",
+      "resolved": true,
+      "note": "s/e6-nojq.sh: sin jq, dos ejecuciones → exit 0 y sin cambios."
+    },
+    {
+      "id": "A2",
+      "resolved": true,
+      "note": "s/e10-a2.sh: los block del consumidor ganan a warn/confirm del SDK; sc-17 lo cubre."
+    },
+    {
+      "id": "A3",
+      "resolved": true,
+      "note": "chain.sh al principio, stdin devuelto, guarda [ -x ]; sc-08a/sc-10b verdes."
+    },
+    {
+      "id": "A4",
+      "resolved": false,
+      "note": "Un jq de fuera que mueve el guard de evento supera merged_ok (prev-A4)."
+    },
+    {
+      "id": "A5",
+      "resolved": true,
+      "note": "*.log → exit 3 con regla y línea; con excepciones → 0. El hueco de «lib/» es nuevo (A2-2)."
+    },
+    {
+      "id": "A6",
+      "resolved": true,
+      "note": "Regla sin mode o policy vacía → exit 3 con el motivo. Hueco restante: A2-7."
+    },
+    {
+      "id": "A7",
+      "resolved": true,
+      "note": "./, barra final y absoluta → activa; encadenados → 0. Queda «~» (A2-8)."
+    },
+    {
+      "id": "A8",
+      "resolved": true,
+      "note": "Formas no fusionables → fragmento y exit 3, nunca exit 1; matcher antiguo sustituido."
+    },
+    {
+      "id": "A9",
+      "resolved": true,
+      "note": "backup de stack.proposed.yaml y de .gitignore."
+    },
+    {
+      "id": "A10",
+      "resolved": true,
+      "note": "sc-01 con mktemp fuera de repo y mensaje «no es un repo git»."
+    },
+    {
+      "id": "P1",
+      "resolved": true,
+      "note": "husky v9 → .husky/<hook>; sc-10a verde."
+    },
+    {
+      "id": "P2",
+      "resolved": true,
+      "note": "Encadenado en .git/hooks sin activar hooksPath; sc-10b verde."
+    },
+    {
+      "id": "P3",
+      "resolved": true,
+      "note": "Lo hecho se reconoce y sale 0. Queda un caso al actualizar sin jq: A2-3."
+    },
+    {
+      "id": "P4",
+      "resolved": true,
+      "note": "Guarda [ -x ]; sc-08c verde."
+    },
+    {
+      "id": "P5",
+      "resolved": true,
+      "note": "Guía + aviso de session-start. Queda el hook no ejecutable: A2-4."
+    },
+    {
+      "id": "P6",
+      "resolved": true,
+      "note": "«.claude/» → pendiente con la excepción; tras ponerla → 0."
+    },
+    {
+      "id": "P8",
+      "resolved": true,
+      "note": "Matcher antiguo sustituido, hook propio conservado, idempotente."
+    },
+    {
+      "id": "P9",
+      "resolved": true,
+      "note": "Textos corregidos; las comprobaciones previas van antes de escribir."
+    },
+    {
+      "id": "P10",
+      "resolved": true,
+      "note": "La guía explica el symlink, pero ejecutar desde él falla: A2-5."
+    },
+    {
+      "id": "V1",
+      "resolved": true,
+      "note": "Cubre las formas documentadas; huecos en A2-6 y posición en A2-1."
+    },
+    {
+      "id": "V3",
+      "resolved": true,
+      "note": "SENTINEL_[A-Z_]+= bloquea SENTINEL_SETUP_JQ= y cualquier variable nueva."
+    }
+  ]
+}
