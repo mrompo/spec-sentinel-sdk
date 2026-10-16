@@ -44,6 +44,22 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
 - **THEN** el fichero queda intacto, se escribe `sentinel/settings.fragment.json` y la salida
   explica el paso manual
 
+#### Scenario: Actualizar el cableado (SC-sdk-setup-09)
+
+- **WHEN** se reinstala sobre un `.claude/settings.json` con el cableado de una versión anterior
+  del SDK (otro matcher, el comando escrito de otra forma) o con hooks propios en el mismo grupo
+- **THEN** las entradas del SDK se reconocen por la ruta de su script y se sustituyen por las
+  actuales, una sola vez cada una, con backup y conservando todo lo del consumidor
+- **AND** si la forma del fichero no permite fusionar con seguridad, se deja el fragmento y
+  queda pendiente (exit 3), nunca un error a mitad de instalación
+
+#### Scenario: El instalador no sirve para descablear (SC-sdk-setup-10)
+
+- **WHEN** `setup` se ejecuta con un `jq` que no produce el cableado del SDK, o con un `jq` que
+  está dentro del repo destino (por `SENTINEL_SETUP_JQ` o por el `PATH`)
+- **THEN** `.claude/settings.json` conserva el cableado del Centinela: el `jq` del repo se ignora
+  y un resultado sin el cableado no se escribe (queda pendiente)
+
 #### Scenario: Actualización sin pisar la política (SC-sdk-setup-05)
 
 - **WHEN** se reinstala o actualiza el SDK en un repo cuya `policy.yaml` fue personalizada

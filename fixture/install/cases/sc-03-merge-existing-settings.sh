@@ -35,3 +35,43 @@ backups="$(find "$WS/sentinel/.backup" -path '*/.claude/settings.json' -type f 2
 grep -qxF "sentinel/.backup/" "$WS/.gitignore" || fail_case ".gitignore no excluye los backups"
 assert_out_contains "backup" || fail_case "la salida no menciona el backup"
 cleanup_git_workspace
+
+# SC-sdk-setup-09: el fragmento sale del .claude/settings.json del SDK, que solo cablea hooks
+jq -e 'keys == ["hooks"]' "$REPO_ROOT/.claude/settings.json" >/dev/null \
+  || { echo "    el .claude/settings.json del SDK (fuente del fragmento) debe tener solo «hooks»" >&2; exit 1; }
+cur_matcher="$(jq -r '.hooks.PreToolUse[] | select(any(.hooks[]; .command | contains("sentinel-guard"))) | .matcher' "$REPO_ROOT/.claude/settings.json")"
+
+# SC-sdk-setup-09: un cableado antiguo (matcher sin Read|Grep|Glob, comando sin comillas, el guard
+# compartiendo grupo con un hook propio) se actualiza y lo del consumidor se conserva (P8, A8)
+mk_git_workspace
+S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
+cat >"$S" <<'EOF'
+{ "hooks": { "PreToolUse": [
+  { "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
+    "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/sentinel/hooks/sentinel-guard.sh\"" } ] },
+  { "matcher": "Bash",
+    "hooks": [ { "type": "command", "command": "bash $CLAUDE_PROJECT_DIR/sentinel/hooks/sentinel-guard.sh" },
+               { "type": "command", "command": "echo hook-propio" } ] }
+] } }
+EOF
+run_setup
+assert_exit 0 || fail_case "actualizar un cableado antiguo debería terminar con 0: $RH_ERR"
+[ "$(settings_count "$S" sentinel-guard)" -eq 1 ] || fail_case "el Centinela debería quedar cableado una sola vez"
+[ "$(jq -r '.hooks.PreToolUse[] | select(any(.hooks[]; .command | contains("sentinel-guard"))) | .matcher' "$S")" = "$cur_matcher" ] \
+  || fail_case "el matcher del Centinela no se actualizó al del SDK"
+[ "$(jq -r '.hooks.PreToolUse[] | select(any(.hooks[]; .command == "echo hook-propio")) | .matcher' "$S")" = "Bash" ] \
+  || fail_case "el hook propio debería conservarse con su matcher"
+find "$WS/sentinel/.backup" -path '*/.claude/settings.json' -type f | grep -q . || fail_case "actualizar el cableado sin backup"
+before="$(ws_snapshot)"; run_setup
+assert_exit 0 && [ "$before" = "$(ws_snapshot)" ] || fail_case "tras actualizar, reinstalar debería ser idempotente"
+cleanup_git_workspace
+
+# SC-sdk-setup-09: una forma que no se puede fusionar con seguridad → fragmento y pendiente, no error
+mk_git_workspace
+S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
+printf '{"hooks":{"PreToolUse":["x"]}}\n' >"$S"; orig="$(cat "$S")"
+run_setup
+assert_exit 3 || fail_case "una forma inesperada de settings.json debería terminar con 3, no con error"
+[ "$(cat "$S")" = "$orig" ] || fail_case "una forma inesperada de settings.json no se toca"
+[ -f "$WS/sentinel/settings.fragment.json" ] || fail_case "debería dejarse el fragmento"
+cleanup_git_workspace
