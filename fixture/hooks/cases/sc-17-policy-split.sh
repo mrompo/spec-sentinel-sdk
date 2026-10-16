@@ -65,6 +65,36 @@ guard "$(bash_payload 'echo hola')"
 assert_exit 2 || fail_case "19: un id duplicado debería ser error de política"
 assert_err_contains "no-force-push" || fail_case "19: el error no nombra el id duplicado"
 
+# 20 — entre las dos políticas gana la decisión más estricta: un warn o confirm del SDK no tapa un
+# block del consumidor, y un confirm del consumidor gana a un warn del SDK
+cat >"$C" <<'EOF'
+version: 1
+rules:
+  - id: no-coverage-edits
+    tool: Edit|Write
+    path_re: jest\.config
+    mode: block
+    reason: la cobertura la cambia QA
+  - id: no-rm-build
+    tool: Bash
+    command_re: rm[[:space:]]+-rf[[:space:]]+build
+    mode: block
+    reason: build lo limpia el pipeline
+  - id: ask-release
+    tool: Bash
+    command_re: make[[:space:]]+release
+    mode: confirm
+    reason: el release lo aprueba una persona
+EOF
+guard '{"tool_name":"Edit","tool_input":{"file_path":"jest.config.js","new_string":"x"}}'
+assert_exit 2 || fail_case "20: un warn del SDK (coverage-thresholds) tapó un block del consumidor"
+assert_err_contains "no-coverage-edits" || fail_case "20: debería decidir la regla del consumidor"
+guard "$(bash_payload 'rm -rf build')"
+assert_exit 2 || fail_case "20: un confirm del SDK (destructive) tapó un block del consumidor"
+assert_err_contains "no-rm-build" || fail_case "20: debería decidir la regla del consumidor"
+guard "$(bash_payload 'make release # vitest.config')"
+case "$RH_OUT" in *'"ask"'*ask-release*) ;; *) fail_case "20: un confirm del consumidor debería ganar a un warn del SDK (stdout: $RH_OUT)";; esac
+
 # sdd — la del consumidor manda; sin declararlo, hereda la distribuida (que trae sdd: false:
 # el nivel Método lo activa cada proyecto)
 EDIT_SRC='{"tool_name":"Edit","tool_input":{"file_path":"src/app.js","new_string":"x"}}'
@@ -88,7 +118,9 @@ for payload in \
   '{"tool_name":"Write","tool_input":{"file_path":"sentinel/policy.default.yaml","content":"version: 1\nrules:\n"}}' \
   '{"tool_name":"Edit","tool_input":{"file_path":"sentinel/policy.yaml","new_string":"x"}}' \
   "$(bash_payload 'rm sentinel/policy.default.yaml')" \
-  "$(bash_payload 'SENTINEL_POLICY_DEFAULT=/tmp/vacia.yaml claude')"; do
+  "$(bash_payload 'SENTINEL_POLICY_DEFAULT=/tmp/vacia.yaml claude')" \
+  "$(bash_payload 'SENTINEL_SETUP_JQ=./myjq bash ../sdk/ai-specs/skills/setup/setup.sh .')" \
+  "$(bash_payload 'env SENTINEL_CUALQUIERA=1 make test')"; do
   guard "$payload"
   assert_exit 2 || fail_case "13: debería bloquearse: $payload"
 done

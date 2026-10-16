@@ -7,12 +7,12 @@
 
 ### Requirement: Evaluación de la política
 
-El hook `sentinel-guard` SHALL leer cada tool call (JSON por stdin) y evaluar en orden primero
-las reglas de la política distribuida (`sentinel/policy.default.yaml`, viene con el SDK y la
-actualiza `setup`) y después las de la política del consumidor (`sentinel/policy.yaml`, nunca
-se pisa); la primera regla que matchea decide el resultado. El consumidor solo SHALL poder
-**añadir** reglas: ninguna suya se evalúa antes que una del SDK. `sdd:` SHALL leerse de la
-política del consumidor y, si no lo declara, de la distribuida.
+El hook `sentinel-guard` SHALL leer cada tool call (JSON por stdin) y evaluar la política
+distribuida (`sentinel/policy.default.yaml`, viene con el SDK y la actualiza `setup`) y la del
+consumidor (`sentinel/policy.yaml`, nunca se pisa). En cada una decide la primera regla que
+matchea; entre las dos SHALL ganar la decisión más estricta (`block` > `confirm` > `warn`) y, a
+igualdad, la del SDK. El consumidor SHALL poder **añadir** protección, nunca quitarla. `sdd:`
+SHALL leerse de la política del consumidor y, si no lo declara, de la distribuida.
 
 #### Scenario: Acción sin regla — pasa (SC-sentinel-guard-01)
 
@@ -42,15 +42,54 @@ política del consumidor y, si no lo declara, de la distribuida.
 - **THEN** el hook deniega como error de política, explicando que las reglas del SDK no se
   sustituyen desde la del consumidor
 
+#### Scenario: Un aviso del SDK no tapa un bloqueo del consumidor (SC-sentinel-guard-20)
+
+- **WHEN** una acción matchea una regla `warn` o `confirm` del SDK y una `block` del consumidor
+  (p. ej. editar `jest.config.js`, que el SDK solo avisa, o `rm -rf build`, que solo confirma)
+- **THEN** la acción se bloquea por la regla del consumidor
+- **AND** una regla `confirm` del consumidor gana a una `warn` del SDK
+
 ### Requirement: El enforcement se protege a sí mismo
 
 La política SHALL bloquear toda modificación o borrado del propio enforcement (hooks, las dos
 políticas, log de overrides, cableado de la herramienta) y todo intento de desactivar los gates
-(`--no-verify`, `core.hooksPath`, auto-concesión de variables de override o de política).
+(`--no-verify`, `core.hooksPath`, cualquier variable `SENTINEL_*` fijada desde un comando).
+Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforcement y el cableado.
 
 #### Scenario: Desarmar el guard — bloqueado (SC-sentinel-guard-13)
 
 - **WHEN** el agente intenta escribir o borrar `sentinel/hooks/*`, `sentinel/policy.yaml`,
   `sentinel/policy.default.yaml`, `sentinel/overrides.log` o `.claude/settings.json`, ejecutar
-  `git commit --no-verify` o apuntar `SENTINEL_POLICY_DEFAULT=` a otra política
+  `git commit --no-verify` o fijar una variable `SENTINEL_*` en un comando (p. ej.
+  `SENTINEL_POLICY_DEFAULT=` o `SENTINEL_SETUP_JQ=`)
 - **THEN** el hook deniega la acción
+
+#### Scenario: Instalar es una decisión humana (SC-sentinel-guard-21)
+
+- **WHEN** el agente ejecuta el instalador (`ai-specs/skills/setup/setup.sh`, con `bash` o
+  directamente)
+- **THEN** el hook pide aprobación humana (`confirm`); leer o buscar en ese fichero no la pide
+
+### Requirement: Hooks auxiliares
+
+`session-start` SHALL inyectar al inicio de sesión la rama actual y el cambio OpenSpec activo, y
+SHALL avisar si el repo tiene la Esclusa pero en este clon no está activa ni encadenada (los git
+hooks no viajan con el clon); `post-edit` SHALL formatear cada fichero editado con el comando
+`format` del adaptador de stack, degradando en silencio si el entorno no está listo.
+
+#### Scenario: Contexto al arrancar (SC-sentinel-guard-11)
+
+- **WHEN** arranca una sesión de agente en el repo
+- **THEN** el agente recibe rama actual + cambio activo (o "entre fases") sin pedirlo
+
+#### Scenario: Autoformato con entorno caído (SC-sentinel-guard-12)
+
+- **WHEN** `post-edit` corre y el comando `format` del adaptador no está disponible
+- **THEN** no falla ni bloquea: degrada en silencio y la edición queda intacta
+
+#### Scenario: La Esclusa inactiva en el clon se avisa (SC-sentinel-guard-22)
+
+- **WHEN** arranca una sesión en un repo con `sentinel/githooks/` cuyo `core.hooksPath` no
+  apunta a la Esclusa y cuyos hooks no la encadenan (p. ej. el clon recién hecho de un compañero)
+- **THEN** el contexto de arranque avisa de que la Esclusa no está activa y da el comando que
+  la activa; con la Esclusa activa o encadenada, no avisa

@@ -77,7 +77,7 @@ assert_exit 0 || fail_case "la instalación en un repo limpio debería terminar 
 for hp in "./sentinel/githooks" "sentinel/githooks/" "$WS/sentinel/githooks"; do
   git_in_ws config core.hooksPath "$hp"
   run_setup
-  assert_exit 0 || fail_case "con core.hooksPath=«$hp» la Esclusa ya está activa: debería terminar con 0"
-  assert_out_lacks "PENDIENTE" || fail_case "con core.hooksPath=«$hp» no debería quedar nada pendiente"
+  assert_exit 0 || fail_case "con core.hooksPath=«${hp}» la Esclusa ya está activa: debería terminar con 0"
+  assert_out_lacks "PENDIENTE" || fail_case "con core.hooksPath=«${hp}» no debería quedar nada pendiente"
 done
 cleanup_git_workspace
