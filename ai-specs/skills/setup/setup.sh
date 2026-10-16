@@ -172,23 +172,39 @@ else
 fi
 
 # ── 4. La Esclusa: core.hooksPath ────────────────────────────────────────────────────────
+# own_hooks <dir> → « hook1 hook2…» ejecutables de <dir> (los .sample no cuentan); un dir
+# relativo se resuelve, como hace git, desde la raíz del repo
+own_hooks() {
+  local d="$1" h list=""
+  case "$d" in /*) ;; *) d="$TARGET/$d" ;; esac
+  for h in "$d"/*; do
+    [ -f "$h" ] && [ -x "$h" ] && case "$h" in *.sample) ;; *) list="$list $(basename "$h")" ;; esac
+  done
+  printf '%s' "$list"
+}
+
 cur="$(git -C "$TARGET" config --get core.hooksPath || true)"
 if [ "$cur" = "$HOOKS_PATH" ]; then
   ok "Esclusa activa (core.hooksPath → $HOOKS_PATH)"
 elif [ -n "$cur" ]; then
   # Puede venir del config global de la persona (p. ej. un escáner corporativo): tampoco se pisa
   origin="$(git -C "$TARGET" config --show-origin --get core.hooksPath 2>/dev/null | cut -f1)"
-  todo "el repo ya usa core.hooksPath → «${cur}» (definido en ${origin:-config de git}); no se
+  cur_dir="$(git -C "$TARGET" config --type=path --get core.hooksPath 2>/dev/null || printf '%s' "$cur")"
+  if [ -z "$(own_hooks "$cur_dir")" ]; then
+    # Un hooksPath global y relativo (p. ej. «.githooks») sin esa carpeta aquí no ejecuta nada
+    todo "core.hooksPath → «${cur}» (definido en ${origin:-config de git}) no tiene hooks en este repo:
+    hoy no ejecuta nada aquí, así que activar la Esclusa no silencia nada. setup no cambia
+    configuración de git que no es suya; actívala tú (solo afecta a este repo):
+    git config core.hooksPath $HOOKS_PATH"
+  else
+    todo "el repo ya usa core.hooksPath → «${cur}» (definido en ${origin:-config de git}); no se
     cambia para no silenciar esos hooks.
     Encadena la Esclusa: al final de cada hook de «${cur}» (commit-msg, pre-commit, pre-push) añade
     «$HOOKS_PATH/<hook> \"\$@\" || exit 1» — o, si ya no los necesitas: git config core.hooksPath $HOOKS_PATH"
+  fi
 else
   hd="$(git -C "$TARGET" rev-parse --git-path hooks)"
-  case "$hd" in /*) ;; *) hd="$TARGET/$hd" ;; esac
-  own=""
-  for h in "$hd"/*; do
-    [ -f "$h" ] && [ -x "$h" ] && case "$h" in *.sample) ;; *) own="$own $(basename "$h")" ;; esac
-  done
+  own="$(own_hooks "$hd")"
   if [ -n "$own" ]; then
     todo "hay git hooks propios en $hd:$own. Activar la Esclusa (core.hooksPath) los dejaría
     sin ejecutarse, así que no se activa. Muévelos a $HOOKS_PATH encadenados con los de la Esclusa,
