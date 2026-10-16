@@ -15,7 +15,8 @@
 #     las líneas que encadenan la Esclusa en ellos (chain.sh) y se reconoce cuando ya están.
 # Los backups van a sentinel/.backup/<fecha>/ (fuera de git).
 #
-# Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error, nada a medias.
+# Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error. Si falla una
+# comprobación previa no se escribe nada; si falla a mitad, lo hecho se queda y reejecutar es seguro.
 # Variables: SENTINEL_SETUP_JQ (binario de jq), SENTINEL_GITLEAKS_BIN (el mismo que la Esclusa).
 # Falsifica: SC-sdk-setup-01..08 (fixture/install/cases/).
 set -uo pipefail
@@ -83,6 +84,7 @@ fi
 # solo si el repo ya trabaja con OpenSpec.
 CP="$TARGET/sentinel/policy.yaml"
 policy_ids() { sed -nE 's/^[[:space:]]*-[[:space:]]+id:[[:space:]]*([^[:space:]]+).*/\1/p' "$1" | LC_ALL=C sort -u; }
+dup=""
 if [ -f "$CP" ]; then
   ok "política del consumidor conservada (sentinel/policy.yaml)"
   # Una política anterior a la separación repite las reglas del SDK: el Centinela la rechazaría
@@ -110,6 +112,7 @@ fi
 GI="$TARGET/.gitignore"; gi_added=""
 for line in "sentinel/.override" "sentinel/.backup/"; do
   [ -f "$GI" ] && grep -qxF "$line" "$GI" && continue
+  [ -f "$GI" ] && [ -z "$gi_added" ] && backup ".gitignore"
   [ -s "$GI" ] && [ -n "$(tail -c1 "$GI")" ] && echo >>"$GI"
   echo "$line" >>"$GI"; gi_added="$gi_added $line"
 done
@@ -296,8 +299,11 @@ else
   # shellcheck source=/dev/null
   source "$SDK_ROOT/sentinel/adapters/stack.sh"
   if proposal="$(stack_detect "$TARGET" 2>/dev/null)"; then
-    [ -f "$A/stack.proposed.yaml" ] && [ "$(cat "$A/stack.proposed.yaml")" = "$proposal" ] \
-      || printf '%s\n' "$proposal" >"$A/stack.proposed.yaml"
+    if ! { [ -f "$A/stack.proposed.yaml" ] && [ "$(cat "$A/stack.proposed.yaml")" = "$proposal" ]; }; then
+      # Una propuesta que la persona ya revisó no se pierde
+      [ -f "$A/stack.proposed.yaml" ] && backup "sentinel/adapters/stack.proposed.yaml"
+      printf '%s\n' "$proposal" >"$A/stack.proposed.yaml"
+    fi
     note "stack detectado: propuesta en sentinel/adapters/stack.proposed.yaml. Revísala y
     renómbrala a stack.yaml para que la Esclusa ejecute format, lint y tests"
   else
@@ -313,6 +319,33 @@ else
   todo "gitleaks no está instalado y es obligatorio: la Esclusa rechazará todos los commits.
     macOS: brew install gitleaks · Windows: scoop install gitleaks · Linux: binario de
     https://github.com/gitleaks/gitleaks/releases (comprueba con: gitleaks version)"
+fi
+
+# ── 7. Lo que tiene que viajar con el repo no puede estar ignorado ───────────────────────
+ignored=""
+for f in sentinel/overrides.log sentinel/policy.yaml sentinel/policy.default.yaml .claude/settings.json \
+         sentinel/hooks/sentinel-guard.sh sentinel/githooks/pre-commit; do
+  # -q decide (una excepción «!…» también aparece en -v, pero no ignora); -v solo dice qué regla
+  git -C "$TARGET" check-ignore -q -- "$f" 2>/dev/null || continue
+  why="$(git -C "$TARGET" check-ignore -v -- "$f" 2>/dev/null | cut -f1)"
+  rest="${why#*:}"
+  ignored="$ignored
+      $f — lo ignora «${rest#*:}» (${why%%:*}, línea ${rest%%:*})"
+done
+[ -z "$ignored" ] || todo "el .gitignore deja fuera ficheros que hay que versionar:$ignored
+    Sin ellos en git, tus compañeros no reciben el Centinela o la bitácora se queda en tu máquina.
+    Añade al final del .gitignore una excepción por fichero (p. ej. «!sentinel/overrides.log»).
+    Si se ignora una carpeta entera (p. ej. «.claude/»), git no mira dentro: cámbiala por
+    «.claude/*» y añade «!.claude/settings.json». Compruébalo con: git check-ignore -v <fichero>"
+
+# ── 8. El Centinela instalado tiene que dejar pasar lo inocuo ────────────────────────────
+# (con ids duplicados ya hay un pendiente que explica el bloqueo)
+if [ -z "$dup" ]; then
+  smoke_err="$(cd "$TARGET" && printf '%s' '{"tool_name":"Bash","tool_input":{"command":"true"}}' \
+    | env -u SENTINEL_POLICY -u SENTINEL_POLICY_DEFAULT -u SENTINEL_OVERRIDE -u SENTINEL_CONFIRM \
+        CLAUDE_PROJECT_DIR="$TARGET" bash "$TARGET/sentinel/hooks/sentinel-guard.sh" 2>&1 >/dev/null)" \
+    || todo "el Centinela instalado deniega una acción inocua (\`true\`): ${smoke_err#sentinel-guard: }
+    Mientras siga así, el agente no podrá hacer nada en este repo. Revisa sentinel/policy.yaml"
 fi
 
 echo
