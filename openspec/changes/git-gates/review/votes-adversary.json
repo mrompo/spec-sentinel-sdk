@@ -1,0 +1,22 @@
+{"lens":"adversary","votes":[
+{"id":"A1","agree":true,"severity":"minor","note":"Real: sin jq y con settings.json ya existente, el script va siempre a write_fragment sin comprobar nada; no abre ninguna vía para saltar gates, pero si se sigue la instrucción el cableado queda duplicado."},
+{"id":"A2","agree":true,"severity":"blocker","note":"Real: warn hace exit 0 y confirm resuelve antes de llegar a policy.yaml, así que cualquier regla block del consumidor se salta si la acción también activa una regla warn o confirm del SDK. Es una vía nueva que contradice SC-sentinel-guard-17."},
+{"id":"A3","agree":true,"severity":"major","note":"Real: pre-push lee las refs de stdin; si el hook original ya lo ha consumido, la Esclusa no ve nada y la comprobación de rama protegida deja pasar el push en silencio. Además, la línea propuesta con ruta relativa rompe otros repos cuando el hooksPath es global."},
+{"id":"A4","agree":true,"severity":"major","note":"Coincide con mis V1 y V3, y ahora con reproducción: setup.sh sirve para reescribir el .claude/settings.json protegido y descablear el Centinela. Es major y no blocker porque ejecutar un script indirecto es un límite ya documentado, pero el instalador lo convierte en un camino legitimado."},
+{"id":"A5","agree":true,"severity":"major","note":"Real: setup no comprueba git check-ignore. Si overrides.log no se versiona, nadie revisa la auditoría de break-glass. Es el mismo defecto que P6."},
+{"id":"A6","agree":true,"severity":"minor","note":"Real, pero falla cerrado: no abre ninguna vía, solo empuja a desinstalar el Centinela."},
+{"id":"A7","agree":true,"severity":"minor","note":"Real: la comparación es literal, así que otra forma de escribir la misma ruta da exit 3 perpetuo y además propone encadenar la Esclusa en sus propios hooks. Es ruido de pendientes, sin vía de abuso directa."},
+{"id":"A8","agree":true,"severity":"minor","note":"Real: SAFE no garantiza que MERGE funcione, y la deduplicación compara solo el comando, sin el matcher. La parte de seguridad está mejor descrita en P8."},
+{"id":"A9","agree":true,"severity":"minor","note":"Real e incumple la spec; pierde ediciones del consumidor en stack.proposed.yaml, pero no afecta a los gates."},
+{"id":"A10","agree":true,"severity":"nit","note":"Plausible por cómo está escrito el caso; es un hueco de cobertura del banco, no una vía de abuso."},
+{"id":"P1","agree":true,"severity":"major","note":"Real: con husky v9 setup manda encadenar en .husky/_; el encadenado desaparece con npm install y la Esclusa queda apagada sin que nadie lo note. Major y no blocker porque setup sale con 3."},
+{"id":"P2","agree":true,"severity":"major","note":"Real: setup recomienda meter hooks del consumidor en sentinel/githooks y, al reejecutarlo, los pisa y sale con 0. El instalador desactiva hooks del consumidor sin avisar; el backup lo mitiga en parte."},
+{"id":"P3","agree":true,"severity":"minor","note":"Real: el riesgo es la fatiga de pendientes: un exit 3 que nunca cambia esconde los pendientes reales, como que falte gitleaks."},
+{"id":"P4","agree":true,"severity":"major","note":"Real: la línea propuesta usa una ruta relativa con || exit 1, así que en un hooksPath global rompe los commits de todos los repos sin Esclusa. Coincide con A3."},
+{"id":"P5","agree":true,"severity":"major","note":"Real: core.hooksPath es local a cada clon; no-hook-disabling impide al agente activarlo, así que en el clon de un compañero la Esclusa está apagada y nada avisa hasta que exista la Aduana."},
+{"id":"P6","agree":true,"severity":"major","note":"Mismo defecto que A5 y más grave: si .claude/ está ignorado, los compañeros no reciben el Centinela, y setup sale con 0."},
+{"id":"P7","agree":false,"severity":"minor","note":"El cambio de comportamiento existe, pero tasks.md (slice 6) lo registra como límite asumido, y la protección del SDK no se relaja. Como mejora, es minor."},
+{"id":"P8","agree":true,"severity":"major","note":"Real: deduplicar por cadena exacta deja un matcher antiguo sin Read|Grep|Glob y aun así setup informa «ya cableado»; isolation-env queda sin vigilar en lectura tras actualizar, sin aviso."},
+{"id":"P9","agree":true,"severity":"nit","note":"Real, pero el exit 1 avisa a la persona y no abre ninguna vía de abuso: basta con corregir la promesa."},
+{"id":"P10","agree":true,"severity":"nit","note":"Real: el SDK no tiene .claude/skills y setup no copia la skill; la guía promete algo que no existe."}
+]}

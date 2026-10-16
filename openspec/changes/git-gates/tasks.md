@@ -87,7 +87,9 @@
 
 ## Tribunal y Delivery
 
-- [ ] 11. `review` adversarial (tres lentes) → **Veredicto**. Foco anotado durante `apply`:
+- [ ] 11. `review` adversarial (tres lentes) → **Veredicto**: **`HOLD`** el 2026-10-16
+       ([`review/`](review/README.md)): 1 bloqueante y 12 graves validados → vuelta a `apply`
+       tras la **Resolución** 👤. Foco anotado durante `apply`:
        - el agente puede ejecutar `setup.sh` en un repo consumidor, y eso sobrescribe ficheros
          protegidos con los del SDK (con backup): el Centinela solo ve el texto del comando;
        - la Verificación de la skill `setup` pide `exit 0` en la segunda ejecución, pero si la
