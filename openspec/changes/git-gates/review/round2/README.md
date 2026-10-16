@@ -36,4 +36,10 @@ propio ciclo de vida y sus interruptores.
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente.
+Decidida por una persona el 2026-10-16:
+
+- **Temas 1, 2, 3 y 5 se arreglan en esta PR** (ronda 3 de `apply`, slices S1-S5 de
+  `tasks.md`), con otro parche de ficheros protegidos, y el panel se relanza al terminar.
+- **El tema 4 pasa a un cambio OpenSpec propio** (convivencia con otros gestores de hooks, con
+  su diseño). En esta PR se protegen los ficheros donde queda encadenada la Esclusa y la guía
+  documenta el resto como límite conocido.
