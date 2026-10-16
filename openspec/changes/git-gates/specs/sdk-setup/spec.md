@@ -107,6 +107,10 @@ nunca con éxito silencioso.
   bitácora, las políticas, `.claude/settings.json`, el enforcement)
 - **THEN** `setup` termina con exit 3 nombrando cada fichero, la regla que lo ignora y la
   excepción que hay que añadir; cuando ya no están ignorados, termina con 0
+- **AND** se comprueba todo lo que instala (también la librería de la Esclusa), no una muestra,
+  y la excepción propuesta funciona aunque la regla venga de fuera del repo (`core.excludesFile`)
+- **AND** si el repo tiene `core.fileMode=false`, avisa de que los ejecutables hay que marcarlos
+  en el índice (`git add --chmod=+x`) hasta que lo estén: sin el permiso, git ignora los hooks
 
 #### Scenario: El Centinela instalado funciona (SC-sdk-setup-12)
 

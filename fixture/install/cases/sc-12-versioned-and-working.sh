@@ -40,6 +40,53 @@ assert_exit 3 || fail_case "con la política del consumidor vacía debería term
 assert_out_contains "ilegible" || fail_case "no muestra el motivo que da el Centinela (política ilegible)"
 cleanup_git_workspace
 
+# d) «lib/» (plantilla de Python, outDir de TypeScript) ignora la librería de la Esclusa: se
+#    comprueba todo lo que se instala, no una muestra (A2-2 = P2-1)
+mk_git_workspace
+printf '__pycache__/\nlib/\n' >"$WS/.gitignore"
+run_setup
+assert_exit 3 || fail_case "con lib/ ignorado (librería de la Esclusa) debería terminar con 3"
+assert_out_contains "sentinel/githooks/lib/" || fail_case "no nombra la librería de la Esclusa ignorada"
+assert_out_contains "!sentinel/githooks/lib/" || fail_case "no da la excepción para la carpeta ignorada"
+printf '!sentinel/githooks/lib/\n' >>"$WS/.gitignore"
+run_setup
+assert_exit 0 || fail_case "con la excepción de lib/ debería terminar con 0: $RH_ERR"
+git_in_ws add -A -- . ':!.gl-ok'
+git_in_ws ls-files --error-unmatch sentinel/githooks/lib/breakglass.sh >/dev/null 2>&1 \
+  || fail_case "con la excepción, la librería de la Esclusa debería versionarse"
+cleanup_git_workspace
+
+# e) «.claude/» en el excludesFile global: la excepción tiene que funcionar desde el .gitignore
+#    del repo (P2-10)
+mk_git_workspace
+gx="$WS.excludes"; gcfg="$WS.gitconfig"
+printf '.claude/\n' >"$gx"; printf '[core]\n\texcludesFile = %s\n' "$gx" >"$gcfg"
+done_e() { rm -f "$gx" "$gcfg"; }
+run_setup GIT_CONFIG_GLOBAL="$gcfg"
+assert_exit 3 || { done_e; fail_case "con .claude/ ignorado desde fuera del repo debería terminar con 3"; }
+assert_out_contains "!.claude/" || { done_e; fail_case "la excepción debería reincluir la carpeta (!.claude/)"; }
+printf '!.claude/\n.claude/*\n!.claude/settings.json\n' >>"$WS/.gitignore"
+run_setup GIT_CONFIG_GLOBAL="$gcfg"
+assert_exit 0 || { done_e; fail_case "con la excepción propuesta debería terminar con 0: $RH_ERR"; }
+done_e
+cleanup_git_workspace
+
+# f) core.fileMode=false: git no guarda el +x y en los clones ignora los hooks (P2-7)
+mk_git_workspace
+git_in_ws config core.fileMode false
+run_setup
+assert_exit 3 || fail_case "con core.fileMode=false debería terminar con 3"
+assert_out_contains "git add --chmod=+x" || fail_case "no da el comando que marca los ejecutables"
+git_in_ws add -A -- . ':!.gl-ok'
+cmd="$(printf '%s\n' "$RH_ERR" | sed -n 's/^[[:space:]]*\(git add --chmod=+x .*\)$/\1/p' | head -1)"
+[ -n "$cmd" ] || fail_case "no se encuentra la línea «git add --chmod=+x …» en la salida"
+( cd "$WS" && eval "$cmd" ) || fail_case "el comando propuesto falló: $cmd"
+[ "$(git_in_ws ls-files -s sentinel/githooks/pre-commit | cut -d' ' -f1)" = 100755 ] \
+  || fail_case "tras el comando propuesto, pre-commit debería estar como ejecutable en el índice"
+run_setup
+assert_exit 0 || fail_case "con los ejecutables marcados en el índice debería terminar con 0: $RH_ERR"
+cleanup_git_workspace
+
 # c) la propuesta de stack revisada por una persona no se pierde al reinstalar
 mk_git_workspace
 printf '{"scripts":{"test":"vitest","lint":"eslint ."}}\n' >"$WS/package.json"
