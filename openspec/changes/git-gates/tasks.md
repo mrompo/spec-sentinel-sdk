@@ -2,7 +2,7 @@
 
 **Objetivo**: el nivel Guardia instalable en cualquier repo con un comando, con la Esclusa real.
 **Ritmo**: un slice = caso del banco en rojo → implementación mínima → verde → commit atómico.
-**Posición en el Loop**: PR 1/3 ✅ en `main` (#3) · PR 2/3 ✅ en `main` (#4) · PR 3/3 en `apply` (2026-10-12).
+**Posición en el Loop**: PR 1/3 ✅ en `main` (#3) · PR 2/3 ✅ en `main` (#4) · PR 3/3: `apply` terminado (2026-10-16), toca `review`.
 
 ## Engine · antes de teclear
 
@@ -73,18 +73,24 @@
        con los ficheros instalados, rechaza un secreto, un mensaje no conforme y un push a
        `main`; el Centinela protege las dos políticas y aplica una regla añadida por el
        proyecto. Falsificado con 8 mutantes (un puesto saboteado cada vez): todos rompen el caso
-- [ ] 9. 👤 Auto-instalación en este repo (`core.hooksPath` apuntando a `sentinel/githooks`),
+- [x] 9. 👤 Auto-instalación en este repo (`core.hooksPath` apuntando a `sentinel/githooks`),
        solo con el banco en verde — la regla `no-hook-disabling` impide al agente tocar
-       `core.hooksPath`, así que lo ejecuta una persona
-- [ ] 10. `STATUS.md` + sección
-       «Instalar en tu proyecto» de `docs/guia-uso.md`
-       - 👤 tres ficheros protegidos siguen hablando de una sola política (slice 6): el mapa de
-         `AGENTS.md`, `sentinel/hooks/README.md` y el aviso de `session-start.sh`
-         («Reglas: sentinel/policy.yaml»)
+       `core.hooksPath`, así que lo ejecuta una persona. Hecho el 2026-10-16 (`9799824`, el
+       primer commit que pasó por la Esclusa). En la máquina había un `core.hooksPath` global
+       (`.githooks`) sin esa carpeta en el repo: `setup` proponía encadenar hooks que no
+       existían. Corregido con su caso (`4e42c54` en rojo, `54dcf31`, SC-sdk-setup-08)
+- [x] 10. `STATUS.md` + sección «Instalar en tu proyecto» de `docs/guia-uso.md`
+- [ ] 10b. 👤 Tres ficheros protegidos siguen hablando de una sola política (slice 6): el mapa
+       de `AGENTS.md`, `sentinel/hooks/README.md` y el aviso de `session-start.sh`
+       («Reglas: sentinel/policy.yaml»)
 
 ## Tribunal y Delivery
 
-- [ ] 11. `review` adversarial (tres lentes) → **Veredicto**
+- [ ] 11. `review` adversarial (tres lentes) → **Veredicto**. Foco anotado durante `apply`:
+       - el agente puede ejecutar `setup.sh` en un repo consumidor, y eso sobrescribe ficheros
+         protegidos con los del SDK (con backup): el Centinela solo ve el texto del comando;
+       - la Verificación de la skill `setup` pide `exit 0` en la segunda ejecución, pero si la
+         persona decidió encadenar sus hooks, `setup` saldrá con `3` siempre
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
 ## Notas de diseño (design gate)

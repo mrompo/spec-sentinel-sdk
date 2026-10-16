@@ -33,7 +33,7 @@ Dentro de cada stage hay **steps**, y para salir de cada step hay que cruzar un 
 | Verificar la salud del framework | ✅ | Sección «Verificar que todo está bien» |
 | Shield: reglas que el agente no puede saltarse | ✅ | Sección «Shield» |
 | Abrir PRs con un formato que se revisa bien | ✅ | Paso 4 de «El ciclo de trabajo» |
-| Instalarlo en tu propio proyecto | 🔄 fase 2 (en propuesta) | — |
+| Instalarlo en tu propio proyecto (nivel Guardia) | ✅ fase 2 | Sección «Instalar en tu proyecto» |
 | Gate de PR en CI + spec-coverage | 🔜 fase 3 | — |
 | Skills del ciclo completo + doctor | 🔜 fase 4 | — |
 | Release por entornos + carril hotfix | 🔜 fase 5 | — |
@@ -69,6 +69,9 @@ rojo), luego el código mínimo que lo pone en verde, y un commit:
 bash fixture/verify.sh        # rojo → implementas → verde
 git add -A && git commit -m "feat(<área>): <qué>"
 ```
+
+En zsh, si el mensaje lleva `!` (cambio incompatible, p. ej. `feat(api)!: …`), ponlo entre
+comillas simples: con dobles, zsh lo toma por una referencia al historial y falla.
 
 Marca la tarea con `- [x]` en el `tasks.md`. El progreso real vive ahí.
 
@@ -113,15 +116,69 @@ openspec validate --all --strict  # las specs y cambios están bien formados
 Si ambos están en verde, el repo está sano. Esto mismo corre en CI en cada PR
 (cuando el repo tenga remote).
 
+## Instalar en tu proyecto
+
+Un comando instala el **nivel Guardia** (el Centinela y la Esclusa) en cualquier repo git, use o
+no OpenSpec. Desde la **raíz** de tu repo y en una rama, nunca en una protegida:
+
+```bash
+git checkout -b chore/spec-sentinel
+bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh .
+```
+
+También puedes pedírselo al agente: la skill `setup` ejecuta el script y te explica la salida.
+
+| Qué hace | Qué deja en tu repo |
+|---|---|
+| Copia el enforcement | `sentinel/`: hooks, git hooks, adaptadores y la política del SDK (`policy.default.yaml`) |
+| Crea tu política | `sentinel/policy.yaml`, vacía, para tus reglas (con `sdd: true` si el repo tiene `openspec/`) |
+| Cablea el Centinela | `.claude/settings.json`: lo fusiona con lo tuyo usando `jq`, con backup |
+| Activa la Esclusa | `core.hooksPath` → `sentinel/githooks`, si tu repo no usa ya otros git hooks |
+| Propone el stack | `sentinel/adapters/stack.proposed.yaml`, si reconoce Node o Laravel |
+| Comprueba gitleaks | Te avisa ahora, no en el primer commit |
+
+**Cómo termina**:
+
+| Salida | Significa | Qué haces |
+|---|---|---|
+| `0` | Instalado | Commitea (abajo) |
+| `3` | Instalado con pasos pendientes (líneas `⚠ PENDIENTE`) | Resuélvelos y vuelve a ejecutar `setup` hasta que salga `0` |
+| `1` | Error, sin nada a medias | Lee el motivo y corrígelo |
+
+**Los pendientes habituales**:
+
+- **gitleaks no está instalado** → instálalo (tabla en «Requisitos de la Esclusa», más abajo).
+- **Ya usas otros git hooks** (husky, un `core.hooksPath` propio o global) → `setup` no los
+  silencia: te dice cómo encadenar la Esclusa al final de los tuyos. Si ese `core.hooksPath` no
+  tiene hooks en tu repo (por ejemplo, uno global cuya carpeta no existe ahí), no hay nada que
+  encadenar: te da el comando que la activa, que solo afecta a ese repo.
+- **No tienes jq** → deja `sentinel/settings.fragment.json` para que lo copies a mano en
+  `.claude/settings.json`.
+
+El **stack propuesto** no es un pendiente: revisa `stack.proposed.yaml` y, si te vale,
+renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests con un aviso.
+
+**Al terminar**, versiona la instalación. Ese primer commit ya pasa por la Esclusa:
+
+```bash
+git add -A && git commit -m "chore: instala spec-sentinel (nivel Guardia)"
+git commit --allow-empty -m prueba      # comprobación: la Esclusa tiene que rechazarlo
+```
+
+Y reinicia la sesión del agente para que cargue el Centinela (ver «Importante al instalar»).
+
+**Para actualizar**, vuelve a ejecutar `setup`. Actualiza lo que es del SDK (si lo habías
+tocado, guarda tu versión en `sentinel/.backup/`) y nunca toca lo tuyo: `policy.yaml`,
+`stack.yaml` ni la bitácora.
+
 ## Shield · las reglas estrictas
 
 Las reglas viven en **la política**, que tiene dos ficheros:
 [`sentinel/policy.default.yaml`](../sentinel/policy.default.yaml), con las del SDK (las
 actualiza `setup`), y [`sentinel/policy.yaml`](../sentinel/policy.yaml), con las de tu
-proyecto. Hoy se aplican en el puesto del
-**Centinela** (el hook que intercepta cada acción del agente); la **Esclusa** (git hooks) y la
-**Aduana** (CI) llegan en las fases 2 y 3. Cada regla vigila una acción y decide en uno de
-tres modos:
+proyecto. Se aplican en el puesto del **Centinela** (el hook que intercepta cada acción del
+agente); la **Esclusa** (git hooks) revisa cada commit y cada push, y la **Aduana** (CI) llega
+en la fase 3. Cada regla vigila una acción y decide en uno de tres modos:
 
 | Modo | Qué pasa |
 |---|---|
