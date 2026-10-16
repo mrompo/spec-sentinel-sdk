@@ -94,6 +94,28 @@
          protegidos con los del SDK (con backup): el Centinela solo ve el texto del comando;
        - la Verificación de la skill `setup` pide `exit 0` en la segunda ejecución, pero si la
          persona decidió encadenar sus hooks, `setup` saldrá con `3` siempre
+### Ronda 2 de `apply`, tras el `HOLD` (disposición del 2026-10-16: todo lo validado)
+
+- [ ] R1. La instalación se cierra (A1 🛑, P3, A7): `setup` comprueba en vez de repetir — el
+       cableado ya presente sin jq, el `hooksPath` escrito de otra forma, el encadenado hecho
+- [ ] R2. Encadenar bien con hooks ajenos (A3, P1, P2, P4): un snippet único (guarda las refs
+       de stdin, va al principio, `[ -x … ]` para los demás repos), husky v9 en
+       `.husky/<hook>`, los de `.git/hooks` se encadenan donde están
+- [ ] R3. 👤 Las dos políticas (A2): cada una decide por su primera regla y gana la decisión
+       más estricta — Centinela (**fichero protegido**)
+- [ ] R4. El instalador no descablea (A4, V1, V3): `setup` valida el resultado de la fusión e
+       ignora un jq dentro del repo; 👤 en la política, `SENTINEL_[A-Z_]+=` en
+       `no-hook-disabling` y `confirm` para ejecutar `setup.sh`
+- [ ] R5. Lo que llega al equipo (A5 = P6, P5): `setup` avisa si el `.gitignore` deja fuera lo
+       que hay que versionar; la guía explica el paso por clon; 👤 `session-start` avisa si la
+       Esclusa no está activa en el clon
+- [ ] R6. Actualizar el cableado (P8, A8): las entradas del SDK se reconocen por la ruta del
+       script y se sustituyen; SAFE endurecido; si la fusión falla, fragmento y no `die`; el
+       fragmento sale del `.claude/settings.json` del SDK
+- [ ] R7. Menores (A6, A9, P9, P10, A10) + la nota de P7 en la guía
+- [ ] R8. 👤 Parche de ficheros protegidos (R3, R4 y R5) aplicado por una persona, banco en verde
+- [ ] R9. Relanzar el panel → **Veredicto**
+
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
 ## Notas de diseño (design gate)

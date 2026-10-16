@@ -50,4 +50,10 @@ los JSON).
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente: una persona decide qué se arregla en esta PR y qué queda como deuda registrada.
+Decidida por una persona el 2026-10-16:
+
+- **Todo lo validado se arregla en esta PR** (temas 1 a 7), en una segunda ronda de `apply`
+  (slices R1-R9 de `tasks.md`), y el panel se relanza al terminar.
+- **P7**: se mantiene el límite de la opción A (la lista de ramas protegidas la decide el SDK) y
+  la guía lo explica; ampliarla iría en un cambio aparte.
+- **V2 y V4**: sin acción (no validados, sin impacto real).
