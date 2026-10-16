@@ -67,8 +67,12 @@
        - el stack detectado se escribe en `stack.proposed.yaml`; lo activa una persona;
        - un `core.hooksPath` previo, **también el global** de la persona, no se pisa: se
          explica cómo encadenar la Esclusa (afecta al slice 9 si la máquina tiene uno global)
-- [ ] 8. Caso de instalación end-to-end en `demo-app/`: tras `setup`, los gates bloquean
-       (SC-sdk-setup-01) — DoD de la fase
+- [x] 8. Caso de instalación end-to-end en `demo-app/`: tras `setup`, los gates bloquean
+       (SC-sdk-setup-01) — DoD de la fase. `fixture/install/cases/sc-09-e2e-demo-app.sh`:
+       instala, commitea la propia instalación (la Esclusa no se bloquea con sus ficheros) y,
+       con los ficheros instalados, rechaza un secreto, un mensaje no conforme y un push a
+       `main`; el Centinela protege las dos políticas y aplica una regla añadida por el
+       proyecto. Falsificado con 8 mutantes (un puesto saboteado cada vez): todos rompen el caso
 - [ ] 9. 👤 Auto-instalación en este repo (`core.hooksPath` apuntando a `sentinel/githooks`),
        solo con el banco en verde — la regla `no-hook-disabling` impide al agente tocar
        `core.hooksPath`, así que lo ejecuta una persona

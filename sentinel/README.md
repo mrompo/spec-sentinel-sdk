@@ -47,4 +47,4 @@ La regla práctica: **el Centinela evita el 95% de los accidentes y todo el desc
 detener a un adversario decidido con acceso a shell.** Para eso están los puestos de abajo.
 
 Estado: Centinela (fase 1) y Esclusa (fase 2) implementados, con 17 y 16 casos en el banco; el
-instalador (`ai-specs/skills/setup/`, 8 casos) cierra la fase 2. Siguiente: ci → fase 3.
+instalador (`ai-specs/skills/setup/`, 9 casos, uno end-to-end) cierra la fase 2. Siguiente: ci → fase 3.
