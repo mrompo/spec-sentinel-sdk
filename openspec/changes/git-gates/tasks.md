@@ -80,9 +80,10 @@
        (`.githooks`) sin esa carpeta en el repo: `setup` proponía encadenar hooks que no
        existían. Corregido con su caso (`4e42c54` en rojo, `54dcf31`, SC-sdk-setup-08)
 - [x] 10. `STATUS.md` + sección «Instalar en tu proyecto» de `docs/guia-uso.md`
-- [ ] 10b. 👤 Tres ficheros protegidos siguen hablando de una sola política (slice 6): el mapa
+- [x] 10b. 👤 Tres ficheros protegidos siguen hablando de una sola política (slice 6): el mapa
        de `AGENTS.md`, `sentinel/hooks/README.md` y el aviso de `session-start.sh`
-       («Reglas: sentinel/policy.yaml»)
+       («Reglas: sentinel/policy.yaml»). Aplicado por una persona desde un parche revisado
+       (`3646f5e`)
 
 ## Tribunal y Delivery
 
