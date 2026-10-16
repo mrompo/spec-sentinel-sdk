@@ -2,7 +2,7 @@
 # pre-push — la Esclusa, segundo tiempo: rama protegida, entorno, tests y (nivel Método) specs.
 # Aquí el commit ya existe: la rama de destino se valida sin ventana de TOCTOU, venga de donde
 # venga el push. Patrón skip-vs-fail, como pre-commit.
-# Falsifica: SC-git-gates-04, 05; la excepción auditada, 11-13 (lib/breakglass.sh).
+# Falsifica: SC-git-gates-04, 05, 16; la excepción auditada, 11-13 (lib/breakglass.sh).
 set -uo pipefail
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,16 +15,18 @@ done
 
 warn() { echo "⚠ [Esclusa] $1" >&2; }
 ROOT="$(git rev-parse --show-toplevel)"
-POLICY="$ROOT/sentinel/policy.yaml"
+POLICY_DEFAULT="$ROOT/sentinel/policy.default.yaml"   # la distribuida (del SDK)
+POLICY="$ROOT/sentinel/policy.yaml"                   # la del consumidor
 
 # ── 1. Rama protegida ─────────────────────────────────────────────────────────────
-# Una sola fuente: el branch_re de la regla protected-branches de la política (el mismo que usa
-# el Centinela). Sin política, la lista por defecto del SDK.
+# Una sola fuente: el branch_re de la regla protected-branches de la política distribuida (el
+# mismo que usa el Centinela; el consumidor no puede redefinir ese id). Sin ella, la lista por
+# defecto del SDK.
 protected_re='^(main|master|development|preproduction|production)$'
-if [ -f "$POLICY" ]; then
+if [ -f "$POLICY_DEFAULT" ]; then
   re="$(awk '/^[[:space:]]*- id:[[:space:]]*protected-branches[[:space:]]*$/{inb=1; next}
              inb && /^[[:space:]]*- id:/{exit}
-             inb && /^[[:space:]]*branch_re:/{sub(/^[[:space:]]*branch_re:[[:space:]]*/, ""); print; exit}' "$POLICY")"
+             inb && /^[[:space:]]*branch_re:/{sub(/^[[:space:]]*branch_re:[[:space:]]*/, ""); print; exit}' "$POLICY_DEFAULT")"
   [ -n "$re" ] && protected_re="$re"
 fi
 
@@ -37,7 +39,7 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
     cat >&2 <<EOF
 ✗ [Esclusa] Push directo a una rama protegida: «${branch}».
     Publica tu rama feature/fix/hotfix y abre una PR: la integración pasa por la Aduana.
-    (La lista sale de la regla protected-branches de sentinel/policy.yaml.)
+    (La lista sale de la regla protected-branches de sentinel/policy.default.yaml.)
 EOF
     esclusa_reject pre-push "push a rama protegida: ${branch}"
   fi
@@ -64,8 +66,11 @@ else
   fi
 fi
 
-# ── 3. Specs (solo nivel Método: sdd: true en la política y openspec/ en el repo) ──
-sdd="$( [ -f "$POLICY" ] && sed -nE 's/^sdd:[[:space:]]*([a-z]+).*/\1/p' "$POLICY" | head -1 )"
+# ── 3. Specs (solo nivel Método: sdd: true y openspec/ en el repo) ────────────────
+# sdd: lo declara el consumidor; si no lo hace, vale el de la distribuida (como el Centinela)
+read_sdd() { [ -f "$1" ] && sed -nE 's/^sdd:[[:space:]]*([a-z]+).*/\1/p' "$1" | head -1; }
+sdd="$(read_sdd "$POLICY")"
+[ -n "$sdd" ] || sdd="$(read_sdd "$POLICY_DEFAULT")"
 if [ "$sdd" = "true" ] && [ -d "$ROOT/openspec" ]; then
   OPENSPEC="${SENTINEL_OPENSPEC_BIN:-openspec}"
   if command -v "$OPENSPEC" >/dev/null 2>&1; then
