@@ -62,8 +62,7 @@ S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
 jq '.hooks.PreToolUse[0].matcher = "Bash|Edit|Write|MultiEdit|NotebookEdit"' "$REPO_ROOT/.claude/settings.json" >"$S"
 run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
 assert_exit 3 || fail_case "sin jq y con el matcher antiguo debería terminar con 3"
-assert_out_contains "sustituye" || fail_case "con el cableado antiguo, el pendiente debería pedir sustituir las entradas del SDK"
-jq '.hooks.PreToolUse[0].matcher' "$REPO_ROOT/.claude/settings.json" >/dev/null
+assert_out_contains "Sustituye las entradas" || fail_case "con el cableado antiguo, el pendiente debería pedir sustituir las entradas del SDK"
 cp "$REPO_ROOT/.claude/settings.json" "$S"
 run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
 assert_exit 0 || fail_case "sin jq, con las entradas sustituidas, setup debería terminar con 0: $RH_ERR"

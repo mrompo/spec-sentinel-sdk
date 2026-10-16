@@ -21,7 +21,8 @@
 # Falsifica: SC-sdk-setup-01..08 (fixture/install/cases/).
 set -uo pipefail
 
-SDK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
+# cd -P primero: a través de un enlace a la skill (~/.claude/skills/setup) se sube desde la real
+SDK_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && cd ../../.. && pwd -P)"
 JQ="${SENTINEL_SETUP_JQ:-jq}"
 GITLEAKS="${SENTINEL_GITLEAKS_BIN:-gitleaks}"
 HOOKS_PATH="sentinel/githooks"
@@ -157,26 +158,69 @@ if [ -n "$JQ_BIN" ]; then
 fi
 
 S="$TARGET/.claude/settings.json"; F="$TARGET/sentinel/settings.fragment.json"
-write_fragment() {
+write_fragment() { # $1=motivo [$2=qué hacer con el fragmento]
   [ -f "$F" ] && [ "$(cat "$F")" = "$FRAGMENT" ] || printf '%s\n' "$FRAGMENT" >"$F"
-  todo "$1 — .claude/settings.json no se ha tocado. Añade a mano las entradas de
-    sentinel/settings.fragment.json dentro de \"hooks\" (o instala jq) y vuelve a ejecutar setup"
+  todo "$1 — .claude/settings.json no se ha tocado. ${2:-Añade a mano las entradas de
+    sentinel/settings.fragment.json dentro de \"hooks\"} (o instala jq) y vuelve a ejecutar setup"
 }
 # El paso manual ya está hecho: el fragmento sobra (y no debe acabar versionado)
 drop_fragment() { [ -f "$F" ] && rm -f "$F" && note "retirado sentinel/settings.fragment.json: el cableado ya está"; return 0; }
-# wired_ok <fichero> → comprobación por texto, sin jq: cada script del SDK aparece una sola vez y
-# están los matchers actuales del fragmento
-wired_ok() {
-  local s m
-  for s in sentinel-guard post-edit session-start; do
-    [ "$(grep -o "sentinel/hooks/$s\.sh" "$1" 2>/dev/null | wc -l | tr -d ' ')" = 1 ] || return 1
-  done
-  while IFS= read -r m; do
-    [ -z "$m" ] || grep -qF "\"$m\"" "$1" || return 1
-  done <<EOF
-$(printf '%s\n' "$FRAGMENT" | sed -nE 's/.*"matcher"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p')
-EOF
+
+# wired_ok <fichero> → el fichero lleva el cableado del SDK: cada grupo del .claude/settings.json
+# del SDK está, tal cual, dentro de SU evento (.hooks.<evento>). Es una comprobación de
+# estructura y no usa jq (el resultado de una fusión no se valida con el mismo jq que la hizo):
+# un mini lector de JSON en awk que compara sin el espacio de fuera de las cadenas.
+WIRING_AWK='
+FNR == 1 { f++ }
+{ buf[f] = buf[f] $0 "\n" }
+END {
+  frag = compact(buf[1]); have = compact(buf[2]); found = 0
+  n = split("PreToolUse PostToolUse SessionStart SessionEnd UserPromptSubmit Stop SubagentStop Notification PreCompact", evs, " ")
+  for (k = 1; k <= n; k++) {
+    want = event_array(frag, evs[k]); if (want == "") continue
+    found++; got = event_array(have, evs[k])
+    if (got == "" || index(got, substr(want, 2, length(want) - 2)) == 0) exit 1
+  }
+  exit (found > 0 ? 0 : 1)
 }
+function compact(s,   out, i, c, n, instr, esc) {
+  out = ""; instr = 0; esc = 0; n = length(s)
+  for (i = 1; i <= n; i++) {
+    c = substr(s, i, 1)
+    if (instr) { out = out c; if (esc) esc = 0; else if (c == "\\") esc = 1; else if (c == "\"") instr = 0; continue }
+    if (c == "\"") { instr = 1; out = out c; continue }
+    if (c == " " || c == "\t" || c == "\n" || c == "\r") continue
+    out = out c
+  }
+  return out
+}
+function event_array(s, ev,   n, i, c, depth, instr, esc, str, key, kdepth, hooks, start) {
+  n = length(s); depth = 0; instr = 0; esc = 0; str = ""; key = ""; kdepth = -1; hooks = 0; start = 0
+  for (i = 1; i <= n; i++) {
+    c = substr(s, i, 1)
+    if (instr) {
+      if (esc) { esc = 0; str = str c } else if (c == "\\") { esc = 1; str = str c }
+      else if (c == "\"") instr = 0; else str = str c
+      continue
+    }
+    if (c == "\"") { instr = 1; str = ""; continue }
+    if (c == ":") { key = str; kdepth = depth; continue }
+    if (c == "{" || c == "[") {
+      depth++
+      if (c == "{" && !hooks && key == "hooks" && kdepth == 1) hooks = depth
+      else if (c == "[" && hooks && !start && key == ev && kdepth == hooks) start = i
+      key = ""; kdepth = -1; continue
+    }
+    if (c == "}" || c == "]") {
+      if (start && c == "]" && depth == hooks + 1) return substr(s, start, i - start + 1)
+      if (hooks && depth == hooks) hooks = -1
+      depth--; key = ""; kdepth = -1; continue
+    }
+    if (c == ",") { key = ""; kdepth = -1 }
+  }
+  return ""
+}'
+wired_ok() { awk "$WIRING_AWK" "$SDK_ROOT/.claude/settings.json" "$1" 2>/dev/null; }
 # merged_ok <json> → el resultado de una fusión es un objeto JSON y conserva el cableado
 merged_ok() {
   local t rc
@@ -190,7 +234,11 @@ if [ ! -f "$S" ]; then
   ok "Centinela cableado (.claude/settings.json creado)"; drop_fragment
 elif [ -z "$JQ_BIN" ]; then
   if wired_ok "$S"; then
-    ok "Centinela ya cableado en .claude/settings.json (sin jq: comprobado por texto)"; drop_fragment
+    ok "Centinela ya cableado en .claude/settings.json (comprobado sin jq)"; drop_fragment
+  elif grep -q 'sentinel/hooks/' "$S" 2>/dev/null; then
+    write_fragment "jq no está disponible y .claude/settings.json tiene un cableado del SDK que no es el actual" \
+      "Sustituye las entradas que ya llaman a sentinel/hooks/*.sh por las de
+    sentinel/settings.fragment.json (no las añadas: quedarían repetidas)"
   else
     write_fragment "jq no está disponible y ya hay un .claude/settings.json"
   fi
@@ -224,11 +272,13 @@ own_hooks() {
   done
   printf '%s' "$list"
 }
-# is_esclusa <hooksPath> → apunta a la Esclusa de este repo, se escriba como se escriba
+# is_esclusa <hooksPath> → apunta a la Esclusa de este repo, se escriba como se escriba: se
+# compara el directorio físico (relativo a la raíz, absoluto, con ./, barra final o enlaces)
 is_esclusa() {
-  local p="${1%/}"; p="${p#./}"
-  [ "$p" = "$HOOKS_PATH" ] && return 0
-  case "$p" in /*) [ -d "$p" ] && [ "$(cd "$p" && pwd -P)" = "$TARGET/$HOOKS_PATH" ] ;; *) return 1 ;; esac
+  local d
+  d="$(abs_dir "$1")"
+  [ -d "$d" ] && [ -d "$TARGET/$HOOKS_PATH" ] \
+    && [ "$(cd "$d" && pwd -P)" = "$(cd "$TARGET/$HOOKS_PATH" && pwd -P)" ]
 }
 # chain_todo <situación> <dir de los hooks> → pendiente con las líneas de chain.sh para cada hook
 chain_todo() {
@@ -245,13 +295,14 @@ $(chain_snippet "$h" | sed 's/^/      /')"
 }
 
 cur="$(git -C "$TARGET" config --get core.hooksPath || true)"
-if [ -n "$cur" ] && is_esclusa "$cur"; then
+# El valor tal cual y expandido como lo hace git (~, rutas): los dos sirven para reconocerla
+cur_dir="$(git -C "$TARGET" config --type=path --get core.hooksPath 2>/dev/null || printf '%s' "$cur")"
+cur_dir="${cur_dir%/}"
+if [ -n "$cur" ] && { is_esclusa "$cur" || is_esclusa "$cur_dir"; }; then
   ok "Esclusa activa (core.hooksPath → $cur)"
 elif [ -n "$cur" ]; then
   # Puede venir del config global de la persona (p. ej. un escáner corporativo): tampoco se pisa
   origin="$(git -C "$TARGET" config --show-origin --get core.hooksPath 2>/dev/null | cut -f1)"
-  cur_dir="$(git -C "$TARGET" config --type=path --get core.hooksPath 2>/dev/null || printf '%s' "$cur")"
-  cur_dir="${cur_dir%/}"
   scope=""
   [ -n "$(git -C "$TARGET" config --local --get core.hooksPath 2>/dev/null)" ] \
     || scope=" Ese core.hooksPath no es de este repo: vale para todos tus repos."
@@ -383,13 +434,22 @@ if [ "$(git -C "$TARGET" config --bool core.fileMode 2>/dev/null)" = "false" ]; 
 fi
 
 # ── 8. El Centinela instalado tiene que dejar pasar lo inocuo ────────────────────────────
-# (con ids duplicados ya hay un pendiente que explica el bloqueo)
+# Una acción de shell, una lectura y una edición (las reglas de ruta solo se evalúan con su
+# tool). Con ids duplicados ya hay un pendiente que explica el bloqueo.
 if [ -z "$dup" ]; then
-  smoke_err="$(cd "$TARGET" && printf '%s' '{"tool_name":"Bash","tool_input":{"command":"true"}}' \
-    | env -u SENTINEL_POLICY -u SENTINEL_POLICY_DEFAULT -u SENTINEL_OVERRIDE -u SENTINEL_CONFIRM \
-        CLAUDE_PROJECT_DIR="$TARGET" bash "$TARGET/sentinel/hooks/sentinel-guard.sh" 2>&1 >/dev/null)" \
-    || todo "el Centinela instalado deniega una acción inocua (\`true\`): ${smoke_err#sentinel-guard: }
-    Mientras siga así, el agente no podrá hacer nada en este repo. Revisa sentinel/policy.yaml"
+  smoke_path="$(printf '%s' "$TARGET/smoke-test.txt" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+  while IFS='|' read -r what payload; do
+    smoke_err="$(cd "$TARGET" && printf '%s' "$payload" \
+      | env -u SENTINEL_POLICY -u SENTINEL_POLICY_DEFAULT -u SENTINEL_OVERRIDE -u SENTINEL_CONFIRM \
+          CLAUDE_PROJECT_DIR="$TARGET" bash "$TARGET/sentinel/hooks/sentinel-guard.sh" 2>&1 >/dev/null)" && continue
+    todo "el Centinela instalado deniega una acción inocua ($what): ${smoke_err#sentinel-guard: }
+    Mientras siga así, el agente no podrá trabajar en este repo. Revisa sentinel/policy.yaml"
+    break
+  done <<EOF
+\`true\` en shell|{"tool_name":"Bash","tool_input":{"command":"true"}}
+leer un fichero|{"tool_name":"Read","tool_input":{"file_path":"$smoke_path"}}
+editar un fichero|{"tool_name":"Edit","tool_input":{"file_path":"$smoke_path","old_string":"a","new_string":"b"}}
+EOF
 fi
 
 echo
