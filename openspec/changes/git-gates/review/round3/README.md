@@ -28,4 +28,14 @@ Los 20 hallazgos están validados por las tres lentes. Agrupados por defecto:
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente.
+Decidida por una persona el 2026-10-17:
+
+- **En esta PR** (ronda 4 de `apply`, slices T1-T7 de `tasks.md`): los defectos 1 y 2
+  (bloqueantes), 3 (alinear la spec con la decisión) y 4 (`AGENTS.md` pasa a la política del
+  propio SDK), más los textos baratos del 6: los README con la regla vigente, el `git add` de la
+  skill y el pendiente de `core.fileMode` en la guía.
+- **Cambio propio**: el defecto 5, la versión del SDK que instala `setup` (P3-4).
+- **Deuda registrada**: el parser y los comentarios en línea (A3-3), la excepción de `.claude/`
+  (A3-2 = P3-5), la prueba de humo con todas las tools (A3-prev-A2-7), el `core.hooksPath`
+  propio encadenado (A3-5, se documenta como límite), las rutas relativas de `session-start`
+  (A3-6) y los avisos pensados para el SDK (P3-8).

@@ -65,10 +65,12 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
   instalador con las herramientas de edición (`ai-specs/skills/setup/setup.sh` y `chain.sh`;
   desde la shell pide aprobación, SC-sentinel-guard-21), el fragmento de cableado
   (`sentinel/settings.fragment.json`) o los hooks donde queda encadenada la Esclusa
-  (`.husky/<hook>`, `.git/hooks/`), ejecutar `git commit --no-verify`, tocar `core.hooksPath`
-  (en cualquier combinación de mayúsculas) o fijar o ampliar una variable `SENTINEL_*` en un
-  comando (p. ej. `SENTINEL_POLICY_DEFAULT=` o `SENTINEL_SETUP_JQ=`)
+  (`.husky/<hook>`, `.git/hooks/`), ejecutar `git commit --no-verify`, tocar `core.hooksPath` o
+  fijar una variable `SENTINEL_*` en un comando (p. ej. `SENTINEL_POLICY_DEFAULT=` o
+  `SENTINEL_SETUP_JQ=`)
 - **THEN** el hook deniega la acción
+- **AND** otras grafías de esas asignaciones y de `core.hooksPath` son el límite documentado
+  «regex evadibles» (decisión de la persona del 2026-10-16), no parte de esta garantía
 
 #### Scenario: Instalar es una decisión humana (SC-sentinel-guard-21)
 
