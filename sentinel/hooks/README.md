@@ -5,7 +5,7 @@ Tres hooks, tres arquetipos (no habrá más scripts — las reglas nuevas van a 
 
 | Hook | Evento | Arquetipo | Qué hace |
 |---|---|---|---|
-| `sentinel-guard.sh` | PreToolUse (Bash, Edit\|Write, Read) | *block* | Evalúa las dos políticas, `policy.default.yaml` y `policy.yaml` (en cada una decide la primera regla que matchea; entre las dos, la más estricta); deniega con exit 2 + motivo; registra overrides de break-glass |
+| `sentinel-guard.sh` | PreToolUse (Bash, Edit\|Write, Read) | *block* | Evalúa las dos políticas, `policy.default.yaml` y `policy.yaml`: de todas las reglas que matchean gana la más estricta (a igualdad, la primera, y las del SDK van antes); deniega con exit 2 + motivo; registra overrides de break-glass |
 | `session-start.sh` | SessionStart | *inject* | Inyecta rama actual + cambios OpenSpec activos + decisiones recientes; avisa si la Esclusa no está activa en el clon |
 | `post-edit.sh` | PostToolUse (Edit\|Write) | *auto-fix* | Formatea el fichero editado con el comando `format` del adaptador de stack; degradación silenciosa si el entorno no está listo |
 

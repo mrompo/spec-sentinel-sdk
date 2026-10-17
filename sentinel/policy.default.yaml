@@ -23,8 +23,8 @@
 #       mode:          block | confirm | warn
 #       reason:        motivo mostrado al denegar/avisar
 #
-# Modos: block → exit 2 con motivo · confirm → exige aprobación humana (SENTINEL_CONFIRM=1
-# tras aprobar) · warn → pasa dejando aviso.
+# Modos: block → exit 2 con motivo · confirm → pide aprobación humana para esa acción (el
+# permiso del harness) · warn → pasa dejando aviso.
 # Break-glass (block/confirm): SENTINEL_OVERRIDE="<motivo>" permite la acción y la registra
 # en sentinel/overrides.log (fichero versionado; doctor lo reporta — KPI de overrides).
 
@@ -44,16 +44,18 @@ rules:
     # Segunda revisión de git-gates (SC-sentinel-guard-13): el fragmento de cableado que la
     # persona copia a mano sin jq, y los hooks donde queda encadenada la Esclusa (husky y
     # .git/hooks). El instalador tiene sus propias reglas (protect-installer, install-needs-human).
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.claude/settings|AGENTS\.md$)
+    # AGENTS.md no va aquí: en un consumidor es suyo; el SDK lo protege en su propia policy.yaml.
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.claude/settings)
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
 
   # El instalador es lo que ejecuta la aprobación humana de instalar: con las herramientas de
-  # edición no se toca (SC-sentinel-guard-13). Sin ancla, para cubrir también la copia del SDK a
-  # la que apunta el consumidor. Desde la shell lo decide una persona (install-needs-human).
+  # edición no se toca (SC-sentinel-guard-13). Sin ancla y sin «ai-specs/»: cubre la copia del SDK a
+  # la que apunta el consumidor y el enlace de la skill que recomienda la guía
+  # (~/.claude/skills/setup). Desde la shell lo decide una persona (install-needs-human).
   - id: protect-installer
     tool: Edit|Write|MultiEdit|NotebookEdit
-    path_re: ai-specs/skills/setup/(setup|chain)\.sh
+    path_re: skills/setup/(setup|chain)\.sh
     mode: block
     reason: No se modifica el instalador del SDK — hazlo en un cambio OpenSpec revisado por un humano
 
@@ -71,7 +73,7 @@ rules:
   # regla más estricta, esta aprobación no rebaja ningún bloqueo del mismo comando.
   - id: install-needs-human
     tool: Bash
-    command_re: ai-specs/skills/setup/(setup|chain)\.sh
+    command_re: skills/setup/(setup|chain)\.sh
     mode: confirm
     reason: El comando ejecuta o toca el instalador del SDK, que reescribe el enforcement y el cableado — lo aprueba una persona
 

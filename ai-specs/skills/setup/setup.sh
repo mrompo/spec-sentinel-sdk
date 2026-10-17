@@ -18,7 +18,7 @@
 # Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error. Si falla una
 # comprobación previa no se escribe nada; si falla a mitad, lo hecho se queda y reejecutar es seguro.
 # Variables: SENTINEL_SETUP_JQ (binario de jq), SENTINEL_GITLEAKS_BIN (el mismo que la Esclusa).
-# Falsifica: SC-sdk-setup-01..08 (fixture/install/cases/).
+# Falsifica: SC-sdk-setup-01..13 (fixture/install/cases/).
 set -uo pipefail
 
 # cd -P primero: a través de un enlace a la skill (~/.claude/skills/setup) se sube desde la real
@@ -169,11 +169,16 @@ drop_fragment() { [ -f "$F" ] && rm -f "$F" && note "retirado sentinel/settings.
 # wired_ok <fichero> → el fichero lleva el cableado del SDK: cada grupo del .claude/settings.json
 # del SDK está, tal cual, dentro de SU evento (.hooks.<evento>). Es una comprobación de
 # estructura y no usa jq (el resultado de una fusión no se valida con el mismo jq que la hizo):
-# un mini lector de JSON en awk que compara sin el espacio de fuera de las cadenas.
+# un mini lector de JSON en awk que compara sin el espacio de fuera de las cadenas. Antes exige
+# JSON estricto, porque Claude Code se queda con la ÚLTIMA aparición de una clave: sin claves
+# repetidas, sin escapes en las claves y sin nada detrás del objeto (SC-sdk-setup-10).
+# Con -v mode=disabled responde otra cosa: 0 si la raíz trae «"disableAllHooks": true».
 WIRING_AWK='
 FNR == 1 { f++ }
 { buf[f] = buf[f] $0 "\n" }
 END {
+  if (!strict(buf[2])) exit 1
+  if (mode == "disabled") exit (DISABLED ? 0 : 1)
   frag = compact(buf[1]); have = compact(buf[2]); found = 0
   n = split("PreToolUse PostToolUse SessionStart SessionEnd UserPromptSubmit Stop SubagentStop Notification PreCompact", evs, " ")
   for (k = 1; k <= n; k++) {
@@ -182,6 +187,37 @@ END {
     if (got == "" || index(got, substr(want, 2, length(want) - 2)) == 0) exit 1
   }
   exit (found > 0 ? 0 : 1)
+}
+function strict(s,   n, i, c, depth, instr, esc, str, k, nobj, started, done, pend) {
+  n = length(s); depth = 0; instr = 0; esc = 0; str = ""; nobj = 0; started = 0; done = 0; pend = 0
+  for (i = 1; i <= n; i++) {
+    c = substr(s, i, 1)
+    if (instr) {
+      if (esc) { esc = 0; str = str c } else if (c == "\\") { esc = 1; str = str c }
+      else if (c == "\"") instr = 0; else str = str c
+      continue
+    }
+    if (c == " " || c == "\t" || c == "\n" || c == "\r") continue
+    if (done) return 0
+    if (!started) { if (c != "{") return 0; started = 1 }
+    if (c == "\"") { instr = 1; str = ""; continue }
+    if (c == ":") {
+      if (!isobj[depth] || index(str, "\\") > 0) return 0
+      k = objid[depth] SUBSEP str
+      if (k in seen) return 0
+      seen[k] = 1
+      if (depth == 1 && str == "disableAllHooks") pend = 1
+      continue
+    }
+    if (pend) { if (c == "t") DISABLED = 1; pend = 0 }
+    if (c == "{" || c == "[") { depth++; isobj[depth] = (c == "{"); if (c == "{") objid[depth] = ++nobj; continue }
+    if (c == "}" || c == "]") {
+      if (depth == 0 || (c == "}") != isobj[depth]) return 0
+      depth--; if (depth == 0) done = 1
+      continue
+    }
+  }
+  return (started && done && !instr)
 }
 function compact(s,   out, i, c, n, instr, esc) {
   out = ""; instr = 0; esc = 0; n = length(s)
@@ -221,12 +257,17 @@ function event_array(s, ev,   n, i, c, depth, instr, esc, str, key, kdepth, hook
   return ""
 }'
 wired_ok() { awk "$WIRING_AWK" "$SDK_ROOT/.claude/settings.json" "$1" 2>/dev/null; }
-# merged_ok <json> → el resultado de una fusión es un objeto JSON y conserva el cableado
+# hooks_disabled <fichero> → JSON estricto con «"disableAllHooks": true» en la raíz: Claude Code
+# no ejecuta ningún hook, tampoco el Centinela
+hooks_disabled() { [ -f "$1" ] && awk -v mode=disabled "$WIRING_AWK" "$SDK_ROOT/.claude/settings.json" "$1" 2>/dev/null; }
+# merged_ok <json> → el resultado de una fusión es un objeto JSON estricto, conserva el cableado
+# y no apaga los hooks si antes no lo estaban
 merged_ok() {
   local t rc
   case "$1" in "{"*) ;; *) return 1 ;; esac
   t="$(mktemp)" || return 1
   printf '%s\n' "$1" >"$t"; wired_ok "$t"; rc=$?
+  [ "$rc" -ne 0 ] || ! hooks_disabled "$t" || hooks_disabled "$S" || rc=1
   rm -f "$t"; return $rc
 }
 if [ ! -f "$S" ]; then
@@ -259,6 +300,11 @@ else
     drop_fragment
   fi
 fi
+# Cableado no es lo mismo que activo: con disableAllHooks, Claude Code no ejecuta ningún hook
+for sf in "$S" "$TARGET/.claude/settings.local.json"; do
+  hooks_disabled "$sf" && todo "${sf#$TARGET/} tiene «\"disableAllHooks\": true»: Claude Code no ejecuta
+    ningún hook, tampoco el Centinela. Quítalo (o ponlo a false) y vuelve a ejecutar setup"
+done
 
 # ── 4. La Esclusa: core.hooksPath, o encadenada en los git hooks que ya hay ──────────────
 # abs_dir <dir> → <dir> absoluto; uno relativo se resuelve, como hace git, desde la raíz del repo
@@ -457,5 +503,5 @@ if [ "$pending" -eq 1 ]; then
   echo "Nivel Guardia instalado con pasos pendientes (⚠ arriba). Vuelve a ejecutar setup al resolverlos."
   exit 3
 fi
-echo "✓ Nivel Guardia instalado. Versiona sentinel/, .claude/settings.json y .gitignore en un commit."
+echo "✓ Nivel Guardia instalado. Versiónalo en un commit: git add sentinel .claude .gitignore"
 exit 0

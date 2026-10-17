@@ -8,3 +8,11 @@ version: 1
 sdd: true
 
 rules:
+  # El mapa de instrucciones de los agentes de ESTE repo (AGENTS.md y sus enlaces CLAUDE.md,
+  # GEMINI.md y codex.md) lo cambia una persona. No va en la política distribuida: en un repo
+  # consumidor, su AGENTS.md es suyo (tercera revisión de git-gates, P3-3).
+  - id: protect-agents-md
+    tool: Bash|Edit|Write|MultiEdit|NotebookEdit
+    path_re: (AGENTS|CLAUDE|GEMINI|codex)\.md$
+    mode: block
+    reason: El mapa de instrucciones de los agentes de este repo lo cambia una persona en un cambio OpenSpec revisado
