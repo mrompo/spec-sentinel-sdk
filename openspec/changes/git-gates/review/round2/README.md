@@ -1,7 +1,7 @@
 # Revisión adversarial, ronda 2 — `git-gates` PR 3/3 (instalación)
 
-**Fecha**: 2026-10-16 · **Rama**: `feature/git-gates-install` @ `5f1ece5` · **Alcance**:
-`git diff main..5f1ece5` (63 ficheros), tras la ronda 2 de `apply` que siguió al primer `HOLD`
+**Fecha**: 2026-10-16 · **Rama**: `feature/git-gates-install` @ `7bf7547` · **Alcance**:
+`git diff main..7bf7547` (63 ficheros), tras la ronda 2 de `apply` que siguió al primer `HOLD`
 ([`../README.md`](../README.md)).
 
 Mismo método: tres lentes nuevas con contexto limpio, `counter-review` cruzado y veredicto

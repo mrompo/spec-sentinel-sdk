@@ -1,7 +1,7 @@
 # Revisión adversarial — `git-gates` PR 3/3 (instalación)
 
-**Fecha**: 2026-10-16 · **Rama**: `feature/git-gates-install` @ `ffcf126` · **Alcance**:
-`git diff main..ffcf126` (48 ficheros) contra los deltas de `specs/`.
+**Fecha**: 2026-10-16 · **Rama**: `feature/git-gates-install` @ `2879722` · **Alcance**:
+`git diff main..2879722` (48 ficheros) contra los deltas de `specs/`.
 
 **Método** (`docs/05-semantica.md` §Tribunal): tres lentes con contexto limpio (ven el diff y
 la spec, nunca el razonamiento del implementador), una ronda `counter-review` en la que cada
