@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-16 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación): el panel dio `HOLD` dos veces; la tercera ronda de arreglos está hecha y se relanza el panel
+**Última actualización**: 2026-10-17 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación): el panel dio `HOLD` tres veces; la cuarta ronda de arreglos está hecha y se relanza el panel · historia reescrita con los mensajes de commit en español (misma topología y contenido)
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `apply` (PR 3/3) |
-| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` (#3) · PR 2/3 (ficheros protegidos) ✅ en `main` (#4) · **PR 3/3 (instalación): `review` dio `HOLD` dos veces ([review/](openspec/changes/git-gates/review/README.md), [round2/](openspec/changes/git-gates/review/round2/README.md)), ronda 3 de `apply` hecha, se relanza `review`** |
+| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` (#3) · PR 2/3 (ficheros protegidos) ✅ en `main` (#4) · **PR 3/3 (instalación): `review` dio `HOLD` tres veces ([review/](openspec/changes/git-gates/review/README.md), [round2/](openspec/changes/git-gates/review/round2/README.md), [round3/](openspec/changes/git-gates/review/round3/README.md)), ronda 4 de `apply` hecha, se relanza `review`** |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -72,6 +72,20 @@
   git-lfs): sacada de `git-gates` tras su segunda revisión; expediente propio,
   [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md), con el gate Intención
   pendiente.
+- **Versión del SDK instalada** (P3-4 de la tercera revisión de `git-gates`): `setup` no la
+  registra, y reinstalar desde una copia más vieja revierte el enforcement sin aviso. Expediente
+  propio, [`sdk-version`](openspec/changes/sdk-version/proposal.md), con el gate Intención
+  pendiente.
+- **Deuda de la tercera revisión de `git-gates`** (decisión del 2026-10-17, detalle en
+  [round3/](openspec/changes/git-gates/review/round3/README.md)):
+  - el parser de la política no recorta los comentarios en línea y mezcla una regla que no
+    empieza por `- id:` con la anterior (A3-3);
+  - la excepción que propone `setup` para `.claude/` es demasiado amplia y puede volver a
+    ignorar `commands/`, `agents/` y `skills/` (A3-2 = P3-5);
+  - la prueba de humo de `setup` no cubre Write, Grep, Glob, MultiEdit ni NotebookEdit
+    (A3-prev-A2-7);
+  - `session-start` compara texto en rutas relativas de `core.hooksPath` (A3-6) y sus avisos
+    dan por hecho que el repo es el SDK (`STATUS.md`, OpenSpec) (P3-8).
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.

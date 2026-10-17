@@ -164,6 +164,12 @@ instalar reescribe el enforcement y lo decides tú.
   excepción que hay que añadir.
 - **El Centinela lo deniega todo** → tu `sentinel/policy.yaml` tiene un error; `setup` te
   muestra el motivo.
+- **Tu repo tiene `core.fileMode=false`** (habitual en Git for Windows y en WSL sobre `/mnt/c`)
+  → git no guarda el permiso de ejecución y, en los clones, ignoraría los hooks. Tras el
+  `git add`, marca los ejecutables con el `git add --chmod=+x …` que te da `setup`.
+- **Hay un `"disableAllHooks": true`** en `.claude/settings.json` o en
+  `.claude/settings.local.json` → Claude Code no ejecuta ningún hook, tampoco el Centinela.
+  Quítalo o ponlo a `false`.
 
 El **stack propuesto** no es un pendiente: revisa `stack.proposed.yaml` y, si te vale,
 renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests con un aviso.
@@ -171,7 +177,7 @@ renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests
 **Al terminar**, versiona la instalación. Ese primer commit ya pasa por la Esclusa:
 
 ```bash
-git add -A && git commit -m "chore: instala spec-sentinel (nivel Guardia)"
+git add sentinel .claude .gitignore && git commit -m "chore: instala spec-sentinel (nivel Guardia)"
 git commit --allow-empty -m prueba      # comprobación: la Esclusa tiene que rechazarlo
 ```
 

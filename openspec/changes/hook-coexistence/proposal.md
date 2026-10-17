@@ -24,8 +24,11 @@ herramientas reales:
 - **Versionado del encadenado**: el mensaje final de `setup` no nombra los hooks de husky que
   hay que versionar (P2-8).
 
-En `git-gates` los hooks donde queda encadenada la Esclusa ya están protegidos frente al agente
-(`self-protection`), y la guía documenta este límite.
+En `git-gates`, los hooks encadenados de husky (`.husky/<hook>`) y de `.git/hooks/` ya están
+protegidos frente al agente (`self-protection`); los de un `core.hooksPath` propio con otra ruta
+no lo están (A3-5 de la tercera revisión). La guía y `sentinel/README.md` documentan el límite.
+También pertenece a este cambio que `setup` acepte con exit 0 un encadenado en una ubicación
+que no está protegida.
 
 ## What Changes
 

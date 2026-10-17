@@ -157,19 +157,22 @@
 
 ### Ronda 4 de `apply`, tras el tercer `HOLD` (disposición del 2026-10-17: bloqueantes y graves)
 
-- [ ] T1. La spec SC-sentinel-guard-13 dice lo que se decidió: las variantes de V2-6 son límite
-       documentado, no protección (A3-prev-V2-6)
-- [ ] T2. 👤 La comprobación del cableado sigue la semántica de JSON: claves repetidas, escapes
+- [x] T1. La spec SC-sentinel-guard-13 dice lo que se decidió: las variantes de V2-6 son límite
+       documentado, no protección (A3-prev-V2-6) (`e42b284`)
+- [x] T2. 👤 La comprobación del cableado sigue la semántica de JSON: claves repetidas, escapes
        en las claves o basura tras el objeto → no cableado; `disableAllHooks: true` → no efectivo
-       (A3-prev-A2-prevA4 = P3-1, A3-1) — `setup.sh` (**fichero protegido**)
-- [ ] T3. 👤 El instalador, protegido también por la ruta del enlace de la skill
-       (`~/.claude/skills/setup`) (P3-2 = A3-prev-A2-5) — política (**fichero protegido**)
-- [ ] T4. 👤 `AGENTS.md` sale de la política distribuida y pasa a la `policy.yaml` del propio SDK
-       (P3-3) — las dos políticas (**ficheros protegidos**)
-- [ ] T5. Textos: los README con la regla vigente (V3-1 = A3-4 = P3-7; el de los hooks es
-       protegido 👤), el `git add` de la skill y de `setup` (P3-6), el pendiente de
-       `core.fileMode` en la guía (P3-9) y el límite del `core.hooksPath` propio (A3-5)
-- [ ] T6. La versión del SDK (P3-4) como cambio propio, y la deuda registrada en `STATUS.md`
+       (A3-prev-A2-prevA4 = P3-1, A3-1) — `setup.sh` (**fichero protegido**; escrito con la
+       aprobación directa de una persona, `1ecf51d`)
+- [x] T3. 👤 El instalador, protegido también por la ruta del enlace de la skill
+       (`~/.claude/skills/setup`) (P3-2 = A3-prev-A2-5) — política (**fichero protegido**, con
+       llave, `1ecf51d`)
+- [x] T4. 👤 `AGENTS.md` sale de la política distribuida y pasa a la `policy.yaml` del propio SDK
+       (P3-3) — las dos políticas (**ficheros protegidos**, con llave, `1ecf51d`)
+- [x] T5. Textos: los README con la regla vigente (V3-1 = A3-4 = P3-7; el de los hooks con
+       llave), el `git add` de la skill y de `setup` (P3-6), el pendiente de `core.fileMode` y
+       el de `disableAllHooks` en la guía (P3-9) y el límite del `core.hooksPath` propio (A3-5)
+- [x] T6. La versión del SDK (P3-4) como cambio propio,
+       [`sdk-version`](../sdk-version/proposal.md), y la deuda registrada en `STATUS.md`
 - [ ] T7. Relanzar el panel → **Veredicto**
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`

@@ -34,13 +34,18 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
 4. **Pasos pendientes**: preséntalos a la persona uno a uno, con la instrucción literal del
    script. Los que tocan su máquina o su configuración (instalar gitleaks o jq, poner las
    líneas que encadenan la Esclusa en sus git hooks, fusionar `sentinel/settings.fragment.json`,
-   añadir excepciones al `.gitignore`) **los decide y los hace ella**. Después, vuelve al paso 2:
+   añadir excepciones al `.gitignore`, marcar los ejecutables con `git add --chmod=+x` si el
+   repo tiene `core.fileMode=false`, quitar un `disableAllHooks`) **los decide y los hace
+   ella**. Después, vuelve al paso 2:
    `setup` reconoce lo que ya está hecho, y la instalación está cerrada cuando sale con `0`.
 5. **Adaptador de stack**: si hay `sentinel/adapters/stack.proposed.yaml`, enséñaselo a la
    persona. Solo con su visto bueno se renombra a `stack.yaml`. Sin adaptador, la Esclusa omite
    format, lint y tests con aviso, así que no es bloqueante.
-6. **Versiona** `sentinel/`, `.claude/settings.json` y `.gitignore` en un commit
-   (`chore: install spec sentinel guard level`), en una rama, nunca en una protegida.
+6. **Versiona** la instalación en un commit, en una rama y nunca en una protegida:
+   `git add sentinel .claude .gitignore` (nombrar `.claude/settings.json` en un comando lo
+   bloquea el Centinela) y `chore: instala spec-sentinel (nivel Guardia)`. Comprueba con
+   `git status` que no entra `.claude/settings.local.json`, que es de cada persona. Si la
+   Esclusa quedó encadenada en hooks versionados (husky), versiónalos también.
 
 ## Rationalizations
 
@@ -69,4 +74,5 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
   `no-hook-disabling` le bloquea cualquier comando que nombre `core.hooksPath`.
 - Un commit con mensaje no conforme se rechaza (`git commit --allow-empty -m "prueba"`).
 - `.claude/settings.json` contiene `sentinel-guard.sh`, `post-edit.sh` y `session-start.sh` una
-  sola vez cada uno.
+  sola vez cada uno (léelo con la herramienta de lectura: un comando de shell que lo nombre lo
+  bloquea el Centinela).
