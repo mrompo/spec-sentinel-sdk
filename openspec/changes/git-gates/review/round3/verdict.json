@@ -1,0 +1,263 @@
+{
+  "verdict": "HOLD",
+  "counts": {
+    "blocker": {
+      "total": 3,
+      "validated": 3
+    },
+    "major": {
+      "total": 5,
+      "validated": 5
+    },
+    "minor": {
+      "total": 9,
+      "validated": 9
+    },
+    "nit": {
+      "total": 3,
+      "validated": 3
+    }
+  },
+  "findings": [
+    {
+      "id": "A3-prev-A2-prevA4",
+      "lens": "auditor",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 173,
+      "title": "La comprobación de estructura del cableado (WIRING_AWK/wired_ok/merged_ok) no sigue la semántica de JSON: un jq de fuera del repo sigue descableando el Centinela y setup dice «✓ Centinela cableado» (SC-sdk-setup-10)"
+    },
+    {
+      "id": "P3-1",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 210,
+      "title": "Sin jq, el cableado pegado como segunda clave «hooks» da «✓ ya cableado» (exit 0) y Claude Code no carga el Centinela; tampoco se mira disableAllHooks"
+    },
+    {
+      "id": "P3-2",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 56,
+      "title": "Con la skill expuesta como dice la guía (~/.claude/skills/setup), el agente edita el instalador sin bloqueo y lo ejecuta sin aprobación humana"
+    },
+    {
+      "id": "A3-1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 249,
+      "title": "setup no mira disableAllHooks: con «\"disableAllHooks\": true» en .claude/settings.json dice «✓ Nivel Guardia instalado» (exit 0) y el Centinela no se ejecuta nunca"
+    },
+    {
+      "id": "A3-prev-A2-5",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 74,
+      "title": "Por el enlace de la skill que recomienda la guía (~/.claude/skills/setup), ejecutar el instalador no pide aprobación y editarlo no se bloquea; S3 hizo que esa ruta funcione"
+    },
+    {
+      "id": "A3-prev-V2-6",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "openspec/changes/git-gates/specs/sentinel-guard/spec.md",
+      "line": 68,
+      "title": "SC-sentinel-guard-13 promete denegar core.hooksPath «en cualquier combinación de mayúsculas» y «fijar o ampliar» SENTINEL_*, pero el código y el banco no lo hacen: la spec contradice la decisión de dejarlo como límite"
+    },
+    {
+      "id": "P3-3",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 47,
+      "title": "«AGENTS\\.md$» viaja en la self-protection distribuida: en cada consumidor el agente no puede editar ni nombrar en shell su propio AGENTS.md, y el consumidor no puede relajarlo"
+    },
+    {
+      "id": "P3-4",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 69,
+      "title": "setup no registra ni compara la versión del SDK: un compañero con un clon viejo del SDK, al que session-start dice «ejecuta setup», revierte el enforcement en silencio"
+    },
+    {
+      "id": "A3-2",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 394,
+      "title": "La excepción propuesta para .claude/settings.json («!.claude/», «.claude/*», «!.claude/settings.json») vuelve a ignorar lo que el equipo versionaba en .claude/ (commands, agents, skills)"
+    },
+    {
+      "id": "A3-3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 208,
+      "title": "El parser no hace lo que dice su comentario: no recorta los «#» tras un valor, y una regla que no empieza por «- id:» se mezcla con la anterior; las reglas del consumidor se quedan sin efecto sin aviso"
+    },
+    {
+      "id": "A3-4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/README.md",
+      "line": 22,
+      "title": "Los contratos siguen describiendo la evaluación anterior («en cada fichero decide la primera regla que matchea»)"
+    },
+    {
+      "id": "A3-5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 47,
+      "title": "La Esclusa encadenada en un core.hooksPath propio (que setup acepta con exit 0) no está protegida, aunque la proposal de hook-coexistence diga que sí"
+    },
+    {
+      "id": "A3-prev-A2-7",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 441,
+      "title": "La prueba de humo solo prueba Bash, Read y Edit: una regla del consumidor rota para Write o Grep/Glob deniega todas esas acciones y setup sale con 0 (SC-sdk-setup-12)"
+    },
+    {
+      "id": "P3-5",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 394,
+      "title": "La excepción propuesta para .claude/settings.json vuelve a ignorar, para todo el equipo, lo que comparte en .claude/ (commands, agents, skills)"
+    },
+    {
+      "id": "P3-6",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/SKILL.md",
+      "line": 42,
+      "title": "La skill y el mensaje final de setup mandan versionar con un comando que el Centinela instalado bloquea"
+    },
+    {
+      "id": "P3-7",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/README.md",
+      "line": 22,
+      "title": "El contrato que se copia a cada consumidor describe la prioridad anterior («en cada fichero decide la primera regla») y da conteos viejos"
+    },
+    {
+      "id": "V3-1",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/README.md",
+      "line": 22,
+      "title": "El contrato documentado sigue diciendo «en cada fichero decide la primera regla que matchea», que contradice la spec (SC-sentinel-guard-20/21) y el guard; igual en sentinel/hooks/README.md, y los recuentos del banco del README están desfasados (19/16/12 frente a 20/16/13)"
+    },
+    {
+      "id": "A3-6",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 28,
+      "title": "session-start compara texto en rutas relativas: avisa en falso con formas que setup sí reconoce"
+    },
+    {
+      "id": "P3-8",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 20,
+      "title": "Lo distribuido supone que el consumidor es el SDK: «Estado: STATUS.md», «entre fases», enlaces a ../docs y ../openspec"
+    },
+    {
+      "id": "P3-9",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 151,
+      "title": "«Los pendientes habituales» no recoge el de core.fileMode=false"
+    }
+  ]
+}

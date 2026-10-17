@@ -150,7 +150,10 @@
 - [x] S6. 👤 Ficheros protegidos de S2 y S4: en vez de parche, el agente los escribió con cuatro
        llaves de un solo uso que creó una persona (2026-10-17), registradas en
        `sentinel/overrides.log`; banco en verde (20 + 16 + 13 casos)
-- [ ] S7. Relanzar el panel → **Veredicto**
+- [x] S7. Relanzar el panel → **Veredicto**: **`HOLD`** por tercera vez el 2026-10-17
+       ([`review/round3/`](review/round3/README.md)): dos bloqueantes (la comprobación del
+       cableado no sigue la semántica de JSON; el enlace de la skill deja el instalador sin
+       proteger) y tres graves. Pendiente la **Resolución** 👤
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
