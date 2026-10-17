@@ -67,3 +67,19 @@ cp "$REPO_ROOT/.claude/settings.json" "$S"
 run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
 assert_exit 0 || fail_case "sin jq, con las entradas sustituidas, setup debería terminar con 0: $RH_ERR"
 cleanup_git_workspace
+
+# Sin jq, el fragmento pegado como una segunda clave «hooks» (error habitual al copiar a mano):
+# Claude Code se queda con la última, así que no cuenta como cableado (P3-1). Igual con algo
+# detrás del objeto
+mk_git_workspace
+S="$WS/.claude/settings.json"; F="$WS/sentinel/settings.fragment.json"; mkdir -p "$WS/.claude"
+H="$(jq -c .hooks "$REPO_ROOT/.claude/settings.json")"
+printf '{"hooks":%s,\n "hooks":{"PostToolUse":[{"matcher":"Edit","hooks":[{"type":"command","command":"echo prettier"}]}]}}\n' "$H" >"$S"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 3 || fail_case "sin jq, con la clave «hooks» repetida no debería darse por cableado"
+assert_out_lacks "ya cableado" || fail_case "con la clave «hooks» repetida no debería decir «ya cableado»"
+[ -f "$F" ] || fail_case "con la clave «hooks» repetida, el fragmento no debería retirarse"
+cp "$REPO_ROOT/.claude/settings.json" "$S"; printf '}\n' >>"$S"
+run_setup SENTINEL_SETUP_JQ=/nonexistent/jq
+assert_exit 3 || fail_case "sin jq, con algo detrás del objeto no debería darse por cableado"
+cleanup_git_workspace

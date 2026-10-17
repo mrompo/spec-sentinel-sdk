@@ -75,7 +75,9 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 #### Scenario: Instalar es una decisión humana (SC-sentinel-guard-21)
 
 - **WHEN** el agente ejecuta el instalador (`ai-specs/skills/setup/setup.sh`, con `bash` o
-  directamente) o cualquier comando de shell que nombre el instalador (`setup.sh` o `chain.sh`)
+  directamente, también por la ruta del enlace de la skill que recomienda la guía,
+  `~/.claude/skills/setup/`) o cualquier comando de shell que nombre el instalador (`setup.sh` o
+  `chain.sh`)
 - **THEN** el hook pide aprobación humana (`confirm`): la persona ve el comando antes de que se
   ejecute. Leerlo con las herramientas de lectura no la pide; escribirlo con las de edición se
   bloquea (SC-sentinel-guard-13)

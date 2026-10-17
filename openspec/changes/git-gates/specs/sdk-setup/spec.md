@@ -62,6 +62,10 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
 - **AND** la comprobación es de estructura, sin `jq`: cada grupo del cableado del SDK tiene que
   estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio. La misma
   comprobación vale sin `jq` para el cableado que la persona pega a mano
+- **AND** un `.claude/settings.json` que no es JSON estricto (una clave repetida, también al pegar
+  el fragmento a mano; escapes en las claves; algo tras el objeto) no cuenta como cableado, y con
+  `disableAllHooks: true` (en `.claude/settings.json` o en `.claude/settings.local.json`) el
+  cableado no es efectivo: queda pendiente, y una fusión no lo puede introducir
 
 #### Scenario: Actualización sin pisar la política (SC-sdk-setup-05)
 

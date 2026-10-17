@@ -76,6 +76,20 @@ assert_exit 0 || fail_case "con una regla de permisos que nombra el guard deber�
 [ "$(jq -r '.permissions.deny[0]' "$S")" = "Edit(sentinel/hooks/sentinel-guard.sh)" ] || fail_case "se perdió la regla de permisos"
 cleanup_git_workspace
 
+# SC-sdk-setup-10: con disableAllHooks: true Claude Code no ejecuta ningún hook, así que el
+# Centinela no está activo aunque esté cableado: pendiente, en settings.json o en el local (A3-1)
+mk_git_workspace
+S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
+printf '{"disableAllHooks":true}\n' >"$S"
+run_setup
+assert_exit 3 || fail_case "con disableAllHooks: true en settings.json debería terminar con 3"
+assert_out_contains "disableAllHooks" || fail_case "la salida debería nombrar disableAllHooks"
+printf '{}\n' >"$S"; printf '{"disableAllHooks": true}\n' >"$WS/.claude/settings.local.json"
+run_setup
+assert_exit 3 || fail_case "con disableAllHooks: true en settings.local.json debería terminar con 3"
+assert_out_contains "settings.local.json" || fail_case "la salida debería nombrar settings.local.json"
+cleanup_git_workspace
+
 # SC-sdk-setup-09: una forma que no se puede fusionar con seguridad → fragmento y pendiente, no error
 mk_git_workspace
 S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"

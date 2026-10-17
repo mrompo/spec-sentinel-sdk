@@ -9,6 +9,8 @@ bash_payload() { printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1
 guard() { run_hook "$GUARD_HOOK" "$(bash_payload "$1")" SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$NO_POLICY"; }
 
 for cmd in \
+  'bash ~/.claude/skills/setup/setup.sh .' \
+  'bash /Users/me/.claude/skills/setup/setup.sh /Users/me/app' \
   'bash ../spec-sentinel-sdk/ai-specs/skills/setup/setup.sh .' \
   'bash /opt/sdk/ai-specs/skills/setup/setup.sh' \
   'cd ../app && bash ../sdk/ai-specs/skills/setup/setup.sh .' \

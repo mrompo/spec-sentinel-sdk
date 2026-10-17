@@ -113,6 +113,19 @@ printf 'version: 1\nsdd: false\nrules:\n' >"$C"
 guard "$EDIT_SRC"
 [ -z "$RH_ERR" ] || fail_case "sdd: false del consumidor manda sobre la distribuida ($RH_ERR)"
 
+# AGENTS.md es del consumidor: la política distribuida no lo protege (P3-3). En el SDK lo protege
+# su propia policy.yaml, también a través de los enlaces CLAUDE.md, GEMINI.md y codex.md
+printf 'version: 1\nrules:\n' >"$C"
+for f in AGENTS.md packages/api/AGENTS.md CLAUDE.md; do
+  guard "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$f\",\"new_string\":\"x\"}}"
+  assert_exit 0 || fail_case "en un consumidor, editar $f no debería bloquearse ($RH_ERR)"
+done
+for f in AGENTS.md CLAUDE.md GEMINI.md codex.md; do
+  run_hook "$GUARD_HOOK" "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$f\",\"new_string\":\"x\"}}" \
+    SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || fail_case "en el SDK, editar $f debería bloquearse (lo protege su policy.yaml)"
+done
+
 # 13 — las dos políticas y la variable de la distribuida están protegidas
 for payload in \
   '{"tool_name":"Write","tool_input":{"file_path":"sentinel/policy.default.yaml","content":"version: 1\nrules:\n"}}' \

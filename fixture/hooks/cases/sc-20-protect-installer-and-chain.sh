@@ -9,6 +9,7 @@ fail_case() { echo "    $1" >&2; exit 1; }
 guard() { run_hook "$GUARD_HOOK" "$1" SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$NO_POLICY"; }
 
 for f in ai-specs/skills/setup/setup.sh ai-specs/skills/setup/chain.sh \
+         /Users/me/.claude/skills/setup/setup.sh /Users/me/.claude/skills/setup/chain.sh \
          sentinel/settings.fragment.json \
          .husky/commit-msg .husky/pre-commit .husky/pre-push .git/hooks/pre-commit; do
   guard "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$f\",\"content\":\"x\"}}"

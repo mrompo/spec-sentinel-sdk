@@ -53,5 +53,17 @@ run_setup SENTINEL_SETUP_JQ="$WS.bin/jq-moved"
 assert_exit 3 || fail_case "con un resultado que saca el Centinela de PreToolUse debería terminar con 3"
 [ "$(cat "$S")" = "$orig" ] || fail_case "setup escribió un settings.json con el Centinela fuera de su evento"
 
+# d) fuera del repo, un jq que devuelve el cableado y después otra clave «hooks» vacía (Claude
+#    Code se queda con la última), o que añade disableAllHooks: tampoco se escribe (P3-1, A3-1)
+H="$(jq -c .hooks "$REPO_ROOT/.claude/settings.json")"
+printf '{"hooks":%s,"hooks":{}}\n' "$H" >"$WS.bin/dup.json"
+jq '. + {disableAllHooks: true}' "$REPO_ROOT/.claude/settings.json" >"$WS.bin/off.json"
+for out in dup off; do
+  sed "s#moved.json#$out.json#" "$WS.bin/jq-moved" >"$WS.bin/jq-$out"; chmod +x "$WS.bin/jq-$out"
+  run_setup SENTINEL_SETUP_JQ="$WS.bin/jq-$out"
+  assert_exit 3 || fail_case "con un jq que devuelve «$out» debería terminar con 3"
+  [ "$(cat "$S")" = "$orig" ] || fail_case "setup escribió el resultado «$out» de un jq que deja el Centinela sin efecto"
+done
+
 rm -rf "$WS.bin"
 cleanup_git_workspace
