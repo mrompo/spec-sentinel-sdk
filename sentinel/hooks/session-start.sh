@@ -22,7 +22,8 @@ echo "[sentinel] Rama: $BRANCH · $ACTIVE · Estado: STATUS.md · Reglas: sentin
 # Los git hooks no viajan con el clon: si el repo tiene la Esclusa pero aquí no está activa ni
 # encadenada (p. ej. un clon recién hecho), se avisa (SC-sentinel-guard-22)
 if [ -d "$ROOT/sentinel/githooks" ]; then
-  hp="$(git -C "$ROOT" config --get core.hooksPath 2>/dev/null || true)"; hp="${hp%/}"; hp="${hp#./}"
+  # --type=path: git expande «~» como cuando ejecuta los hooks (A2-8)
+  hp="$(git -C "$ROOT" config --type=path --get core.hooksPath 2>/dev/null || true)"; hp="${hp%/}"; hp="${hp#./}"
   esclusa=0
   case "$hp" in
     sentinel/githooks) esclusa=1 ;;

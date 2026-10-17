@@ -8,9 +8,10 @@
 # Reglas (esquema v1 plano) en dos políticas:
 #   1) sentinel/policy.default.yaml — la distribuida (viene con el SDK, la actualiza setup)
 #   2) sentinel/policy.yaml         — la del consumidor (opcional; solo AÑADE protección)
-# En cada una decide la primera regla que matchea; entre las dos gana la decisión más estricta
-# (block > confirm > warn) y, a igualdad, la del SDK. Un id repetido es un error de política
-# (opción A del slice 6 de git-gates, SC-sentinel-guard-17..20).
+# De todas las reglas que matchean, en las dos políticas, gana la decisión más estricta
+# (block > confirm > warn) y, a igualdad, la primera (las del SDK van antes): ninguna regla que
+# solo confirma o avisa tapa un bloqueo. Un id repetido es un error de política
+# (opción A del slice 6 de git-gates, SC-sentinel-guard-17..21).
 # Sin dependencias: bash + grep/sed. Endurecido tras el panel adversarial (ver §Limitaciones
 # en sentinel/README.md: lo que este puesto NO puede garantizar lo cubren Esclusa y Aduana).
 set -uo pipefail
@@ -154,7 +155,11 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
 # ── Evaluación de reglas ─────────────────────────────────────────────────────────────────
 reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; }
 
-# apply_rule → 0 si la regla en curso matchea (queda en m_id, m_mode, m_reason, m_policy); 1 si no
+# rank <modo> → cuánto restringe, para quedarse con la decisión más estricta
+rank() { case "$1" in block) echo 3 ;; confirm) echo 2 ;; warn) echo 1 ;; *) echo 0 ;; esac; }
+
+# apply_rule → 0 si la regla en curso matchea, 1 si no. Si matchea y es más estricta que la que
+# ya había en m_id, m_mode, m_reason, m_policy, la sustituye; a igualdad se queda la primera.
 apply_rule() {
   [ -n "$r_id" ] || return 1
   # Regla malformada = error de política, no permiso silencioso (fail-closed)
@@ -187,7 +192,10 @@ apply_rule() {
     block|confirm|warn) ;;
     *) deny "[$r_id] modo desconocido '$r_mode' en la política — corrige $CUR_POLICY" ;;
   esac
-  m_id="$r_id"; m_mode="$r_mode"; m_reason="$r_reason"; m_policy="$CUR_POLICY"
+  # Se queda con la más estricta de las que matchean; a igualdad, con la primera
+  if [ -z "$m_id" ] || [ "$(rank "$r_mode")" -gt "$(rank "$m_mode")" ]; then
+    m_id="$r_id"; m_mode="$r_mode"; m_reason="$r_reason"; m_policy="$CUR_POLICY"
+  fi
   return 0
 }
 
@@ -204,8 +212,9 @@ val() {
   printf '%s' "$v"
 }
 
-# eval_policy <fichero> → la primera regla del fichero que matchea queda en m_* (m_id vacío si
-# ninguna). Se detiene en ella: dentro de cada política, la primera que matchea decide.
+# eval_policy <fichero> → de las reglas del fichero que matchean, la más estricta queda en m_*
+# (m_id vacío si ninguna; a igualdad, la primera). En cuanto una bloquea ya no hay nada más
+# estricto, así que deja de mirar.
 eval_policy() {
   CUR_POLICY="$1"; m_id=""; m_mode=""; m_reason=""; m_policy=""
   reset_rule
@@ -214,7 +223,8 @@ eval_policy() {
     case "$line" in \#*|"") continue ;; esac        # comentario en cualquier columna
     case "$line" in
       "- id:"*|"-  id:"*)
-        apply_rule && return 0
+        apply_rule || true
+        [ "$m_mode" = block ] && return 0
         reset_rule; r_id="$(val "${line#-}")" ;;
       *)
         if   kv "$line" "tool";                     then r_tool="$(val "$line")"
@@ -232,10 +242,7 @@ eval_policy() {
   apply_rule || true
 }
 
-# rank <modo> → cuánto restringe, para quedarse con la decisión más estricta
-rank() { case "$1" in block) echo 3 ;; confirm) echo 2 ;; warn) echo 1 ;; *) echo 0 ;; esac; }
-
-# Cada política decide por su primera regla; entre las dos gana la más estricta y, a igualdad,
+# De todas las reglas que matchean, en las dos políticas, gana la más estricta y, a igualdad,
 # la del SDK: el consumidor añade protección, nunca la quita (SC-17, SC-18, SC-20)
 eval_policy "$DEFAULT_POLICY"
 d_id="$m_id"; d_mode="$m_mode"; d_reason="$m_reason"; d_policy="$m_policy"

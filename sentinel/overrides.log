@@ -1,0 +1,4 @@
+2026-10-17T07:18:59Z | self-protection | Write:sentinel/hooks/sentinel-guard.sh | git-gates S2: la regla mas estricta gana tambien dentro de cada politica (A2-1)
+2026-10-17T07:21:37Z | self-protection | Write:sentinel/policy.default.yaml | git-gates S4: proteger instalador, fragmento y hooks encadenados (V2-5, V2-4, V2-2)
+2026-10-17T07:27:02Z | self-protection | Write:sentinel/policy.default.yaml | git-gates S4: el instalador, bloqueado con Edit/Write y con aprobacion desde la shell
+2026-10-17T07:28:17Z | self-protection | Write:sentinel/hooks/session-start.sh | git-gates A2-8: session-start reconoce la Esclusa con ~ en core.hooksPath

@@ -1,15 +1,17 @@
 # sentinel/policy.default.yaml — LA política distribuida del SDK (puesto Centinela)
 #
 # Viene con el SDK y `setup` la actualiza: no la edites en tu proyecto (se sobrescribe, con
-# backup). Tus reglas van en sentinel/policy.yaml. En cada política decide la primera regla que
-# matchea y, entre las dos, la decisión más estricta (block > confirm > warn; a igualdad, esta):
-# el consumidor solo puede AÑADIR protección, nunca quitarla, y repetir aquí un id es un error
-# de política (opción A del slice 6 de git-gates, SC-sentinel-guard-17..20).
+# backup). Tus reglas van en sentinel/policy.yaml. De todas las reglas que matchean, en las dos
+# políticas, gana la decisión más estricta (block > confirm > warn; a igualdad, la primera, y
+# las de este fichero van antes): el consumidor solo puede AÑADIR protección, nunca quitarla, y
+# repetir aquí un id es un error de política (opción A del slice 6 de git-gates,
+# SC-sentinel-guard-17..21).
 #
 # Esquema v1 (plano, parseable con bash+sed — sin dependencias), igual en las dos políticas:
 #   sdd: true|false            → nivel Método activo (habilita reglas con requires_sdd). Lo
 #                                declara el consumidor; si no lo hace, vale el de este fichero
-#   rules:                     → lista ordenada; en cada política, LA PRIMERA REGLA QUE MATCHEA DECIDE
+#   rules:                     → lista de reglas; de las que matchean, GANA LA MÁS ESTRICTA
+#                                (a igualdad, la primera)
 #     - id:            único y obligatorio en las dos políticas (lo referencia overrides.log)
 #       tool:          regex sobre tool_name (Bash, Edit|Write, …)
 #       command_re:    regex sobre el comando (solo tool Bash)
@@ -39,9 +41,21 @@ rules:
     # el break-glass (hallazgo del 2026-09-30, SC-git-gates-14). La Esclusa entra con sus hooks,
     # su librería y el lector del adaptador (SC-git-gates-15); su README y el stack.yaml del
     # consumidor siguen siendo editables. Las dos políticas, la distribuida y la del consumidor.
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override)|\.claude/settings|AGENTS\.md$)
+    # Segunda revisión de git-gates (SC-sentinel-guard-13): el fragmento de cableado que la
+    # persona copia a mano sin jq, y los hooks donde queda encadenada la Esclusa (husky y
+    # .git/hooks). El instalador tiene sus propias reglas (protect-installer, install-needs-human).
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.claude/settings|AGENTS\.md$)
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
+
+  # El instalador es lo que ejecuta la aprobación humana de instalar: con las herramientas de
+  # edición no se toca (SC-sentinel-guard-13). Sin ancla, para cubrir también la copia del SDK a
+  # la que apunta el consumidor. Desde la shell lo decide una persona (install-needs-human).
+  - id: protect-installer
+    tool: Edit|Write|MultiEdit|NotebookEdit
+    path_re: ai-specs/skills/setup/(setup|chain)\.sh
+    mode: block
+    reason: No se modifica el instalador del SDK — hazlo en un cambio OpenSpec revisado por un humano
 
   - id: no-hook-disabling
     tool: Bash
@@ -51,13 +65,15 @@ rules:
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 
-  # Instalar o actualizar reescribe el enforcement y el cableado: lo aprueba una persona
-  # (SC-sentinel-guard-21). Solo al ejecutarlo; leerlo o buscar en él no lo pide.
+  # Ejecutar el instalador reescribe el enforcement y el cableado, y desde la shell también se
+  # podría modificar: cualquier comando que lo nombre lo aprueba una persona viendo el comando
+  # (SC-sentinel-guard-21). Leerlo con las herramientas de lectura no lo pide. Como gana la
+  # regla más estricta, esta aprobación no rebaja ningún bloqueo del mismo comando.
   - id: install-needs-human
     tool: Bash
-    command_re: (^|[;&|(]|&&)[[:space:]]*(env[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*((bash|sh|zsh)([[:space:]]+-[^[:space:]]+)*[[:space:]]+)?[^[:space:];&|]*ai-specs/skills/setup/setup\.sh
+    command_re: ai-specs/skills/setup/(setup|chain)\.sh
     mode: confirm
-    reason: Instalar o actualizar el SDK reescribe el enforcement y el cableado — lo aprueba una persona
+    reason: El comando ejecuta o toca el instalador del SDK, que reescribe el enforcement y el cableado — lo aprueba una persona
 
   # ── gitflow ────────────────────────────────────────────────────────────────
   - id: protected-branches
