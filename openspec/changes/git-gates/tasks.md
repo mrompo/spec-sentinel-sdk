@@ -127,15 +127,18 @@
 
 ### Ronda 3 de `apply`, tras el segundo `HOLD` (disposición del 2026-10-16: temas 1-3 y 5)
 
-- [ ] S1. Lo que hay que versionar (A2-2 = P2-1 🛑, P2-7, P2-10): `setup` comprueba con
+- [x] S1. Lo que hay que versionar (A2-2 = P2-1 🛑, P2-7, P2-10): `setup` comprueba con
        `git check-ignore` todo lo que distribuye y lo del consumidor; avisa con
        `core.fileMode=false`; la excepción correcta cuando `.claude/` viene de fuera del repo
-- [ ] S2. 👤 Las reglas del Centinela (A2-1 = V2-1, A2-6 = V2-prevV1, V2-6): la regla del
-       instalador no adelanta a los `block`, reconoce las formas habituales de lanzarlo, y
-       `no-hook-disabling` cubre las variantes de asignación y de mayúsculas — **fichero protegido**
-- [ ] S3. El instalador (A2-prevA4 = V2-prevA4, A2-3 = P2-9, A2-5 = P2-6, A2-7): validar la
+       (`1d1554e` en rojo, `b4864d7`)
+- [ ] S2. 👤 Las reglas del Centinela (A2-1 = V2-1, V2-6): de todas las reglas que coinciden, en
+       las dos políticas, gana la más estricta (ninguna `confirm` o `warn` tapa un `block`), y
+       `no-hook-disabling` cubre las variantes de asignación y de mayúsculas — **fichero
+       protegido**. A2-6 = V2-prevV1 queda documentado como límite (decisión del 2026-10-16)
+- [x] S3. El instalador (A2-prevA4 = V2-prevA4, A2-3 = P2-9, A2-5 = P2-6, A2-7): validar la
        estructura del cableado y no el texto; contar solo comandos; `SDK_ROOT` a través del
-       symlink de la skill; la prueba de humo cubre también tools de fichero
+       symlink de la skill; la prueba de humo cubre también tools de fichero (`23448b1` en
+       rojo, `83fae87`)
 - [ ] S4. 👤 Proteger lo que el agente no debe tocar (V2-5, V2-4, V2-2): el instalador, el
        fragmento y los hooks donde queda encadenada la Esclusa — **fichero protegido**
 - [ ] S5. Retoque (A2-8) y documentación: el tema 4 como límite conocido en la guía y en

@@ -9,10 +9,12 @@
 
 El hook `sentinel-guard` SHALL leer cada tool call (JSON por stdin) y evaluar la política
 distribuida (`sentinel/policy.default.yaml`, viene con el SDK y la actualiza `setup`) y la del
-consumidor (`sentinel/policy.yaml`, nunca se pisa). En cada una decide la primera regla que
-matchea; entre las dos SHALL ganar la decisión más estricta (`block` > `confirm` > `warn`) y, a
-igualdad, la del SDK. El consumidor SHALL poder **añadir** protección, nunca quitarla. `sdd:`
-SHALL leerse de la política del consumidor y, si no lo declara, de la distribuida.
+consumidor (`sentinel/policy.yaml`, nunca se pisa). De todas las reglas que matchean, en las
+dos políticas, SHALL ganar la decisión más estricta (`block` > `confirm` > `warn`) y, a
+igualdad, la primera (las del SDK van antes que las del consumidor): ninguna regla que solo
+confirma o avisa tapa un bloqueo, esté donde esté. El consumidor SHALL poder **añadir**
+protección, nunca quitarla. `sdd:` SHALL leerse de la política del consumidor y, si no lo
+declara, de la distribuida.
 
 #### Scenario: Acción sin regla — pasa (SC-sentinel-guard-01)
 
@@ -59,9 +61,12 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 #### Scenario: Desarmar el guard — bloqueado (SC-sentinel-guard-13)
 
 - **WHEN** el agente intenta escribir o borrar `sentinel/hooks/*`, `sentinel/policy.yaml`,
-  `sentinel/policy.default.yaml`, `sentinel/overrides.log` o `.claude/settings.json`, ejecutar
-  `git commit --no-verify` o fijar una variable `SENTINEL_*` en un comando (p. ej.
-  `SENTINEL_POLICY_DEFAULT=` o `SENTINEL_SETUP_JQ=`)
+  `sentinel/policy.default.yaml`, `sentinel/overrides.log`, `.claude/settings.json`, el
+  instalador (`ai-specs/skills/setup/setup.sh` y `chain.sh`), el fragmento de cableado
+  (`sentinel/settings.fragment.json`) o los hooks donde queda encadenada la Esclusa
+  (`.husky/<hook>`, `.git/hooks/`), ejecutar `git commit --no-verify`, tocar `core.hooksPath`
+  (en cualquier combinación de mayúsculas) o fijar o ampliar una variable `SENTINEL_*` en un
+  comando (p. ej. `SENTINEL_POLICY_DEFAULT=` o `SENTINEL_SETUP_JQ=`)
 - **THEN** el hook deniega la acción
 
 #### Scenario: Instalar es una decisión humana (SC-sentinel-guard-21)
@@ -69,6 +74,11 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 - **WHEN** el agente ejecuta el instalador (`ai-specs/skills/setup/setup.sh`, con `bash` o
   directamente)
 - **THEN** el hook pide aprobación humana (`confirm`); leer o buscar en ese fichero no la pide
+- **AND** si el mismo comando incluye una acción que el SDK bloquea, se bloquea: pedir
+  aprobación para instalar no rebaja ninguna otra regla
+- **AND** la regla reconoce las formas habituales de lanzarlo; las rebuscadas son el límite
+  documentado «regex evadibles» (la protección la dan la comprobación del cableado y que el
+  instalador esté protegido)
 
 ### Requirement: Hooks auxiliares
 
@@ -92,4 +102,5 @@ hooks no viajan con el clon); `post-edit` SHALL formatear cada fichero editado c
 - **WHEN** arranca una sesión en un repo con `sentinel/githooks/` cuyo `core.hooksPath` no
   apunta a la Esclusa y cuyos hooks no la encadenan (p. ej. el clon recién hecho de un compañero)
 - **THEN** el contexto de arranque avisa de que la Esclusa no está activa y da el comando que
-  la activa; con la Esclusa activa o encadenada, no avisa
+  la activa; con la Esclusa activa (se escriba como se escriba su `core.hooksPath`, también con
+  `~`) o encadenada, no avisa

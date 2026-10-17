@@ -43,3 +43,7 @@ Decidida por una persona el 2026-10-16:
 - **El tema 4 pasa a un cambio OpenSpec propio** (convivencia con otros gestores de hooks, con
   su diseño). En esta PR se protegen los ficheros donde queda encadenada la Esclusa y la guía
   documenta el resto como límite conocido.
+- **A2-6 = V2-prevV1** (formas de lanzar el instalador que la regla no reconoce): se documenta
+  como parte del límite «regex evadibles» de `sentinel/README.md`, sin ampliar la regex. La
+  protección real la dan la comprobación estructural del cableado (S3) y proteger el instalador
+  (S4). Decidido por una persona el 2026-10-16.
