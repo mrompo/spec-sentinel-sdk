@@ -26,6 +26,12 @@ for hp in sentinel/githooks ./sentinel/githooks/ "$WS/sentinel/githooks"; do
   start
   warns && fail_case "con core.hooksPath=«${hp}» la Esclusa está activa: no debería avisar"
 done
+# También con «~» (git lo expande): HOME de prueba con un enlace a la Esclusa (A2-8)
+mkdir -p "$WS.home" && ln -s "$WS/sentinel/githooks" "$WS.home/esclusa"
+git -C "$WS" config core.hooksPath "~/esclusa"
+RH_CWD="$WS" run_hook "$START_HOOK" '{}' CLAUDE_PROJECT_DIR="$WS" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 HOME="$WS.home"
+rm -rf "$WS.home"
+warns && fail_case "con core.hooksPath=«~/esclusa» la Esclusa está activa: no debería avisar"
 git -C "$WS" config --unset core.hooksPath
 
 hd="$WS/.git/hooks"; mkdir -p "$hd"

@@ -26,3 +26,14 @@ for cmd in \
   assert_exit 0 || fail_case "«${cmd}» no debería denegarse"
   case "$RH_OUT" in *'"ask"'*) fail_case "«${cmd}» no ejecuta el instalador: no debería pedir aprobación";; esac
 done
+
+# Pedir aprobación para instalar no rebaja ninguna otra regla: si el mismo comando hace algo que
+# el SDK bloquea, se bloquea (SC-sentinel-guard-20, 21)
+guard 'bash ../sdk/ai-specs/skills/setup/setup.sh . && git push --force origin x'
+assert_exit 2 || fail_case "un comando que instala y además hace force-push debería bloquearse"
+assert_err_contains "no-force-push" || fail_case "debería decidir no-force-push, no la aprobación de instalar"
+
+# Dentro de la política del SDK también gana la más estricta: borrar la configuración de tests
+# pide confirmación (destructive), no se queda en el aviso de coverage-thresholds
+guard 'rm -rf jest.config.js'
+case "$RH_OUT" in *'"ask"'*destructive*) ;; *) fail_case "borrar jest.config.js debería pedir confirmación (destructive), no solo avisar (stdout: $RH_OUT)";; esac
