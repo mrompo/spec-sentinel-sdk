@@ -131,19 +131,25 @@
        `git check-ignore` todo lo que distribuye y lo del consumidor; avisa con
        `core.fileMode=false`; la excepción correcta cuando `.claude/` viene de fuera del repo
        (`1d1554e` en rojo, `b4864d7`)
-- [ ] S2. 👤 Las reglas del Centinela (A2-1 = V2-1, V2-6): de todas las reglas que coinciden, en
-       las dos políticas, gana la más estricta (ninguna `confirm` o `warn` tapa un `block`), y
-       `no-hook-disabling` cubre las variantes de asignación y de mayúsculas — **fichero
-       protegido**. A2-6 = V2-prevV1 queda documentado como límite (decisión del 2026-10-16)
+- [x] S2. 👤 Las reglas del Centinela (A2-1 = V2-1): de todas las reglas que coinciden, en las
+       dos políticas, gana la más estricta (ninguna `confirm` o `warn` tapa un `block`) —
+       **fichero protegido**, escrito por el agente con una llave concedida por una persona
+       (`72cfe7a`). A2-6 = V2-prevV1 y V2-6 quedan documentados como límite «regex evadibles»
+       (decisión del 2026-10-16)
 - [x] S3. El instalador (A2-prevA4 = V2-prevA4, A2-3 = P2-9, A2-5 = P2-6, A2-7): validar la
        estructura del cableado y no el texto; contar solo comandos; `SDK_ROOT` a través del
        symlink de la skill; la prueba de humo cubre también tools de fichero (`23448b1` en
        rojo, `83fae87`)
-- [ ] S4. 👤 Proteger lo que el agente no debe tocar (V2-5, V2-4, V2-2): el instalador, el
-       fragmento y los hooks donde queda encadenada la Esclusa — **fichero protegido**
-- [ ] S5. Retoque (A2-8) y documentación: el tema 4 como límite conocido en la guía y en
-       `sentinel/README.md`, con su cambio OpenSpec propio
-- [ ] S6. 👤 Parche de ficheros protegidos (S2, S4) aplicado por una persona, banco en verde
+- [x] S4. 👤 Proteger lo que el agente no debe tocar (V2-5, V2-4, V2-2): el fragmento y los
+       hooks donde queda encadenada la Esclusa (`self-protection`); el instalador, bloqueado con
+       las herramientas de edición (`protect-installer`) y con aprobación humana para cualquier
+       comando de shell que lo nombre (`install-needs-human`) — **fichero protegido** (`72cfe7a`)
+- [x] S5. Retoque (A2-8, también en `session-start`) y documentación: el tema 4 como límite
+       conocido en la guía y en `sentinel/README.md`, con su cambio OpenSpec propio,
+       [`hook-coexistence`](../hook-coexistence/proposal.md) (Intención pendiente 👤)
+- [x] S6. 👤 Ficheros protegidos de S2 y S4: en vez de parche, el agente los escribió con cuatro
+       llaves de un solo uso que creó una persona (2026-10-17), registradas en
+       `sentinel/overrides.log`; banco en verde (20 + 16 + 13 casos)
 - [ ] S7. Relanzar el panel → **Veredicto**
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`

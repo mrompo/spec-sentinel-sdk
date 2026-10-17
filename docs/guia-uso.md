@@ -182,6 +182,15 @@ es configuración local y no viaja con git. Basta con `git config core.hooksPath
 sentinel/githooks` (o con ejecutar `setup`). El Centinela sí llega con el repo y, al arrancar la
 sesión, avisa si la Esclusa no está activa en ese clon.
 
+**Límite conocido: otros gestores de git hooks.** Con husky, lefthook, el framework pre-commit
+o git-lfs, la Esclusa se encadena a mano en sus hooks y esas herramientas tienen su propio ciclo
+de vida: lefthook y pre-commit regeneran sus hooks (y se pierden las líneas), husky instala los
+hooks también en CI (en los jobs que commitean o publican, como una release, exporta `HUSKY=0`,
+que también apaga la Esclusa ahí) y, si tu repo tiene hooks de git-lfs en `.git/hooks`, no
+actives `core.hooksPath` a mano: ejecuta `setup`, que te da las líneas de encadenado. Resolverlo
+bien va en su propio cambio,
+[`hook-coexistence`](../openspec/changes/hook-coexistence/proposal.md).
+
 **Para actualizar**, vuelve a ejecutar `setup`. Actualiza lo que es del SDK, también el
 cableado de `.claude/settings.json` (si lo habías tocado, guarda tu versión en
 `sentinel/.backup/`), y nunca toca lo tuyo: `policy.yaml`, `stack.yaml` ni la bitácora.
@@ -205,7 +214,8 @@ en la fase 3. Cada regla vigila una acción y decide en uno de tres modos:
 `preproduction`, `production`) · no force-push · no editar CHANGELOG, lockfiles ni specs
 archivadas · no meter `.skip()`/`.only()` en tests · aviso al tocar config de cobertura ·
 aviso al editar `src/` sin cambio activo (solo en el nivel Método) · `rm -rf`/`DROP`/`reset --hard` piden
-confirmación · ejecutar el instalador pide confirmación · nada de `.env` de producción.
+confirmación · ejecutar o tocar el instalador desde la shell pide confirmación (y con las
+herramientas de edición no se puede) · nada de `.env` de producción.
 
 **Las ramas protegidas las fija el SDK**: tu proyecto no puede cambiar esa lista. Si trabajas
 con `develop` o `staging`, de momento no quedan protegidas; ampliarla irá en un cambio aparte.

@@ -64,8 +64,9 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
 
 - `setup.sh` sale con `0` (tras resolver los pendientes) y una segunda ejecución también sale
   con `0` sin cambiar nada.
-- `git config --get core.hooksPath` devuelve `sentinel/githooks` (o los hooks del consumidor
-  encadenan la Esclusa, si así se decidió).
+- La persona comprueba que `git config --get core.hooksPath` devuelve `sentinel/githooks` (o
+  que sus hooks encadenan la Esclusa, si así se decidió). El agente no lo ejecuta: la regla
+  `no-hook-disabling` le bloquea cualquier comando que nombre `core.hooksPath`.
 - Un commit con mensaje no conforme se rechaza (`git commit --allow-empty -m "prueba"`).
 - `.claude/settings.json` contiene `sentinel-guard.sh`, `post-edit.sh` y `session-start.sh` una
   sola vez cada uno.
