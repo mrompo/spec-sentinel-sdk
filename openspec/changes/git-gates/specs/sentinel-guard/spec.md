@@ -62,7 +62,8 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 
 - **WHEN** el agente intenta escribir o borrar `sentinel/hooks/*`, `sentinel/policy.yaml`,
   `sentinel/policy.default.yaml`, `sentinel/overrides.log`, `.claude/settings.json`, el
-  instalador (`ai-specs/skills/setup/setup.sh` y `chain.sh`), el fragmento de cableado
+  instalador con las herramientas de edición (`ai-specs/skills/setup/setup.sh` y `chain.sh`;
+  desde la shell pide aprobación, SC-sentinel-guard-21), el fragmento de cableado
   (`sentinel/settings.fragment.json`) o los hooks donde queda encadenada la Esclusa
   (`.husky/<hook>`, `.git/hooks/`), ejecutar `git commit --no-verify`, tocar `core.hooksPath`
   (en cualquier combinación de mayúsculas) o fijar o ampliar una variable `SENTINEL_*` en un
@@ -72,8 +73,10 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 #### Scenario: Instalar es una decisión humana (SC-sentinel-guard-21)
 
 - **WHEN** el agente ejecuta el instalador (`ai-specs/skills/setup/setup.sh`, con `bash` o
-  directamente)
-- **THEN** el hook pide aprobación humana (`confirm`); leer o buscar en ese fichero no la pide
+  directamente) o cualquier comando de shell que nombre el instalador (`setup.sh` o `chain.sh`)
+- **THEN** el hook pide aprobación humana (`confirm`): la persona ve el comando antes de que se
+  ejecute. Leerlo con las herramientas de lectura no la pide; escribirlo con las de edición se
+  bloquea (SC-sentinel-guard-13)
 - **AND** si el mismo comando incluye una acción que el SDK bloquea, se bloquea: pedir
   aprobación para instalar no rebaja ninguna otra regla
 - **AND** la regla reconoce las formas habituales de lanzarlo; las rebuscadas son el límite

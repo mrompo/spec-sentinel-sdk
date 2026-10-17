@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SC-sentinel-guard-21: ejecutar el instalador reescribe el enforcement y el cableado, así que
-# pide aprobación humana (confirm), lo lance como lo lance. Leerlo o buscar en él no la pide.
+# pide aprobación humana (confirm), lo lance como lo lance. Cualquier comando de shell que nombre
+# el instalador también la pide (la persona ve el comando). Leerlo con Read no la pide.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 
 fail_case() { echo "    $1" >&2; exit 1; }
@@ -18,13 +19,23 @@ for cmd in \
   case "$RH_OUT" in *'"ask"'*) ;; *) fail_case "«${cmd}» debería pedir aprobación humana (stdout: $RH_OUT)";; esac
 done
 
+# Desde la shell, cualquier comando que nombre el instalador pide aprobación: también los que lo
+# leen y los que lo modifican (V2-5); la persona decide viendo el comando
 for cmd in \
   'cat ai-specs/skills/setup/setup.sh' \
-  'grep -n todo ai-specs/skills/setup/setup.sh' \
-  'git log -- ai-specs/skills/setup/setup.sh'; do
+  'grep -n todo ai-specs/skills/setup/chain.sh' \
+  'echo x >> ai-specs/skills/setup/chain.sh'; do
   guard "$cmd"
-  assert_exit 0 || fail_case "«${cmd}» no debería denegarse"
-  case "$RH_OUT" in *'"ask"'*) fail_case "«${cmd}» no ejecuta el instalador: no debería pedir aprobación";; esac
+  assert_exit 0 || fail_case "«${cmd}» no debería denegarse, sino pedir aprobación"
+  case "$RH_OUT" in *'"ask"'*) ;; *) fail_case "«${cmd}» nombra el instalador: debería pedir aprobación (stdout: $RH_OUT)";; esac
+done
+
+# Con las herramientas de lectura, leerlo no pide nada
+for f in ai-specs/skills/setup/setup.sh ai-specs/skills/setup/chain.sh; do
+  run_hook "$GUARD_HOOK" "{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$f\"}}" \
+    SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$NO_POLICY"
+  assert_exit 0 || fail_case "leer $f con Read no debería bloquearse"
+  case "$RH_OUT" in *'"ask"'*) fail_case "leer $f con Read no debería pedir aprobación";; esac
 done
 
 # Pedir aprobación para instalar no rebaja ninguna otra regla: si el mismo comando hace algo que
