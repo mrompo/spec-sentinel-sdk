@@ -1,0 +1,15 @@
+{"lens":"adversary","votes":[
+{"id":"A4-prev-P3-1","agree":true,"severity":"blocker","note":"Coincide con mis V4-prev-P3-1 y V4-prev-A3-prev-A2-prevA4. Es bloqueante por el jq de fuera del repo, que reescribe el fichero para que no cargue y setup sale con 0. Por la vía sin jq basta con grave, porque Claude Code avisa al arrancar."},
+{"id":"A4-2","agree":true,"severity":"minor","note":"Es mi V4-2 (lo reproduje con la clave repetida y con \\u0041, y Claude Code aplica el ajuste sin avisar). Es menor porque el agente no puede escribir settings.local.json: la ruta está protegida y Claude Code normaliza los paths."},
+{"id":"A4-3","agree":true,"severity":"minor","note":"Es real, pero es configuración de usuario de la persona, y el agente no puede escribirla porque \\.claude/settings también cubre ~/.claude/settings.json. Es el mismo hallazgo que P4-4."},
+{"id":"A4-4","agree":true,"severity":"minor","note":"El mensaje engaña, pero el resultado es fail-closed (exit 3) y no abre ninguna vía. Es el mismo hallazgo que P4-2."},
+{"id":"A4-5","agree":true,"severity":"minor","note":"Confirmado: ningún caso de fixture/install lleva \\u en una clave, así que una regla dura de SC-sdk-setup-10 queda sin falsificar, y eso va contra la regla del repo."},
+{"id":"A4-6","agree":true,"severity":"major","note":"Un settings.local.json versionado se aplica en el clon de cada compañero, con sus permisos y, si los lleva, disableAllHooks o un env con SENTINEL_*. Ese commit lo hace el agente siguiendo la propia skill."},
+{"id":"A4-7","agree":true,"severity":"minor","note":"Bloquea de más en el consumidor, sin abrir ninguna vía. El arreglo, darle a la skill un nombre propio, es el mismo de P4-5."},
+{"id":"P4-1","agree":true,"severity":"major","note":"Coincide con mi V4-prev-P3-1 y con A4-prev-P3-1. Lo dejo en grave porque solo cubre el pegado a mano sin jq, y ahí Claude Code avisa al arrancar de que el fichero no cargó, cosa que no hacía con la clave repetida."},
+{"id":"P4-2","agree":true,"severity":"minor","note":"Es el mismo hallazgo que A4-4. setup se queda en exit 3, así que no hay salto de gate; perder el hook propio afecta al consumidor, no al Centinela."},
+{"id":"P4-3","agree":true,"severity":"minor","note":"jq se queda con la última clave, igual que JSON.parse, así que lo que ve setup coincide con lo que carga Claude Code y el Centinela no se pierde. Solo se anulan en silencio los hooks del consumidor."},
+{"id":"P4-4","agree":true,"severity":"minor","note":"Es el mismo hallazgo que A4-3: configuración de usuario de la persona, que el agente no puede escribir."},
+{"id":"P4-5","agree":true,"severity":"minor","note":"Es real con otro nombre de enlace y con setup/setup anidado (skills/setup/setup/setup.sh no casa con la regex). La parte de «cd ~/.claude/skills/setup && bash setup.sh» es del límite «regex evadibles» que se decidió en la ronda 2."},
+{"id":"P4-6","agree":true,"severity":"nit","note":"Hoy el cableado del SDK solo usa eventos que están en la lista, así que es protección a futuro."}
+]}

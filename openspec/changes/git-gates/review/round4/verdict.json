@@ -1,0 +1,263 @@
+{
+  "verdict": "HOLD",
+  "counts": {
+    "blocker": {
+      "total": 3,
+      "validated": 3
+    },
+    "major": {
+      "total": 6,
+      "validated": 6
+    },
+    "minor": {
+      "total": 10,
+      "validated": 10
+    },
+    "nit": {
+      "total": 1,
+      "validated": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "A4-prev-P3-1",
+      "lens": "auditor",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 191,
+      "title": "(= A3-prev-A2-prevA4) strict() no comprueba la gramática JSON: sin jq, el fragmento pegado a mano con una coma de más o de menos da «ya cableado» (exit 0) y Claude Code descarta el fichero entero"
+    },
+    {
+      "id": "P4-1",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 191,
+      "title": "Sin jq, un settings.json que no es JSON (coma final, coma que falta, comentario, literal mal escrito) da «✓ Centinela ya cableado» (exit 0) y retira el fragmento; Claude Code descarta el fichero entero"
+    },
+    {
+      "id": "V4-prev-A3-prev-A2-prevA4",
+      "lens": "adversary",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 191,
+      "title": "strict() no es un validador de JSON y merged_ok no exige que Claude Code pueda cargar el resultado: un jq de fuera del repo sigue escribiendo un settings.json que deja sin Centinela y setup dice «✓ Centinela cableado» (exit 0)"
+    },
+    {
+      "id": "A4-6",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 506,
+      "title": "El «git add sentinel .claude .gitignore» de la salida de setup y de la guía mete .claude/settings.local.json (permisos y env personales) en el commit del equipo"
+    },
+    {
+      "id": "P4-2",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 279,
+      "title": "Cuando el fichero no es JSON estricto, el pendiente culpa a un «cableado antiguo» y pide sustituir entradas que ya son las actuales: la persona hace lo que dice y setup sigue en exit 3"
+    },
+    {
+      "id": "V4-1",
+      "lens": "adversary",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 265,
+      "title": "merged_ok solo mira el cableado y disableAllHooks: true; la fusión puede añadir un «env» con variables SENTINEL_* que Claude Code pasa a los hooks, y el Centinela queda cableado, cargado sin aviso y con otra política"
+    },
+    {
+      "id": "V4-4",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 48,
+      "title": "El agente apaga la Esclusa editando .git/config con Edit o Write (hooksPath en [core]), aunque «git config core.hooksPath» está bloqueado; self-protection cubre .git/hooks/ pero no .git/config"
+    },
+    {
+      "id": "V4-5",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 126,
+      "title": "Con la sesión abierta en un subdirectorio del repo (p. ej. un paquete de un monorepo), Claude Code no carga el .claude/settings.json de la raíz: ni Centinela ni session-start, y nada lo dice"
+    },
+    {
+      "id": "V4-prev-P3-1",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 277,
+      "title": "Sin jq, el fragmento pegado a mano con una coma de menos, una de más o un comentario da «✓ Centinela ya cableado (comprobado sin jq)», retira el fragmento y sale con 0, y Claude Code no carga el fichero"
+    },
+    {
+      "id": "A4-2",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 180,
+      "title": "hooks_disabled exige JSON estricto: un settings.local.json válido para Claude Code pero con una clave repetida o un escape en una clave esconde «disableAllHooks: true» y setup sale con 0"
+    },
+    {
+      "id": "A4-3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 304,
+      "title": "disableAllHooks solo se mira en los dos ficheros del proyecto: con «disableAllHooks: true» en ~/.claude/settings.json setup dice «Nivel Guardia instalado» y el Centinela no se ejecuta"
+    },
+    {
+      "id": "A4-4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 279,
+      "title": "Cuando el cableado está pero el JSON no es estricto, el pendiente pide sustituir entradas que ya son las actuales: la persona entra en un bucle"
+    },
+    {
+      "id": "A4-5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/install/cases/sc-04-no-jq.sh",
+      "line": 71,
+      "title": "La regla «escapes en las claves» de SC-sdk-setup-10 no se falsifica en el banco"
+    },
+    {
+      "id": "A4-7",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 58,
+      "title": "protect-installer e install-needs-human sin ancla cubren también una skill «setup» propia de un consumidor (.claude/skills/setup/setup.sh), y su policy.yaml no lo puede relajar"
+    },
+    {
+      "id": "P4-3",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 294,
+      "title": "Con jq, un settings.json con «hooks» repetida cuenta como «ya cableado» (exit 0, sin tocar), al revés que sin jq; los hooks de la primera clave quedan anulados sin aviso"
+    },
+    {
+      "id": "P4-4",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 304,
+      "title": "disableAllHooks solo se mira en los dos ficheros del proyecto: con «true» en ~/.claude/settings.json, setup sale con 0 y en esa máquina el Centinela no corre"
+    },
+    {
+      "id": "P4-5",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 58,
+      "title": "La protección del instalador por el enlace depende de que la carpeta se llame exactamente «setup»; la orden de la guía falla sin ~/.claude/skills y se anida en silencio si ya existe una skill «setup»"
+    },
+    {
+      "id": "V4-2",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 262,
+      "title": "hooks_disabled() deja pasar un fichero no estricto: un settings.local.json con disableAllHooks repetido o escrito con \\u no se detecta, setup sale con 0 y Claude Code apaga todos los hooks sin aviso"
+    },
+    {
+      "id": "V4-3",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 294,
+      "title": "Un settings.json previo que es JSON válido pero está fuera del esquema de Claude Code (model: 5, defaultMode desconocido, disableAllHooks: 1 o \"false\") se da por cableado (exit 0), y Claude Code no carga el fichero entero, Centinela incluido"
+    },
+    {
+      "id": "P4-6",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 183,
+      "title": "La lista de eventos que mira el lector awk está fija: un evento que el SDK añada al cableado y no esté en ella se da por cableado sin comprobarlo"
+    }
+  ]
+}

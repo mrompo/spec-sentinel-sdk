@@ -173,7 +173,9 @@
        el de `disableAllHooks` en la guía (P3-9) y el límite del `core.hooksPath` propio (A3-5)
 - [x] T6. La versión del SDK (P3-4) como cambio propio,
        [`sdk-version`](../sdk-version/proposal.md), y la deuda registrada en `STATUS.md`
-- [ ] T7. Relanzar el panel → **Veredicto**
+- [x] T7. Relanzar el panel → **Veredicto** `HOLD`: la comprobación del cableado sigue sin
+       validar la gramática JSON, más cinco graves
+       ([`review/round4/`](review/round4/README.md))
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
