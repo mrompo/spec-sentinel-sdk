@@ -119,23 +119,31 @@ Si ambos están en verde, el repo está sano. Esto mismo corre en CI en cada PR
 ## Instalar en tu proyecto
 
 Un comando instala el **nivel Guardia** (el Centinela y la Esclusa) en cualquier repo git, use o
-no OpenSpec. Desde la **raíz** de tu repo y en una rama, nunca en una protegida:
+no OpenSpec. Necesita `jq` (sin él no instala nada y te dice cómo instalarlo) y, para la
+Esclusa, gitleaks. Desde la **raíz** de tu repo y en una rama, nunca en una protegida:
 
 ```bash
 git checkout -b chore/spec-sentinel
 bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh .
 ```
 
-Si prefieres que lo haga el agente, expón la skill para Claude Code
-(`ln -s <ruta-al-sdk>/ai-specs/skills/setup ~/.claude/skills/setup`) y dale la ruta del SDK:
-ejecutará `setup` y te explicará la salida. Antes, el Centinela te pedirá aprobación, porque
+Si prefieres que lo haga el agente, expón la skill para Claude Code con este nombre (el
+Centinela protege el instalador por esa ruta) y dale la ruta del SDK:
+
+```bash
+mkdir -p ~/.claude/skills
+ln -sfn <ruta-al-sdk>/ai-specs/skills/setup ~/.claude/skills/spec-sentinel-setup
+```
+
+Ejecutará `setup` y te explicará la salida. Antes, el Centinela te pedirá aprobación, porque
 instalar reescribe el enforcement y lo decides tú.
 
 | Qué hace | Qué deja en tu repo |
 |---|---|
 | Copia el enforcement | `sentinel/`: hooks, git hooks, adaptadores y la política del SDK (`policy.default.yaml`) |
 | Crea tu política | `sentinel/policy.yaml`, vacía, para tus reglas (con `sdd: true` si el repo tiene `openspec/`) |
-| Cablea el Centinela | `.claude/settings.json`: lo fusiona con lo tuyo usando `jq`, con backup |
+| Cablea el Centinela | `.claude/settings.json`: lo fusiona con lo tuyo usando `jq`, con backup, y comprueba que el cableado sea efectivo |
+| Protege lo personal | Añade `.claude/settings.local.json` a tu `.gitignore`, junto a la llave y los backups |
 | Activa la Esclusa | `core.hooksPath` → `sentinel/githooks`, si tu repo no usa ya otros git hooks |
 | Propone el stack | `sentinel/adapters/stack.proposed.yaml`, si reconoce Node o Laravel |
 | Comprueba gitleaks | Te avisa ahora, no en el primer commit |
@@ -146,7 +154,7 @@ instalar reescribe el enforcement y lo decides tú.
 |---|---|---|
 | `0` | Instalado | Commitea (abajo) |
 | `3` | Instalado con pasos pendientes (líneas `⚠ PENDIENTE`) | Resuélvelos y vuelve a ejecutar `setup` hasta que salga `0` |
-| `1` | Error | Lee el motivo y corrígelo. Si falló a mitad, lo hecho se queda y volver a ejecutar `setup` es seguro |
+| `1` | Error (p. ej. falta `jq`: no se ha instalado nada) | Lee el motivo y corrígelo. Si falló a mitad, lo hecho se queda y volver a ejecutar `setup` es seguro |
 
 **Los pendientes habituales** (cuando los resuelves, `setup` lo reconoce y sale con `0`):
 
@@ -157,8 +165,12 @@ instalar reescribe el enforcement y lo decides tú.
   como git-lfs, y no hacen nada en los repos que no tienen la Esclusa. Si ese `core.hooksPath`
   no tiene hooks en tu repo (por ejemplo, uno global cuya carpeta no existe ahí), no hay nada
   que encadenar: te da el comando que activa la Esclusa, que solo afecta a ese repo.
-- **No tienes jq** → deja `sentinel/settings.fragment.json` para que lo copies a mano en
-  `.claude/settings.json`.
+- **Tu `.claude/settings.json` no es JSON válido** (una coma de más o de menos, un comentario,
+  un `NaN`, un número como `01`…) → Claude Code no carga el fichero entero, tampoco el
+  Centinela. `setup` no lo toca y te dice dónde falla: corrígelo.
+- **La forma de `hooks` en tu `.claude/settings.json` es inesperada** → `setup` no la fusiona:
+  deja `sentinel/settings.fragment.json` para que pongas sus grupos a mano, cada uno en su
+  evento.
 - **Tu `.gitignore` deja fuera algo que hay que versionar** (la plantilla de Node ignora
   `*.log`; hay repos que ignoran `.claude/`) → te dice qué fichero, qué regla lo ignora y la
   excepción que hay que añadir.
@@ -167,21 +179,31 @@ instalar reescribe el enforcement y lo decides tú.
 - **Tu repo tiene `core.fileMode=false`** (habitual en Git for Windows y en WSL sobre `/mnt/c`)
   → git no guarda el permiso de ejecución y, en los clones, ignoraría los hooks. Tras el
   `git add`, marca los ejecutables con el `git add --chmod=+x …` que te da `setup`.
-- **Hay un `"disableAllHooks": true`** en `.claude/settings.json` o en
-  `.claude/settings.local.json` → Claude Code no ejecuta ningún hook, tampoco el Centinela.
-  Quítalo o ponlo a `false`.
+- **Hay un `disableAllHooks` que no es `false`** en `.claude/settings.json`, en
+  `.claude/settings.local.json` o en tu configuración de usuario (`~/.claude/settings.json`) →
+  Claude Code no ejecuta ningún hook, tampoco el Centinela (con un valor que no es booleano,
+  puede no cargar el fichero entero). Quítalo o ponlo a `false`.
+- **Hay un `env` con variables `SENTINEL_*`** en alguno de esos ficheros → Claude Code se las
+  pasa al Centinela, que cambiaría de política o de llave. Quítalas.
 
 El **stack propuesto** no es un pendiente: revisa `stack.proposed.yaml` y, si te vale,
 renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests con un aviso.
 
-**Al terminar**, versiona la instalación. Ese primer commit ya pasa por la Esclusa:
+**Al terminar**, versiona la instalación. Revisa lo que entra antes del commit, que ya pasa por
+la Esclusa:
 
 ```bash
-git add sentinel .claude .gitignore && git commit -m "chore: instala spec-sentinel (nivel Guardia)"
+git add sentinel .claude .gitignore
+git status                              # revisa lo que entra: nada personal de .claude/
+git commit -m "chore: instala spec-sentinel (nivel Guardia)"
 git commit --allow-empty -m prueba      # comprobación: la Esclusa tiene que rechazarlo
 ```
 
 Y reinicia la sesión del agente para que cargue el Centinela (ver «Importante al instalar»).
+Ábrela **en la raíz del repo**: en un subdirectorio (un paquete de un monorepo), Claude Code no
+carga el `.claude/settings.json` de la raíz. Comprueba con `/hooks` que aparece
+`sentinel-guard`: Claude Code descarta entero un settings que no valida su esquema, y `setup` no
+lo comprueba todo.
 
 **Cada persona que clone el repo** tiene que activar la Esclusa en su clon: `core.hooksPath`
 es configuración local y no viaja con git. Basta con `git config core.hooksPath

@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-17 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación): el panel dio `HOLD` tres veces; la cuarta ronda de arreglos está hecha y se relanza el panel · historia reescrita con los mensajes de commit en español (misma topología y contenido)
+**Última actualización**: 2026-10-18 · `git-gates`: PR 1/3 (#3) y PR 2/3 (#4) en `main` · PR 3/3 (instalación): el panel dio `HOLD` cuatro veces; la quinta ronda de arreglos (`setup` exige jq) está hecha y se relanza el panel · historia reescrita con los mensajes de commit en español (misma topología y contenido)
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0 y 1 ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · **fase 2 `git-gates`** en `apply` (PR 3/3) |
-| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` (#3) · PR 2/3 (ficheros protegidos) ✅ en `main` (#4) · **PR 3/3 (instalación): `review` dio `HOLD` tres veces ([review/](openspec/changes/git-gates/review/README.md), [round2/](openspec/changes/git-gates/review/round2/README.md), [round3/](openspec/changes/git-gates/review/round3/README.md)), ronda 4 de `apply` hecha, se relanza `review`** |
+| **Loop** | `git-gates`: PR 1/3 (la Esclusa) ✅ en `main` (#3) · PR 2/3 (ficheros protegidos) ✅ en `main` (#4) · **PR 3/3 (instalación): `review` dio `HOLD` cuatro veces ([review/](openspec/changes/git-gates/review/README.md), [round2/](openspec/changes/git-gates/review/round2/README.md), [round3/](openspec/changes/git-gates/review/round3/README.md), [round4/](openspec/changes/git-gates/review/round4/README.md)), ronda 5 de `apply` hecha, se relanza `review`** |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -22,7 +22,7 @@
 | 1 | `sentinel-guard` | 0 | ✅ Archivada (`2026-08-05`) — hook único + política + break-glass auditado; 15 casos en el fixture; endurecida tras panel adversarial |
 | — | `framework-semantics` | — | ✅ Archivada (`2026-09-28`, en `main` por la PR #1) — vocabulario del framework en `docs/05-semantica.md`; 8 escenarios, verificados por el banco |
 | — | `pr-format` | — | ✅ Archivada (`2026-09-29`, en `main` por la PR #2) — título en Conventional Commits + diez secciones fijas; la plantilla la verifica el banco. Adelanta la plantilla de la fase 5 |
-| 2 | `git-gates` | 0 | 🔄 **Apply** — gates Intención, Claridad y Plan aprobados (2026-09-29); PRs 1/3 y 2/3 en `main`; la 3/3 (instalación) pasó dos veces por el panel (`HOLD`), tiene hecha la tercera ronda de arreglos y vuelve al panel |
+| 2 | `git-gates` | 0 | 🔄 **Apply** — gates Intención, Claridad y Plan aprobados (2026-09-29); PRs 1/3 y 2/3 en `main`; la 3/3 (instalación) pasó cuatro veces por el panel (`HOLD`), tiene hecha la quinta ronda de arreglos y vuelve al panel |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |
 | 5 | `release-hotfix` | 1 | Pendiente |
@@ -45,10 +45,10 @@
 
 | Check | Estado |
 |---|---|
-| `fixture/verify.sh` | ✅ verde — 20 casos del Centinela + 16 de la Esclusa + 13 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR |
+| `fixture/verify.sh` | ✅ verde — 20 casos del Centinela + 16 de la Esclusa + 15 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR. El banco de instalación necesita jq |
 | `openspec validate --all --strict` | ✅ verde (3 specs vivas + los expedientes activos) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
-| KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log`: 4 excepciones, todas del 2026-10-17, las llaves que una persona concedió para que el agente escribiera los ficheros protegidos de la ronda 3 de `git-gates` (S2, S4) |
+| KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log`: 9 excepciones, del 2026-10-17 y el 2026-10-18, las llaves que una persona concedió para que el agente escribiera los ficheros protegidos de las rondas 3, 4 y 5 de `git-gates` |
 | Enforcement real | **Centinela y Esclusa activos en este repo**. El Centinela (`.claude/settings.json`) impide al agente commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests o desarmar el propio guard. La Esclusa (`core.hooksPath` → `sentinel/githooks`, desde el 2026-10-16) revisa cada commit y cada push. La Aduana llega en la fase 3 |
 
 ## Deudas / pendientes conscientes
@@ -86,6 +86,16 @@
     (A3-prev-A2-7);
   - `session-start` compara texto en rutas relativas de `core.hooksPath` (A3-6) y sus avisos
     dan por hecho que el repo es el SDK (`STATUS.md`, OpenSpec) (P3-8).
+- **Deuda de la cuarta revisión de `git-gates`** (decisión del 2026-10-18, detalle en
+  [round4/](openspec/changes/git-gates/review/round4/README.md)):
+  - el instalador se protege por sus dos rutas (`ai-specs/skills/setup/` y el enlace
+    `~/.claude/skills/spec-sentinel-setup/`): un enlace con otro nombre no está protegido
+    (resto de P4-5);
+  - `setup` no valida el esquema completo de Claude Code, solo `disableAllHooks` y `env`; el
+    resto queda como límite documentado y se comprueba con `/hooks` (resto de V4-3);
+  - la carpeta de la skill en el SDK se llama `setup` y la skill `spec-sentinel-setup`: la
+    Agent Skills spec pide que coincidan, y renombrar la carpeta toca el instalador y sus
+    reglas.
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.

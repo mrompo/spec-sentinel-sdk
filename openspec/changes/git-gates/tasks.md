@@ -188,13 +188,15 @@
        enlace
 - [x] U3. 👤 `setup.sh` con jq obligatorio, sin lector awk, eventos sacados del fragmento y
        mensajes que distinguen «no es JSON válido» de «falta el cableado» (defectos 1, 2, 3, 4;
-       A4-3 = P4-4, V4-3, P4-6) (**fichero protegido**, con llave)
-- [x] U4. 👤 La política protege `.git/config` y ancla el instalador a sus dos rutas (V4-4, A4-7)
-       (**fichero protegido**, con llave)
-- [ ] U5. Textos: jq obligatorio, `ln -sn` con nombre propio, `git status` antes del commit,
+       A4-3 = P4-4, V4-3, P4-6) (**fichero protegido**, con llave, `383ea90`)
+- [x] U4. 👤 La política protege la configuración de git (la del repo, la de un worktree o un
+       submódulo, y la global) y ancla el instalador a sus dos rutas (V4-4, A4-7) (**fichero
+       protegido**, con llave, `383ea90`)
+- [x] U5. Textos: jq obligatorio, `ln -sfn` con nombre propio, `git status` antes del commit,
        comprobar con `/hooks` y abrir Claude Code en la raíz del repo; límites nuevos (jq de
-       fuera del repo, subdirectorio, esquema de Claude Code) (A4-6, V4-5, P4-5, V4-3)
-- [ ] U6. La deuda de la cuarta revisión registrada en `STATUS.md`
+       fuera del repo, subdirectorio, esquema de Claude Code) (A4-6, V4-5, P4-5, V4-3) — la
+       skill y la tabla de límites van en `383ea90`
+- [x] U6. La deuda de la cuarta revisión registrada en `STATUS.md`
 - [ ] U7. Relanzar el panel → **Veredicto**
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
