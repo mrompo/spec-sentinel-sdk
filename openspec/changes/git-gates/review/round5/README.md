@@ -38,4 +38,22 @@ Centinela, no del instalador, y vienen de antes de esta PR.
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente de una persona.
+Decidida por una persona el 2026-10-18:
+
+- **En esta PR**, lo del instalador (ronda 6 de `apply`, slices W1-W7 de `tasks.md`):
+  - el defecto 1: jq se ejecuta con un `HOME` aislado y `~/.jq` queda protegido;
+  - el defecto 2: un jq del repo no se usa, se llegue a él como se llegue;
+  - el defecto 5: `.gitattributes` en el SDK y en el consumidor, con su caso en el banco y una
+    nota en la guía para Git for Windows (Windows nativo no se declara soportado);
+  - los menores baratos del instalador: bytes NUL y de control (A5-2, V5-8), `SENTINEL_SETUP_JQ`
+    dentro del repo (A5-4), el «dónde» del léxico (A5-6), el bucle de la forma de `hooks`
+    (P5-3), la excepción de `.claude/` (P5-4), `settings.local.json` versionado o negado (P5-5
+    = A5-7, V5-5), decidir con `jq -e` (P5-7), `BASH_ENV` y compañía en `env` (V5-6), la
+    configuración gestionada (A5-5 = P5-8), el aviso de `sdd: true` (P5-2), el banco del escape
+    (A5-prev-A4-5 = P5-prev-A4-5) y los textos de la guía (P5-9, P5-10).
+- **Cambio propio** para el Centinela,
+  [`sentinel-paths`](../../../sentinel-paths/proposal.md): carpetas protegidas (V5-1), rutas
+  físicas y enlaces (V5-2), la disposición «repo bare + worktrees» (A5-3), otras vías hacia
+  `core.hooksPath` (V5-4), los falsos positivos de la configuración de git (P5-6) y
+  `CLAUDE_CONFIG_DIR` en otra ruta (V5-7). Recoge también que la llave la gaste la primera
+  acción bloqueada de cualquier agente de la sesión, observado durante este panel.

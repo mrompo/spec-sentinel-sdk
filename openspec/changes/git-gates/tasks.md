@@ -200,6 +200,25 @@
 - [x] U7. Relanzar el panel → **Veredicto** `HOLD`: jq carga `~/.jq`, más cuatro graves
        ([`review/round5/`](review/round5/README.md))
 
+### Ronda 6 de `apply`, tras el quinto `HOLD` (disposición del 2026-10-18: el instalador aquí; el Centinela, en `sentinel-paths`)
+
+- [ ] W1. La spec dice lo decidido: jq con `HOME` aislado y nunca uno del repo, por enlace o por
+       `SENTINEL_SETUP_JQ`; NUL y bytes de control no son JSON válido; la forma inesperada de
+       `hooks` nombra el evento; la excepción de `.claude/` no esconde lo del equipo;
+       `settings.local.json` comprobado con git; configuración gestionada y `BASH_ENV` en `env`;
+       finales de línea LF; aviso de `sdd: true`
+- [ ] W2. El banco en rojo, también el caso del escape con un escape de verdad
+- [ ] W3. 👤 `setup.sh` (defectos 1, 2 y 5 y los menores del instalador) (**fichero
+       protegido**, con llave)
+- [ ] W4. 👤 La política protege `~/.jq` (**fichero protegido**, con llave) y el SDK trae su
+       `.gitattributes`
+- [ ] W5. Textos: guía (Git for Windows, ruta absoluta del enlace, aprobación en la primera
+       instalación, `sdd: true`, `.gitattributes` en el commit), skill y límites (configuración
+       gestionada por MDM o servidor)
+- [ ] W6. `STATUS.md`: la deuda de la quinta revisión y el cambio
+       [`sentinel-paths`](../sentinel-paths/proposal.md) (abierto con la disposición)
+- [ ] W7. Relanzar el panel → **Veredicto**
+
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
 ## Notas de diseño (design gate)
