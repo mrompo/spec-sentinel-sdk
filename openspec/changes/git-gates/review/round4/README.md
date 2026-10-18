@@ -36,4 +36,17 @@ salen de la misma raíz.
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente de una persona.
+Decidida por una persona el 2026-10-18:
+
+- **Raíz del defecto 1**: `setup` exige jq, como ya exige gitleaks. Lee, fusiona y comprueba con
+  jq, que resuelve las claves repetidas y los escapes igual que `JSON.parse`; desaparecen el
+  lector en awk y el pegado a mano sin jq. Un jq manipulado fuera del repo pasa a la tabla de
+  límites, junto a un `git` o un `bash` manipulados.
+- **En esta PR** (ronda 5 de `apply`, slices U1-U7 de `tasks.md`): los defectos 1 a 6 y los
+  menores baratos: `disableAllHooks` en la configuración de usuario y con un valor que no sea
+  booleano, la comprobación con `/hooks` en una sesión nueva y un nombre propio para el enlace
+  de la skill, con un `ln -s` que no falle ni se anide. Con jq se resuelven también A4-2 = V4-2,
+  A4-5, P4-3 y P4-6.
+- **Deuda registrada**: el enlace de la skill con un nombre distinto del de la guía (resto de
+  P4-5) y el JSON válido fuera del esquema de Claude Code más allá de `disableAllHooks` (resto
+  de V4-3, límite documentado).

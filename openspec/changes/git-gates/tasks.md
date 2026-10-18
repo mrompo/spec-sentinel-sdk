@@ -177,6 +177,26 @@
        validar la gramática JSON, más cinco graves
        ([`review/round4/`](review/round4/README.md))
 
+### Ronda 5 de `apply`, tras el cuarto `HOLD` (disposición del 2026-10-18: exigir jq; bloqueante, graves y menores baratos)
+
+- [ ] U1. La spec dice lo decidido: `setup` exige jq y lee con la semántica de `JSON.parse`; la
+       fusión no cambia nada fuera de `.hooks`; un `env` con `SENTINEL_*` o un `disableAllHooks`
+       que no sea `false` (proyecto, local o usuario) → pendiente; `.claude/settings.local.json`
+       al `.gitignore`; `.git/config` protegido; nombre propio del enlace de la skill
+- [ ] U2. El banco en rojo: sin jq, JSON no válido, fusión fuera de `.hooks`, `env.SENTINEL_*`,
+       `disableAllHooks` de usuario y no booleano, `.gitignore`, `.git/config` y el nombre del
+       enlace
+- [ ] U3. 👤 `setup.sh` con jq obligatorio, sin lector awk, eventos sacados del fragmento y
+       mensajes que distinguen «no es JSON válido» de «falta el cableado» (defectos 1, 2, 3, 4;
+       A4-3 = P4-4, V4-3, P4-6) (**fichero protegido**, con llave)
+- [ ] U4. 👤 La política protege `.git/config` y ancla el instalador a sus dos rutas (V4-4, A4-7)
+       (**fichero protegido**, con llave)
+- [ ] U5. Textos: jq obligatorio, `ln -sn` con nombre propio, `git status` antes del commit,
+       comprobar con `/hooks` y abrir Claude Code en la raíz del repo; límites nuevos (jq de
+       fuera del repo, subdirectorio, esquema de Claude Code) (A4-6, V4-5, P4-5, V4-3)
+- [ ] U6. La deuda de la cuarta revisión registrada en `STATUS.md`
+- [ ] U7. Relanzar el panel → **Veredicto**
+
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
 ## Notas de diseño (design gate)
