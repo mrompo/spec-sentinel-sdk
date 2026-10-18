@@ -26,8 +26,9 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
    la **raíz** de un repo git (si no, el script falla sin escribir nada). `setup` exige `jq`:
    sin él no instala nada (exit 1) y da la instrucción de instalación.
 2. **Ejecuta** `bash <sdk>/ai-specs/skills/setup/setup.sh <raíz-del-repo>` y lee la salida entera.
-   El Centinela pide aprobación a la persona antes de ejecutarlo: instalar reescribe el
-   enforcement y el cableado, así que lo decide ella.
+   Instalar reescribe el enforcement y el cableado, así que lo decide la persona: en la primera
+   instalación aún no hay Centinela, así que pídele que lo apruebe antes de ejecutarlo; al
+   reinstalar o actualizar, el Centinela le pide la aprobación.
 3. **Interpreta el código de salida**:
    - `0` → instalado. Sigue en el paso 5.
    - `3` → instalado **con pasos pendientes** (líneas `⚠ PENDIENTE`). Paso 4.
@@ -36,18 +37,19 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
 4. **Pasos pendientes**: preséntalos a la persona uno a uno, con la instrucción literal del
    script. Los que tocan su máquina o su configuración (instalar gitleaks, poner las líneas que
    encadenan la Esclusa en sus git hooks, corregir un `.claude/settings.json` que no es JSON
-   válido, fusionar `sentinel/settings.fragment.json` si la forma de `hooks` no permitía
-   hacerlo, añadir excepciones al `.gitignore`, marcar los ejecutables con
-   `git add --chmod=+x` si el repo tiene `core.fileMode=false`, quitar un `disableAllHooks` o
-   un `env` con `SENTINEL_*`, también de su configuración de usuario) **los decide y los hace
-   ella**. Después, vuelve al paso 2:
+   válido o el evento de `hooks` con una forma inesperada, añadir excepciones al `.gitignore`,
+   sacar del índice un `.claude/settings.local.json` versionado (`git rm --cached`), marcar los
+   ejecutables con `git add --chmod=+x` si el repo tiene `core.fileMode=false`, quitar un
+   `disableAllHooks` o un `env` que llega al Centinela, también de su configuración de usuario,
+   corregir los cambios de `openspec/` o decidir `sdd: false`) **los decide y los hace ella**. Lo
+   de la configuración gestionada lo resuelve su organización. Después, vuelve al paso 2:
    `setup` reconoce lo que ya está hecho, y la instalación está cerrada cuando sale con `0`.
 5. **Adaptador de stack**: si hay `sentinel/adapters/stack.proposed.yaml`, enséñaselo a la
    persona. Solo con su visto bueno se renombra a `stack.yaml`. Sin adaptador, la Esclusa omite
    format, lint y tests con aviso, así que no es bloqueante.
 6. **Versiona** la instalación en un commit, en una rama y nunca en una protegida:
-   `git add sentinel .claude .gitignore` (nombrar `.claude/settings.json` en un comando lo
-   bloquea el Centinela) y `chore: instala spec-sentinel (nivel Guardia)`. Antes del commit,
+   `git add sentinel .claude .gitignore .gitattributes` (nombrar `.claude/settings.json` en un
+   comando lo bloquea el Centinela) y `chore: instala spec-sentinel (nivel Guardia)`. Antes del commit,
    revisa con `git status` lo que entra: `.claude/settings.local.json` es de cada persona
    (`setup` lo deja en el `.gitignore`). Si la Esclusa quedó encadenada en hooks versionados
    (husky), versiónalos también.

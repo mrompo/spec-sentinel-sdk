@@ -209,13 +209,13 @@
        finales de línea LF; aviso de `sdd: true`
 - [x] W2. El banco en rojo, también el caso del escape con un escape de verdad
 - [x] W3. 👤 `setup.sh` (defectos 1, 2 y 5 y los menores del instalador) (**fichero
-       protegido**, con llave)
+       protegido**, con llave, `339178e`)
 - [x] W4. 👤 La política protege `~/.jq` (**fichero protegido**, con llave) y el SDK trae su
-       `.gitattributes`
-- [ ] W5. Textos: guía (Git for Windows, ruta absoluta del enlace, aprobación en la primera
+       `.gitattributes` (`339178e`)
+- [x] W5. Textos: guía (Git for Windows, ruta absoluta del enlace, aprobación en la primera
        instalación, `sdd: true`, `.gitattributes` en el commit), skill y límites (configuración
        gestionada por MDM o servidor)
-- [ ] W6. `STATUS.md`: la deuda de la quinta revisión y el cambio
+- [x] W6. `STATUS.md`: la deuda de la quinta revisión y el cambio
        [`sentinel-paths`](../sentinel-paths/proposal.md) (abierto con la disposición)
 - [ ] W7. Relanzar el panel → **Veredicto**
 

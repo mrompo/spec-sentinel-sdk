@@ -132,18 +132,28 @@ Centinela protege el instalador por esa ruta) y dale la ruta del SDK:
 
 ```bash
 mkdir -p ~/.claude/skills
-ln -sfn <ruta-al-sdk>/ai-specs/skills/setup ~/.claude/skills/spec-sentinel-setup
+ln -sfn "$(cd <ruta-al-sdk> && pwd)/ai-specs/skills/setup" ~/.claude/skills/spec-sentinel-setup
+ls ~/.claude/skills/spec-sentinel-setup/SKILL.md     # comprobación: el enlace llega al SDK
 ```
 
-Ejecutará `setup` y te explicará la salida. Antes, el Centinela te pedirá aprobación, porque
-instalar reescribe el enforcement y lo decides tú.
+(El `$(cd … && pwd)` deja la ruta absoluta: un enlace con una ruta relativa se resolvería desde
+`~/.claude/skills` y quedaría roto sin avisar.)
+
+Ejecutará `setup` y te explicará la salida. Instalar reescribe el enforcement y lo decides tú: en
+la primera instalación aún no hay Centinela, así que decides al pedírselo o al aprobar el
+comando; al reinstalar o actualizar, el Centinela te pide aprobación antes de ejecutarlo.
+
+**Windows**: el SDK y `setup` son bash. Con Git Bash o WSL funcionan, y el `.gitattributes` del
+SDK (y el que `setup` deja en tu repo) mantiene en LF lo que ejecuta bash aunque Git for
+Windows convierta a CRLF. Windows nativo no está soportado de forma oficial.
 
 | Qué hace | Qué deja en tu repo |
 |---|---|
 | Copia el enforcement | `sentinel/`: hooks, git hooks, adaptadores y la política del SDK (`policy.default.yaml`) |
-| Crea tu política | `sentinel/policy.yaml`, vacía, para tus reglas (con `sdd: true` si el repo tiene `openspec/`) |
+| Crea tu política | `sentinel/policy.yaml`, vacía, para tus reglas (con `sdd: true` si el repo tiene `openspec/`: el `pre-push` exigirá `openspec validate --strict`, y `setup` te avisa si ya falla) |
 | Cablea el Centinela | `.claude/settings.json`: lo fusiona con lo tuyo usando `jq`, con backup, y comprueba que el cableado sea efectivo |
-| Protege lo personal | Añade `.claude/settings.local.json` a tu `.gitignore`, junto a la llave y los backups |
+| Protege lo personal | Añade `.claude/settings.local.json` a tu `.gitignore`, junto a la llave y los backups, y comprueba con git que de verdad queden fuera |
+| Fija los finales de línea | Añade `sentinel/** text eol=lf` a tu `.gitattributes` |
 | Activa la Esclusa | `core.hooksPath` → `sentinel/githooks`, si tu repo no usa ya otros git hooks |
 | Propone el stack | `sentinel/adapters/stack.proposed.yaml`, si reconoce Node o Laravel |
 | Comprueba gitleaks | Te avisa ahora, no en el primer commit |
@@ -168,9 +178,15 @@ instalar reescribe el enforcement y lo decides tú.
 - **Tu `.claude/settings.json` no es JSON válido** (una coma de más o de menos, un comentario,
   un `NaN`, un número como `01`…) → Claude Code no carga el fichero entero, tampoco el
   Centinela. `setup` no lo toca y te dice dónde falla: corrígelo.
-- **La forma de `hooks` en tu `.claude/settings.json` es inesperada** → `setup` no la fusiona:
-  deja `sentinel/settings.fragment.json` para que pongas sus grupos a mano, cada uno en su
-  evento.
+- **La forma de `hooks` en tu `.claude/settings.json` es inesperada** (un evento que no es una
+  lista de grupos, o un grupo sin su lista `hooks`) → `setup` no fusiona sobre ella y te dice qué
+  evento es: corrígelo y vuelve a ejecutar `setup`, que entonces añade el cableado.
+- **`.claude/settings.local.json` ya está versionado**, o una regla posterior de tu `.gitignore`
+  lo vuelve a incluir → sus cambios personales irían en tus commits. Sácalo del índice con el
+  `git rm --cached` que te da `setup`, o quita esa regla.
+- **Tu repo tiene `openspec/` y `openspec validate --all --strict` ya falla** → con `sdd: true`
+  el `pre-push` lo exigirá y rechazaría el push. Corrige los cambios o, si el repo no quiere el
+  nivel Método, pon `sdd: false` en `sentinel/policy.yaml`.
 - **Tu `.gitignore` deja fuera algo que hay que versionar** (la plantilla de Node ignora
   `*.log`; hay repos que ignoran `.claude/`) → te dice qué fichero, qué regla lo ignora y la
   excepción que hay que añadir.
@@ -183,8 +199,12 @@ instalar reescribe el enforcement y lo decides tú.
   `.claude/settings.local.json` o en tu configuración de usuario (`~/.claude/settings.json`) →
   Claude Code no ejecuta ningún hook, tampoco el Centinela (con un valor que no es booleano,
   puede no cargar el fichero entero). Quítalo o ponlo a `false`.
-- **Hay un `env` con variables `SENTINEL_*`** en alguno de esos ficheros → Claude Code se las
-  pasa al Centinela, que cambiaría de política o de llave. Quítalas.
+- **Hay un `env` con variables `SENTINEL_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS` o
+  `CLAUDE_PROJECT_DIR`** en alguno de esos ficheros → Claude Code se las pasa al proceso del
+  Centinela, que cambiaría de política, de llave o de código. Quítalas.
+- **La configuración gestionada de tu organización** (`managed-settings.json`) tiene
+  `allowManagedHooksOnly: true` o un `disableAllHooks` que no es `false` → Claude Code no
+  ejecuta los hooks del proyecto. Lo resuelve quien administra esa configuración.
 
 El **stack propuesto** no es un pendiente: revisa `stack.proposed.yaml` y, si te vale,
 renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests con un aviso.
@@ -193,7 +213,7 @@ renómbralo a `stack.yaml`. Sin adaptador, la Esclusa omite format, lint y tests
 la Esclusa:
 
 ```bash
-git add sentinel .claude .gitignore
+git add sentinel .claude .gitignore .gitattributes
 git status                              # revisa lo que entra: nada personal de .claude/
 git commit -m "chore: instala spec-sentinel (nivel Guardia)"
 git commit --allow-empty -m prueba      # comprobación: la Esclusa tiene que rechazarlo
