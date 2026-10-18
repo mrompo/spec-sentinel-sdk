@@ -49,23 +49,27 @@ SHALL crear un backup antes de tocar un fichero existente.
   del SDK (otro matcher, el comando escrito de otra forma) o con hooks propios en el mismo grupo
 - **THEN** las entradas del SDK se reconocen por la ruta de su script y se sustituyen por las
   actuales, una sola vez cada una, con backup y conservando todo lo del consumidor
-- **AND** si la forma del fichero no permite fusionar con seguridad, se deja el fragmento y
-  queda pendiente (exit 3), nunca un error a mitad de instalación
+- **AND** si la forma de `hooks` no permite fusionar con seguridad, queda pendiente (exit 3)
+  nombrando el evento con la forma inesperada, nunca un error a mitad de instalación; corregida
+  esa forma, la siguiente ejecución fusiona
 
 #### Scenario: El instalador no sirve para descablear (SC-sdk-setup-10)
 
 - **WHEN** `setup` se ejecuta con un `jq` que está dentro del repo destino (por
-  `SENTINEL_SETUP_JQ` o por el `PATH`), o con uno cuya fusión pierde el cableado, lo saca de su
-  evento, cambia algo fuera de `.hooks` o devuelve algo que no es JSON válido
+  `SENTINEL_SETUP_JQ` o por el `PATH`, también como enlace del repo a un binario de fuera), con
+  una configuración de jq de la persona (`~/.jq`) que cambia lo que hacen sus programas, o con
+  un `jq` cuya fusión pierde el cableado, lo saca de su evento, cambia algo fuera de `.hooks` o
+  devuelve algo que no es JSON válido
 - **THEN** `.claude/settings.json` conserva el cableado del Centinela: el `jq` del repo se ignora
-  (se usa otro del `PATH`, si lo hay) y un resultado de la fusión que no pasa la comprobación no
-  se escribe (queda pendiente)
+  (se usa otro del `PATH`, si lo hay), jq se ejecuta sin la configuración de la persona y un
+  resultado de la fusión que no pasa la comprobación no se escribe (queda pendiente)
 - **AND** la comprobación es de estructura: cada grupo de cada evento del cableado del SDK tiene
   que estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio
 - **AND** el fichero se lee como lo carga Claude Code (con `JSON.parse`: de una clave repetida
   vale la última aparición). Uno que no es JSON válido no cuenta como cableado, tampoco con lo
   que `jq` acepta y JSON no (`NaN`, `Infinity`, números como `01`, `+1`, `.5` o `5.`, una marca
-  BOM): queda pendiente, diciendo que no es JSON válido y dónde, sin proponer sustituir entradas
+  BOM, bytes NUL o de control dentro de una cadena): queda pendiente, diciendo que no es JSON
+  válido y dónde (la línea), sin proponer sustituir entradas
 - **AND** un `jq` de fuera del repo manipulado para falsear también la comprobación es el límite
   documentado «jq manipulado», no parte de esta garantía
 
@@ -73,13 +77,19 @@ SHALL crear un backup antes de tocar un fichero existente.
 
 - **WHEN** `.claude/settings.json`, `.claude/settings.local.json` o la configuración de usuario
   de Claude Code (`$CLAUDE_CONFIG_DIR/settings.json`, por defecto `~/.claude/settings.json`)
-  tienen `disableAllHooks` con un valor que no es `false`, o un `env` con variables `SENTINEL_*`
+  tienen `disableAllHooks` con un valor que no es `false`, o un `env` con variables `SENTINEL_*`,
+  con las que cambian cómo arranca bash (`BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS`) o con
+  `CLAUDE_PROJECT_DIR`
 - **THEN** `setup` termina con exit 3 nombrando el fichero y la clave: con `disableAllHooks`
   Claude Code no ejecuta ningún hook (y con un valor que no es booleano puede no cargar el
-  fichero entero), y las variables `SENTINEL_*` llegan al Centinela y le cambian la política o
-  la llave
+  fichero entero), y esas variables llegan al proceso del Centinela y le cambian la política, la
+  llave o el código que ejecuta
 - **AND** si alguno de esos ficheros existe y no se puede leer como JSON válido, queda pendiente
   («no se puede comprobar»), nunca se da por bueno
+- **AND** la configuración gestionada de la organización (el `managed-settings.json` de la
+  plataforma), si existe, también se lee: con `allowManagedHooksOnly: true` o un
+  `disableAllHooks` que no es `false`, Claude Code no ejecuta los hooks del proyecto y queda
+  pendiente, para que lo resuelva la organización
 - **AND** una fusión no puede introducir ninguna de las dos claves (SC-sdk-setup-10)
 
 #### Scenario: Lo personal no se versiona (SC-sdk-setup-15)
@@ -87,7 +97,29 @@ SHALL crear un backup antes de tocar un fichero existente.
 - **WHEN** se instala en un repo cuyo git no lee el ignore global donde Claude Code excluye
   `.claude/settings.local.json` (p. ej. con un `core.excludesFile` propio)
 - **THEN** el `.gitignore` del repo excluye `.claude/settings.local.json`, además de la llave y
-  los backups, y el `git add sentinel .claude .gitignore` que propone `setup` no lo incluye
+  los backups, y el `git add` que propone `setup` no lo incluye
+- **AND** se comprueba con git (`git check-ignore`), no buscando la línea: si una regla
+  posterior la anula, queda pendiente
+- **AND** si `.claude/settings.local.json` ya está versionado, queda pendiente con el comando
+  que lo saca del índice (`git rm --cached`), que ejecuta la persona
+
+#### Scenario: Finales de línea (SC-sdk-setup-16)
+
+- **WHEN** el SDK o el repo del consumidor se clonan con conversión a CRLF (Git for Windows por
+  defecto, `core.autocrlf=true`)
+- **THEN** lo que ejecuta bash o lee el Centinela llega con LF: el SDK trae un `.gitattributes`
+  y `setup` añade al del consumidor `sentinel/** text eol=lf`; en ese clon, el Centinela deja
+  pasar lo inocuo y la Esclusa acepta un commit conforme
+- **AND** si la copia del SDK desde la que se ejecuta tiene ficheros distribuidos con CRLF,
+  `setup` termina con 1 sin escribir nada y lo dice
+
+#### Scenario: El nivel Método se avisa (SC-sdk-setup-17)
+
+- **WHEN** se instala en un repo con `openspec/` (la política del consumidor tiene `sdd: true`) y
+  `openspec validate --all --strict` falla
+- **THEN** `setup` termina con exit 3 diciendo que el `pre-push` exigirá esa validación y que
+  `sdd: false` en `sentinel/policy.yaml` la desactiva (lo decide una persona)
+- **AND** sin el CLI de OpenSpec lo dice como aviso: la Esclusa omite la validación con aviso
 
 #### Scenario: Actualización sin pisar la política (SC-sdk-setup-05)
 
@@ -138,6 +170,8 @@ nunca con éxito silencioso.
   excepción que hay que añadir; cuando ya no están ignorados, termina con 0
 - **AND** se comprueba todo lo que instala (también la librería de la Esclusa), no una muestra,
   y la excepción propuesta funciona aunque la regla venga de fuera del repo (`core.excludesFile`)
+- **AND** la excepción para `.claude/` reincluye `.claude/settings.json` sin esconder lo que el
+  equipo comparte en `.claude/` (comandos, agentes, skills)
 - **AND** si el repo tiene `core.fileMode=false`, avisa de que los ejecutables hay que marcarlos
   en el índice (`git add --chmod=+x`) hasta que lo estén: sin el permiso, git ignora los hooks
 

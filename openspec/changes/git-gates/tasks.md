@@ -202,7 +202,7 @@
 
 ### Ronda 6 de `apply`, tras el quinto `HOLD` (disposición del 2026-10-18: el instalador aquí; el Centinela, en `sentinel-paths`)
 
-- [ ] W1. La spec dice lo decidido: jq con `HOME` aislado y nunca uno del repo, por enlace o por
+- [x] W1. La spec dice lo decidido: jq con `HOME` aislado y nunca uno del repo, por enlace o por
        `SENTINEL_SETUP_JQ`; NUL y bytes de control no son JSON válido; la forma inesperada de
        `hooks` nombra el evento; la excepción de `.claude/` no esconde lo del equipo;
        `settings.local.json` comprobado con git; configuración gestionada y `BASH_ENV` en `env`;
