@@ -183,7 +183,7 @@
        fusión no cambia nada fuera de `.hooks`; un `env` con `SENTINEL_*` o un `disableAllHooks`
        que no sea `false` (proyecto, local o usuario) → pendiente; `.claude/settings.local.json`
        al `.gitignore`; `.git/config` protegido; nombre propio del enlace de la skill
-- [ ] U2. El banco en rojo: sin jq, JSON no válido, fusión fuera de `.hooks`, `env.SENTINEL_*`,
+- [x] U2. El banco en rojo: sin jq, JSON no válido, fusión fuera de `.hooks`, `env.SENTINEL_*`,
        `disableAllHooks` de usuario y no booleano, `.gitignore`, `.git/config` y el nombre del
        enlace
 - [ ] U3. 👤 `setup.sh` con jq obligatorio, sin lector awk, eventos sacados del fragmento y

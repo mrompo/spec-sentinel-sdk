@@ -9,8 +9,8 @@ bash_payload() { printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1
 guard() { run_hook "$GUARD_HOOK" "$(bash_payload "$1")" SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$NO_POLICY"; }
 
 for cmd in \
-  'bash ~/.claude/skills/setup/setup.sh .' \
-  'bash /Users/me/.claude/skills/setup/setup.sh /Users/me/app' \
+  'bash ~/.claude/skills/spec-sentinel-setup/setup.sh .' \
+  'bash /Users/me/.claude/skills/spec-sentinel-setup/setup.sh /Users/me/app' \
   'bash ../spec-sentinel-sdk/ai-specs/skills/setup/setup.sh .' \
   'bash /opt/sdk/ai-specs/skills/setup/setup.sh' \
   'cd ../app && bash ../sdk/ai-specs/skills/setup/setup.sh .' \
@@ -38,6 +38,14 @@ for f in ai-specs/skills/setup/setup.sh ai-specs/skills/setup/chain.sh; do
     SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$NO_POLICY"
   assert_exit 0 || fail_case "leer $f con Read no debería bloquearse"
   case "$RH_OUT" in *'"ask"'*) fail_case "leer $f con Read no debería pedir aprobación";; esac
+done
+
+# Una skill «setup» propia del consumidor no es el instalador del SDK: se ejecuta sin aprobación
+# (A4-7)
+for cmd in 'bash .claude/skills/setup/setup.sh' 'bash ~/.claude/skills/setup/setup.sh .'; do
+  guard "$cmd"
+  assert_exit 0 || fail_case "«${cmd}» no es el instalador del SDK: no debería denegarse"
+  case "$RH_OUT" in *'"ask"'*) fail_case "«${cmd}» no es el instalador del SDK: no debería pedir aprobación";; esac
 done
 
 # Pedir aprobación para instalar no rebaja ninguna otra regla: si el mismo comando hace algo que

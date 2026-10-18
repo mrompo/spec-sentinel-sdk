@@ -6,6 +6,11 @@ set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../githooks/harness.sh" || exit 1
 SETUP="$REPO_ROOT/ai-specs/skills/setup/setup.sh"
+# setup también mira la configuración de usuario de Claude Code (SC-sdk-setup-14): el banco no
+# lee la de quien lo ejecuta. Un caso la fija con CLAUDE_CONFIG_DIR=… en run_setup
+export CLAUDE_CONFIG_DIR=/nonexistent/claude-user-config
+# setup exige jq (SC-sdk-setup-04): el banco también, para preparar y comprobar los casos
+command -v jq >/dev/null 2>&1 || { echo "    el banco de instalación necesita jq" >&2; exit 1; }
 
 # run_setup [VAR=valor …] → ejecuta el instalador sobre el workspace y deja RH_EXIT/RH_ERR.
 # gitleaks es obligatorio para la Esclusa y el banco no depende de tenerlo: por defecto se usa
