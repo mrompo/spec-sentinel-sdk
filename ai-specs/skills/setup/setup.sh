@@ -3,27 +3,28 @@
 #
 #   bash <sdk>/ai-specs/skills/setup/setup.sh [raíz-del-repo]      (por defecto, el directorio actual)
 #
-# Lo invoca la skill `setup` (SKILL.md, al lado); también se puede ejecutar a mano. Idempotente:
-# una segunda ejecución no cambia nada. Nunca pisa la configuración del consumidor:
+# Lo invoca la skill `spec-sentinel-setup` (SKILL.md, al lado); también se puede ejecutar a mano.
+# Idempotente: una segunda ejecución no cambia nada. Nunca pisa la configuración del consumidor:
 #   - lo distribuido (hooks, githooks, lector del adaptador, policy.default.yaml) se instala o
 #     actualiza, con backup si el fichero del consumidor difería;
 #   - lo del consumidor (policy.yaml, overrides.log, stack.yaml) solo se crea si no existe;
 #     policy.yaml nace sin reglas: las del SDK viven en policy.default.yaml y se evalúan antes;
-#   - .claude/settings.json se fusiona con jq; sin jq, o si la fusión no es segura, se deja
-#     sentinel/settings.fragment.json y se explica el paso manual;
+#   - .claude/settings.json se fusiona con jq, que es obligatorio (sin él no se instala nada); si
+#     la fusión no es segura, se deja sentinel/settings.fragment.json y se explica el paso manual;
 #   - core.hooksPath solo se activa si el repo no usa ya otros git hooks; si los usa, se dan
 #     las líneas que encadenan la Esclusa en ellos (chain.sh) y se reconoce cuando ya están.
 # Los backups van a sentinel/.backup/<fecha>/ (fuera de git).
 #
 # Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error. Si falla una
 # comprobación previa no se escribe nada; si falla a mitad, lo hecho se queda y reejecutar es seguro.
-# Variables: SENTINEL_SETUP_JQ (binario de jq), SENTINEL_GITLEAKS_BIN (el mismo que la Esclusa).
-# Falsifica: SC-sdk-setup-01..13 (fixture/install/cases/).
+# Variables: SENTINEL_SETUP_JQ (binario de jq), SENTINEL_GITLEAKS_BIN (el mismo que la Esclusa),
+# CLAUDE_CONFIG_DIR (la configuración de usuario de Claude Code, como en Claude Code).
+# Falsifica: SC-sdk-setup-01..15 (fixture/install/cases/).
 set -uo pipefail
 
-# cd -P primero: a través de un enlace a la skill (~/.claude/skills/setup) se sube desde la real
+# cd -P primero: a través de un enlace a la skill (~/.claude/skills/spec-sentinel-setup) se sube
+# desde la real
 SDK_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && cd ../../.. && pwd -P)"
-JQ="${SENTINEL_SETUP_JQ:-jq}"
 GITLEAKS="${SENTINEL_GITLEAKS_BIN:-gitleaks}"
 HOOKS_PATH="sentinel/githooks"
 
@@ -48,6 +49,40 @@ TOP="$(git -C "$TARGET" rev-parse --show-toplevel 2>/dev/null)" \
   || die "$TARGET no es la raíz del repo — ejecuta setup en $TOP"
 SELF=0; [ "$TARGET" = "$SDK_ROOT" ] && SELF=1
 
+echo "Instalando el nivel Guardia en $TARGET"
+
+# jq es obligatorio (SC-sdk-setup-04): con él se lee, se fusiona y se comprueba .claude/settings.json
+# como lo carga Claude Code. Nunca uno que viva dentro del repo destino, tampoco a través de un
+# enlace (el agente podría poner ahí uno que «fusione» quitando el cableado): el de
+# SENTINEL_SETUP_JQ o, si no, el primero del PATH que esté fuera (SC-sdk-setup-10)
+JQ_BIN=""
+if [ -n "${SENTINEL_SETUP_JQ:-}" ]; then jq_cands="$SENTINEL_SETUP_JQ"; else jq_cands="$(type -aP jq 2>/dev/null)"; fi
+while IFS= read -r cand; do
+  cand="$(command -v "$cand" 2>/dev/null)" && [ -n "$cand" ] || continue
+  real="$cand"; hops=0
+  while [ -L "$real" ] && [ "$hops" -lt 40 ]; do
+    lnk="$(readlink "$real")"
+    case "$lnk" in /*) real="$lnk" ;; *) real="$(dirname "$real")/$lnk" ;; esac
+    hops=$((hops + 1))
+  done
+  [ ! -L "$real" ] || continue
+  jq_dir="$(cd "$(dirname "$real")" 2>/dev/null && pwd -P)" || continue
+  case "$jq_dir/" in
+    "$TARGET"/*) note "se ignora el jq de $cand: está dentro del repo destino"; continue ;;
+  esac
+  JQ_BIN="$cand"; break
+done <<<"$jq_cands"
+[ -n "$JQ_BIN" ] || die "setup necesita jq (fuera del repo destino) para cablear el Centinela en .claude/settings.json.
+    macOS: brew install jq · Windows: scoop install jq · Linux: apt install jq o dnf install jq
+    (comprueba con: jq --version) y vuelve a ejecutar setup. No se ha instalado nada"
+note "jq: $JQ_BIN ($("$JQ_BIN" --version 2>/dev/null || echo 'versión desconocida'))"
+# El fragmento es el cableado del propio SDK (su .claude/settings.json, que solo tiene «hooks»):
+# una sola fuente, así un cambio de matcher llega a los consumidores al actualizar
+FRAGMENT="$(cat "$SDK_ROOT/.claude/settings.json")"
+"$JQ_BIN" -e '(.hooks | type == "object" and length > 0) and all(.hooks[]; type == "array")' \
+  "$SDK_ROOT/.claude/settings.json" >/dev/null 2>&1 \
+  || die "el .claude/settings.json del SDK no es un cableado válido — ejecuta setup.sh desde una copia íntegra del SDK"
+
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 backup() {
   local rel="$1" dir="$TARGET/sentinel/.backup/$STAMP"
@@ -62,8 +97,6 @@ dist_files() {
   (cd "$SDK_ROOT" && find sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters \
      -type f ! -name '.*' ! -name stack.yaml ! -name stack.proposed.yaml | LC_ALL=C sort)
 }
-
-echo "Instalando el nivel Guardia en $TARGET"
 
 # ── 1. Enforcement distribuido (se actualiza) ────────────────────────────────────────────
 if [ "$SELF" -eq 1 ]; then
@@ -116,9 +149,11 @@ EOF
 fi
 [ -f "$TARGET/sentinel/overrides.log" ] || { : >"$TARGET/sentinel/overrides.log" && ok "bitácora creada (sentinel/overrides.log)"; }
 
-# .gitignore: la llave nunca se versiona; los backups tampoco
+# .gitignore: la llave nunca se versiona; los backups tampoco; ni la configuración personal de
+# Claude Code, que git deja de excluir si no lee el ignore global donde la pone Claude Code
+# (p. ej. con un core.excludesFile propio) (SC-sdk-setup-15)
 GI="$TARGET/.gitignore"; gi_added=""
-for line in "sentinel/.override" "sentinel/.backup/"; do
+for line in "sentinel/.override" "sentinel/.backup/" ".claude/settings.local.json"; do
   [ -f "$GI" ] && grep -qxF "$line" "$GI" && continue
   [ -f "$GI" ] && [ -z "$gi_added" ] && backup ".gitignore"
   [ -s "$GI" ] && [ -n "$(tail -c1 "$GI")" ] && echo >>"$GI"
@@ -127,9 +162,6 @@ done
 [ -n "$gi_added" ] && ok ".gitignore:$gi_added"
 
 # ── 3. Cableado del Centinela en .claude/settings.json ───────────────────────────────────
-# El fragmento es el cableado del propio SDK (su .claude/settings.json, que solo tiene «hooks»):
-# una sola fuente, así un cambio de matcher llega a los consumidores al actualizar.
-FRAGMENT="$(cat "$SDK_ROOT/.claude/settings.json")"
 SCRIPTS='["sentinel/hooks/sentinel-guard.sh","sentinel/hooks/post-edit.sh","sentinel/hooks/session-start.sh"]'
 # Fusión segura solo si cada evento es una lista de grupos y cada grupo una lista de hooks
 SAFE='type == "object" and ((.hooks // {}) | type == "object")
@@ -138,158 +170,102 @@ SAFE='type == "object" and ((.hooks // {}) | type == "object")
 # Las entradas del SDK se reconocen por la ruta de su script (de cualquier versión, con o sin
 # comillas): se quitan donde estén, sin tocar los hooks del consumidor de su mismo grupo, y se
 # añaden las actuales al final de cada evento
-MERGE='def is_sdk: (.command // "") as $c
-         | ($c | type) == "string" and ([ $scripts[] as $s | $c | contains($s) ] | any);
-       def strip_sdk:
-         [ .[] | ((.hooks // []) | length) as $n
-               | ([ (.hooks // [])[] | select(is_sdk | not) ]) as $k
-               | if $n == ($k | length) then . elif ($k | length) == 0 then empty else .hooks = $k end ];
-       .hooks = ((.hooks // {}) | with_entries(.value |= strip_sdk))
+SDK_DEFS='def is_sdk($s): (.command // "") as $c
+            | ($c | type) == "string" and ([ $s[] as $x | $c | contains($x) ] | any);
+          def strip_sdk($s):
+            [ .[] | ((.hooks // []) | length) as $n
+                  | ([ (.hooks // [])[] | select(is_sdk($s) | not) ]) as $k
+                  | if $n == ($k | length) then . elif ($k | length) == 0 then empty else .hooks = $k end ];'
+MERGE="$SDK_DEFS"'
+       .hooks = ((.hooks // {}) | with_entries(.value |= strip_sdk($scripts)))
        | reduce ($frag.hooks | to_entries[]) as $e (.; .hooks[$e.key] = ((.hooks[$e.key] // []) + $e.value))'
+# Lo que la fusión puede cambiar: solo las entradas del SDK. Fuera de «hooks», nada (un «env» con
+# SENTINEL_* llega al Centinela, un disableAllHooks lo apaga); dentro, lo del consumidor tal cual
+SAME="$SDK_DEFS"'
+       def mine: (.hooks // {}) | with_entries(.value |= strip_sdk($sdk) | select(.value != []));
+       (.[0] | del(.hooks)) == (.[1] | del(.hooks)) and (.[0] | mine) == (.[1] | mine)'
+# El cableado del SDK está si cada grupo de cada evento del fragmento está, tal cual, en su
+# evento (los eventos salen del fragmento); con otra forma, jq falla y no cuenta
+WIRED='(.hooks // {}) as $h | ($h | type == "object")
+       and all($frag.hooks | to_entries[]; .key as $k | ($h[$k] // []) as $have
+               | ($have | type == "array") and all(.value[]; . as $g | any($have[]; . == $g)))'
+# JSON_LEX: fuera de las cadenas, solo los tokens de JSON. jq acepta de más (NaN, Infinity, números
+# como 01, +1, .5 o 5., la marca BOM) y Claude Code, que lee con JSON.parse, descarta el fichero
+# entero con cualquiera de ellos. La gramática la valida jq; esto, solo los tokens. Va por líneas
+# porque, en lo que jq acepta, una cadena no cruza líneas
+JSON_LEX='
+{
+  s = $0; out = ""; instr = 0; esc = 0; n = length(s)
+  for (i = 1; i <= n; i++) {
+    c = substr(s, i, 1)
+    if (instr) { if (esc) esc = 0; else if (c == "\\") esc = 1; else if (c == "\"") { instr = 0; out = out "\"\"" }; continue }
+    if (c == "\"") { instr = 1; continue }
+    out = out c
+  }
+  gsub(/[{}:,]/, " ", out); gsub(/\[/, " ", out); gsub(/\]/, " ", out)
+  nt = split(out, t, /[ \t\r]+/)
+  for (k = 1; k <= nt; k++)
+    if (t[k] != "" && t[k] != "\"\"" && t[k] != "true" && t[k] != "false" && t[k] != "null" \
+        && t[k] !~ /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/) { bad = 1; exit }
+}
+END { exit bad }'
 
-# jq: el de SENTINEL_SETUP_JQ o el del PATH, nunca uno que viva dentro del repo destino (el
-# agente podría poner ahí uno que «fusione» quitando el cableado)
-JQ_BIN="$(command -v "$JQ" 2>/dev/null || true)"
-if [ -n "$JQ_BIN" ]; then
-  jq_dir="$(cd "$(dirname "$JQ_BIN")" 2>/dev/null && pwd -P)"
-  case "$jq_dir/" in
-    "$TARGET"/*) note "se ignora el jq de $JQ_BIN: está dentro del repo destino"; JQ_BIN="" ;;
-  esac
-fi
+# json_ok <fichero> → es un objeto JSON que Claude Code puede cargar: jq lo lee entero como un solo
+# objeto (de una clave repetida vale la última, como en JSON.parse) y no hay nada que jq acepte y
+# JSON no. Si no, JSON_ERR dice por qué (el error de jq dice dónde)
+json_ok() {
+  JSON_ERR=""
+  if ! JSON_ERR="$("$JQ_BIN" -e -s 'length == 1 and (.[0] | type == "object")' "$1" 2>&1 >/dev/null)"; then
+    [ -n "$JSON_ERR" ] || JSON_ERR="no es un único objeto JSON"
+    return 1
+  fi
+  LC_ALL=C awk "$JSON_LEX" "$1" && return 0
+  JSON_ERR="tiene algo que jq acepta y JSON no: NaN, Infinity, un número como 01, +1, .5 o 5., o una marca BOM al principio"
+  return 1
+}
+wired_ok() { "$JQ_BIN" -e --argjson frag "$FRAGMENT" "$WIRED" "$1" >/dev/null 2>&1; }
+# merged_ok <json> → el resultado de la fusión se puede escribir: Claude Code lo carga, conserva el
+# cableado y solo cambia las entradas del SDK. Si no, MERGE_ERR dice qué falla. Lo comprueba el
+# mismo jq que fusionó: un jq manipulado para falsearlo todo es el límite «jq manipulado»
+merged_ok() {
+  local t rc=1
+  t="$(mktemp)" || return 1
+  printf '%s\n' "$1" >"$t"
+  if ! json_ok "$t"; then MERGE_ERR="no es JSON válido ($JSON_ERR)"
+  elif ! wired_ok "$t"; then MERGE_ERR="no conserva el cableado del Centinela"
+  elif ! "$JQ_BIN" -e -s --argjson sdk "$SCRIPTS" "$SAME" "$S" "$t" >/dev/null 2>&1; then
+    MERGE_ERR="cambia algo más que las entradas del SDK (fuera de «hooks» o hooks tuyos)"
+  else rc=0; fi
+  rm -f "$t"; return $rc
+}
 
 S="$TARGET/.claude/settings.json"; F="$TARGET/sentinel/settings.fragment.json"
 write_fragment() { # $1=motivo [$2=qué hacer con el fragmento]
   [ -f "$F" ] && [ "$(cat "$F")" = "$FRAGMENT" ] || printf '%s\n' "$FRAGMENT" >"$F"
-  todo "$1 — .claude/settings.json no se ha tocado. ${2:-Añade a mano las entradas de
-    sentinel/settings.fragment.json dentro de \"hooks\"} (o instala jq) y vuelve a ejecutar setup"
+  todo "$1 — .claude/settings.json no se ha tocado. ${2:-Añade a mano los grupos de
+    sentinel/settings.fragment.json, cada uno en su evento de «hooks» (sin repetir la clave de un
+    evento que ya exista)} y vuelve a ejecutar setup"
 }
 # El paso manual ya está hecho: el fragmento sobra (y no debe acabar versionado)
 drop_fragment() { [ -f "$F" ] && rm -f "$F" && note "retirado sentinel/settings.fragment.json: el cableado ya está"; return 0; }
 
-# wired_ok <fichero> → el fichero lleva el cableado del SDK: cada grupo del .claude/settings.json
-# del SDK está, tal cual, dentro de SU evento (.hooks.<evento>). Es una comprobación de
-# estructura y no usa jq (el resultado de una fusión no se valida con el mismo jq que la hizo):
-# un mini lector de JSON en awk que compara sin el espacio de fuera de las cadenas. Antes exige
-# JSON estricto, porque Claude Code se queda con la ÚLTIMA aparición de una clave: sin claves
-# repetidas, sin escapes en las claves y sin nada detrás del objeto (SC-sdk-setup-10).
-# Con -v mode=disabled responde otra cosa: 0 si la raíz trae «"disableAllHooks": true».
-WIRING_AWK='
-FNR == 1 { f++ }
-{ buf[f] = buf[f] $0 "\n" }
-END {
-  if (!strict(buf[2])) exit 1
-  if (mode == "disabled") exit (DISABLED ? 0 : 1)
-  frag = compact(buf[1]); have = compact(buf[2]); found = 0
-  n = split("PreToolUse PostToolUse SessionStart SessionEnd UserPromptSubmit Stop SubagentStop Notification PreCompact", evs, " ")
-  for (k = 1; k <= n; k++) {
-    want = event_array(frag, evs[k]); if (want == "") continue
-    found++; got = event_array(have, evs[k])
-    if (got == "" || index(got, substr(want, 2, length(want) - 2)) == 0) exit 1
-  }
-  exit (found > 0 ? 0 : 1)
-}
-function strict(s,   n, i, c, depth, instr, esc, str, k, nobj, started, done, pend) {
-  n = length(s); depth = 0; instr = 0; esc = 0; str = ""; nobj = 0; started = 0; done = 0; pend = 0
-  for (i = 1; i <= n; i++) {
-    c = substr(s, i, 1)
-    if (instr) {
-      if (esc) { esc = 0; str = str c } else if (c == "\\") { esc = 1; str = str c }
-      else if (c == "\"") instr = 0; else str = str c
-      continue
-    }
-    if (c == " " || c == "\t" || c == "\n" || c == "\r") continue
-    if (done) return 0
-    if (!started) { if (c != "{") return 0; started = 1 }
-    if (c == "\"") { instr = 1; str = ""; continue }
-    if (c == ":") {
-      if (!isobj[depth] || index(str, "\\") > 0) return 0
-      k = objid[depth] SUBSEP str
-      if (k in seen) return 0
-      seen[k] = 1
-      if (depth == 1 && str == "disableAllHooks") pend = 1
-      continue
-    }
-    if (pend) { if (c == "t") DISABLED = 1; pend = 0 }
-    if (c == "{" || c == "[") { depth++; isobj[depth] = (c == "{"); if (c == "{") objid[depth] = ++nobj; continue }
-    if (c == "}" || c == "]") {
-      if (depth == 0 || (c == "}") != isobj[depth]) return 0
-      depth--; if (depth == 0) done = 1
-      continue
-    }
-  }
-  return (started && done && !instr)
-}
-function compact(s,   out, i, c, n, instr, esc) {
-  out = ""; instr = 0; esc = 0; n = length(s)
-  for (i = 1; i <= n; i++) {
-    c = substr(s, i, 1)
-    if (instr) { out = out c; if (esc) esc = 0; else if (c == "\\") esc = 1; else if (c == "\"") instr = 0; continue }
-    if (c == "\"") { instr = 1; out = out c; continue }
-    if (c == " " || c == "\t" || c == "\n" || c == "\r") continue
-    out = out c
-  }
-  return out
-}
-function event_array(s, ev,   n, i, c, depth, instr, esc, str, key, kdepth, hooks, start) {
-  n = length(s); depth = 0; instr = 0; esc = 0; str = ""; key = ""; kdepth = -1; hooks = 0; start = 0
-  for (i = 1; i <= n; i++) {
-    c = substr(s, i, 1)
-    if (instr) {
-      if (esc) { esc = 0; str = str c } else if (c == "\\") { esc = 1; str = str c }
-      else if (c == "\"") instr = 0; else str = str c
-      continue
-    }
-    if (c == "\"") { instr = 1; str = ""; continue }
-    if (c == ":") { key = str; kdepth = depth; continue }
-    if (c == "{" || c == "[") {
-      depth++
-      if (c == "{" && !hooks && key == "hooks" && kdepth == 1) hooks = depth
-      else if (c == "[" && hooks && !start && key == ev && kdepth == hooks) start = i
-      key = ""; kdepth = -1; continue
-    }
-    if (c == "}" || c == "]") {
-      if (start && c == "]" && depth == hooks + 1) return substr(s, start, i - start + 1)
-      if (hooks && depth == hooks) hooks = -1
-      depth--; key = ""; kdepth = -1; continue
-    }
-    if (c == ",") { key = ""; kdepth = -1 }
-  }
-  return ""
-}'
-wired_ok() { awk "$WIRING_AWK" "$SDK_ROOT/.claude/settings.json" "$1" 2>/dev/null; }
-# hooks_disabled <fichero> → JSON estricto con «"disableAllHooks": true» en la raíz: Claude Code
-# no ejecuta ningún hook, tampoco el Centinela
-hooks_disabled() { [ -f "$1" ] && awk -v mode=disabled "$WIRING_AWK" "$SDK_ROOT/.claude/settings.json" "$1" 2>/dev/null; }
-# merged_ok <json> → el resultado de una fusión es un objeto JSON estricto, conserva el cableado
-# y no apaga los hooks si antes no lo estaban
-merged_ok() {
-  local t rc
-  case "$1" in "{"*) ;; *) return 1 ;; esac
-  t="$(mktemp)" || return 1
-  printf '%s\n' "$1" >"$t"; wired_ok "$t"; rc=$?
-  [ "$rc" -ne 0 ] || ! hooks_disabled "$t" || hooks_disabled "$S" || rc=1
-  rm -f "$t"; return $rc
-}
+S_OK=1
 if [ ! -f "$S" ]; then
   mkdir -p "$TARGET/.claude" && printf '%s\n' "$FRAGMENT" >"$S" || die "no se pudo crear .claude/settings.json"
   ok "Centinela cableado (.claude/settings.json creado)"; drop_fragment
-elif [ -z "$JQ_BIN" ]; then
-  if wired_ok "$S"; then
-    ok "Centinela ya cableado en .claude/settings.json (comprobado sin jq)"; drop_fragment
-  elif grep -q 'sentinel/hooks/' "$S" 2>/dev/null; then
-    write_fragment "jq no está disponible y .claude/settings.json tiene un cableado del SDK que no es el actual" \
-      "Sustituye las entradas que ya llaman a sentinel/hooks/*.sh por las de
-    sentinel/settings.fragment.json (no las añadas: quedarían repetidas)"
-  else
-    write_fragment "jq no está disponible y ya hay un .claude/settings.json"
-  fi
+elif ! json_ok "$S"; then
+  S_OK=0
+  todo ".claude/settings.json no es JSON válido: $JSON_ERR.
+    Claude Code no carga un fichero así, tampoco el Centinela, y setup no lo toca. Corrígelo y
+    vuelve a ejecutar setup"
 elif ! "$JQ_BIN" -e "$SAFE" "$S" >/dev/null 2>&1; then
-  write_fragment ".claude/settings.json no es JSON válido o tiene una forma inesperada: fusionar no es seguro"
+  write_fragment ".claude/settings.json tiene una forma inesperada en «hooks» (cada evento, una lista de
+    grupos; cada grupo, con su lista «hooks»): fusionar no es seguro" "Corrige esa forma, o añade a mano
+    los grupos de sentinel/settings.fragment.json, cada uno en su evento de «hooks»,"
 elif ! merged="$("$JQ_BIN" --argjson frag "$FRAGMENT" --argjson scripts "$SCRIPTS" "$MERGE" "$S" 2>/dev/null)"; then
   write_fragment "jq no pudo fusionar .claude/settings.json"
 elif ! merged_ok "$merged"; then
-  # Lo que se va a escribir tiene que conservar el cableado: se comprueba en bash, sin fiarse de jq
-  write_fragment "el resultado de la fusión no conserva el cableado del Centinela"
+  write_fragment "el resultado de la fusión $MERGE_ERR: no se escribe"
 else
   if [ "$("$JQ_BIN" -S . "$S")" = "$(printf '%s' "$merged" | "$JQ_BIN" -S .)" ]; then
     ok "Centinela ya cableado en .claude/settings.json"; drop_fragment
@@ -300,11 +276,35 @@ else
     drop_fragment
   fi
 fi
-# Cableado no es lo mismo que activo: con disableAllHooks, Claude Code no ejecuta ningún hook
-for sf in "$S" "$TARGET/.claude/settings.local.json"; do
-  hooks_disabled "$sf" && todo "${sf#$TARGET/} tiene «\"disableAllHooks\": true»: Claude Code no ejecuta
-    ningún hook, tampoco el Centinela. Quítalo (o ponlo a false) y vuelve a ejecutar setup"
-done
+
+# Cableado no es lo mismo que efectivo (SC-sdk-setup-14): con disableAllHooks, Claude Code no
+# ejecuta ningún hook, y las variables de «env» llegan al Centinela. Se mira en los tres sitios
+# donde Claude Code lo lee: el proyecto, el local y la configuración de usuario
+check_effective() { # $1=fichero $2=cómo nombrarlo
+  local f="$1" name="$2" v keys
+  [ -f "$f" ] || return 0
+  if ! json_ok "$f"; then
+    todo "$name no es JSON válido ($JSON_ERR): no se puede comprobar si apaga los hooks
+    (disableAllHooks) o le cambia la política al Centinela (un «env» con SENTINEL_*). Corrígelo y
+    vuelve a ejecutar setup"
+    return 0
+  fi
+  v="$("$JQ_BIN" -c 'if has("disableAllHooks") then .disableAllHooks else empty end' "$f" 2>/dev/null)"
+  case "$v" in
+    ""|false) ;;
+    true) todo "$name tiene «\"disableAllHooks\": true»: Claude Code no ejecuta ningún hook, tampoco
+    el Centinela. Quítalo (o ponlo a false) y vuelve a ejecutar setup" ;;
+    *) todo "$name tiene «\"disableAllHooks\": ${v}», que no es un booleano: Claude Code puede no cargar
+    el fichero entero, tampoco el Centinela. Quítalo (o ponlo a false) y vuelve a ejecutar setup" ;;
+  esac
+  keys="$("$JQ_BIN" -r '.env | objects | keys[] | select(startswith("SENTINEL_"))' "$f" 2>/dev/null | tr '\n' ' ')"
+  [ -z "$keys" ] || todo "$name fija ${keys% } en «env»: Claude Code pasa esas variables al
+    Centinela, que cambia de política o de llave sin aviso. Quítalas y vuelve a ejecutar setup"
+}
+[ "$S_OK" -eq 0 ] || check_effective "$S" ".claude/settings.json"
+check_effective "$TARGET/.claude/settings.local.json" ".claude/settings.local.json"
+UC="${CLAUDE_CONFIG_DIR:-${HOME:-}/.claude}/settings.json"
+check_effective "$UC" "$UC (tu configuración de usuario de Claude Code)"
 
 # ── 4. La Esclusa: core.hooksPath, o encadenada en los git hooks que ya hay ──────────────
 # abs_dir <dir> → <dir> absoluto; uno relativo se resuelve, como hace git, desde la raíz del repo
@@ -503,5 +503,6 @@ if [ "$pending" -eq 1 ]; then
   echo "Nivel Guardia instalado con pasos pendientes (⚠ arriba). Vuelve a ejecutar setup al resolverlos."
   exit 3
 fi
-echo "✓ Nivel Guardia instalado. Versiónalo en un commit: git add sentinel .claude .gitignore"
+echo "✓ Nivel Guardia instalado. Revisa git status y versiónalo en un commit: git add sentinel .claude .gitignore"
+echo "  Comprueba en una sesión nueva de Claude Code, abierta en la raíz del repo, que /hooks muestra sentinel-guard."
 exit 0

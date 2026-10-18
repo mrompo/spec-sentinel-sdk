@@ -42,20 +42,23 @@ rules:
     # su librería y el lector del adaptador (SC-git-gates-15); su README y el stack.yaml del
     # consumidor siguen siendo editables. Las dos políticas, la distribuida y la del consumidor.
     # Segunda revisión de git-gates (SC-sentinel-guard-13): el fragmento de cableado que la
-    # persona copia a mano sin jq, y los hooks donde queda encadenada la Esclusa (husky y
-    # .git/hooks). El instalador tiene sus propias reglas (protect-installer, install-needs-human).
+    # persona copia a mano, y los hooks donde queda encadenada la Esclusa (husky y .git/hooks).
+    # Cuarta revisión: la configuración de git donde vive core.hooksPath, la del repo (también
+    # de un worktree o un submódulo) y la global; desde un comando ya la cubre no-hook-disabling.
+    # El instalador tiene sus propias reglas (protect-installer, install-needs-human).
     # AGENTS.md no va aquí: en un consumidor es suyo; el SDK lo protege en su propia policy.yaml.
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.claude/settings)
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.git/(worktrees/[^/]+/|modules/.+/)?config|\.gitconfig|\.config/git/config|\.claude/settings)
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
 
   # El instalador es lo que ejecuta la aprobación humana de instalar: con las herramientas de
-  # edición no se toca (SC-sentinel-guard-13). Sin ancla y sin «ai-specs/»: cubre la copia del SDK a
-  # la que apunta el consumidor y el enlace de la skill que recomienda la guía
-  # (~/.claude/skills/setup). Desde la shell lo decide una persona (install-needs-human).
+  # edición no se toca (SC-sentinel-guard-13). Por sus dos rutas: la copia del SDK a la que
+  # apunta el consumidor (…/ai-specs/skills/setup/) y el enlace de la skill que propone la guía
+  # (~/.claude/skills/spec-sentinel-setup/). Una skill «setup» propia del consumidor no es el
+  # instalador. Desde la shell lo decide una persona (install-needs-human).
   - id: protect-installer
     tool: Edit|Write|MultiEdit|NotebookEdit
-    path_re: skills/setup/(setup|chain)\.sh
+    path_re: (ai-specs/skills/setup|\.claude/skills/spec-sentinel-setup)/(setup|chain)\.sh
     mode: block
     reason: No se modifica el instalador del SDK — hazlo en un cambio OpenSpec revisado por un humano
 
@@ -68,12 +71,13 @@ rules:
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 
   # Ejecutar el instalador reescribe el enforcement y el cableado, y desde la shell también se
-  # podría modificar: cualquier comando que lo nombre lo aprueba una persona viendo el comando
-  # (SC-sentinel-guard-21). Leerlo con las herramientas de lectura no lo pide. Como gana la
-  # regla más estricta, esta aprobación no rebaja ningún bloqueo del mismo comando.
+  # podría modificar: cualquier comando que lo nombre, por cualquiera de sus dos rutas, lo
+  # aprueba una persona viendo el comando (SC-sentinel-guard-21). Leerlo con las herramientas de
+  # lectura no lo pide. Como gana la regla más estricta, esta aprobación no rebaja ningún bloqueo
+  # del mismo comando.
   - id: install-needs-human
     tool: Bash
-    command_re: skills/setup/(setup|chain)\.sh
+    command_re: (ai-specs/skills/setup|\.claude/skills/spec-sentinel-setup)/(setup|chain)\.sh
     mode: confirm
     reason: El comando ejecuta o toca el instalador del SDK, que reescribe el enforcement y el cableado — lo aprueba una persona
 

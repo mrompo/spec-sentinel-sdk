@@ -186,10 +186,10 @@
 - [x] U2. El banco en rojo: sin jq, JSON no válido, fusión fuera de `.hooks`, `env.SENTINEL_*`,
        `disableAllHooks` de usuario y no booleano, `.gitignore`, `.git/config` y el nombre del
        enlace
-- [ ] U3. 👤 `setup.sh` con jq obligatorio, sin lector awk, eventos sacados del fragmento y
+- [x] U3. 👤 `setup.sh` con jq obligatorio, sin lector awk, eventos sacados del fragmento y
        mensajes que distinguen «no es JSON válido» de «falta el cableado» (defectos 1, 2, 3, 4;
        A4-3 = P4-4, V4-3, P4-6) (**fichero protegido**, con llave)
-- [ ] U4. 👤 La política protege `.git/config` y ancla el instalador a sus dos rutas (V4-4, A4-7)
+- [x] U4. 👤 La política protege `.git/config` y ancla el instalador a sus dos rutas (V4-4, A4-7)
        (**fichero protegido**, con llave)
 - [ ] U5. Textos: jq obligatorio, `ln -sn` con nombre propio, `git status` antes del commit,
        comprobar con `/hooks` y abrir Claude Code en la raíz del repo; límites nuevos (jq de
