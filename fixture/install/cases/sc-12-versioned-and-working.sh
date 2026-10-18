@@ -70,9 +70,17 @@ done_e() { rm -f "$gx" "$gcfg"; }
 run_setup GIT_CONFIG_GLOBAL="$gcfg"
 assert_exit 3 || { done_e; fail_case "con .claude/ ignorado desde fuera del repo debería terminar con 3"; }
 assert_out_contains "!.claude/" || { done_e; fail_case "la excepción debería reincluir la carpeta (!.claude/)"; }
-printf '!.claude/\n.claude/*\n!.claude/settings.json\n' >>"$WS/.gitignore"
+assert_out_lacks ".claude/*" || { done_e; fail_case "la excepción no debería volver a ignorar el resto de .claude/ (P5-4)"; }
+# Lo que hace la persona: añadir las líneas que propone setup
+printf '%s\n' "$RH_ERR" | sed -n 's/^[[:space:]]*\(!\.claude\/.*\)$/\1/p' >>"$WS/.gitignore"
 run_setup GIT_CONFIG_GLOBAL="$gcfg"
 assert_exit 0 || { done_e; fail_case "con la excepción propuesta debería terminar con 0: $RH_ERR"; }
+# Lo que el equipo comparte en .claude/ se puede versionar; lo personal, no
+mkdir -p "$WS/.claude/commands"; : >"$WS/.claude/commands/deploy.md"; : >"$WS/.claude/settings.local.json"
+GIT_CONFIG_GLOBAL="$gcfg" git -C "$WS" check-ignore -q .claude/commands/deploy.md \
+  && { done_e; fail_case "con la excepción propuesta, .claude/commands/ sigue ignorado (P5-4)"; }
+GIT_CONFIG_GLOBAL="$gcfg" git -C "$WS" check-ignore -q .claude/settings.local.json \
+  || { done_e; fail_case "con la excepción propuesta, .claude/settings.local.json deja de estar ignorado"; }
 done_e
 cleanup_git_workspace
 

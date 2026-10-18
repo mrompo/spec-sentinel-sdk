@@ -48,6 +48,23 @@ un número sin decimales tras el punto|{"hooks":@H@,"x":5.}
 una marca BOM|\xef\xbb\xbf{"hooks":@H@}
 EOF
 
+# Bytes NUL al final y un byte de control dentro de una cadena: algunos jq los aceptan y
+# JSON.parse no (A5-2, V5-8). Y el pendiente dice la línea de lo que jq acepta y JSON no (A5-6)
+mk_git_workspace
+S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
+printf '{"hooks":%s}\n' "$H" >"$S"; printf '\000\000\000' >>"$S"
+run_setup
+assert_exit 3 || fail_case "con bytes NUL al final debería terminar con 3: $RH_ERR"
+assert_out_contains "no es JSON válido" || fail_case "con bytes NUL, la salida debería decir que no es JSON válido"
+printf '{"hooks":%s,"model":"x\037y"}\n' "$H" >"$S"
+run_setup
+assert_exit 3 || fail_case "con un byte de control en una cadena debería terminar con 3: $RH_ERR"
+printf '{"hooks":%s,\n"x":\nNaN}\n' "$H" >"$S"
+run_setup
+assert_exit 3 || fail_case "con un NaN en la línea 3 debería terminar con 3: $RH_ERR"
+assert_out_contains "línea 3" || fail_case "con un NaN, la salida debería decir en qué línea"
+cleanup_git_workspace
+
 # Una clave repetida es JSON válido: vale la última, como en Claude Code. Con el cableado en la
 # última, está cableado; con él en la primera, no (se fusiona y lo de la última se conserva)
 mk_git_workspace

@@ -9,6 +9,10 @@ SETUP="$REPO_ROOT/ai-specs/skills/setup/setup.sh"
 # setup también mira la configuración de usuario de Claude Code (SC-sdk-setup-14): el banco no
 # lee la de quien lo ejecuta. Un caso la fija con CLAUDE_CONFIG_DIR=… en run_setup
 export CLAUDE_CONFIG_DIR=/nonexistent/claude-user-config
+# Ni la configuración gestionada de la máquina ni su CLI de OpenSpec: un caso los fija con
+# SENTINEL_SETUP_MANAGED=… o SENTINEL_OPENSPEC_BIN=… en run_setup
+export SENTINEL_SETUP_MANAGED=/nonexistent/managed-settings.json
+export SENTINEL_OPENSPEC_BIN=/nonexistent/openspec
 # setup exige jq (SC-sdk-setup-04): el banco también, para preparar y comprobar los casos
 command -v jq >/dev/null 2>&1 || { echo "    el banco de instalación necesita jq" >&2; exit 1; }
 

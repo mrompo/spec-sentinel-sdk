@@ -90,12 +90,20 @@ assert_exit 3 || fail_case "con disableAllHooks: true en settings.local.json deb
 assert_out_contains "settings.local.json" || fail_case "la salida debería nombrar settings.local.json"
 cleanup_git_workspace
 
-# SC-sdk-setup-09: una forma que no se puede fusionar con seguridad → fragmento y pendiente, no error
+# SC-sdk-setup-09: una forma que no se puede fusionar con seguridad → pendiente que nombra el
+# evento, no error; corregida la forma, se fusiona (seguir el pendiente no lleva a un bucle, P5-3)
 mk_git_workspace
 S="$WS/.claude/settings.json"; mkdir -p "$WS/.claude"
-printf '{"hooks":{"PreToolUse":["x"]}}\n' >"$S"; orig="$(cat "$S")"
+printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo fin"}]}],"PreToolUse":["x"]}}\n' >"$S"; orig="$(cat "$S")"
 run_setup
 assert_exit 3 || fail_case "una forma inesperada de settings.json debería terminar con 3, no con error"
 [ "$(cat "$S")" = "$orig" ] || fail_case "una forma inesperada de settings.json no se toca"
-[ -f "$WS/sentinel/settings.fragment.json" ] || fail_case "debería dejarse el fragmento"
+assert_out_contains "PreToolUse" || fail_case "el pendiente debería nombrar el evento con la forma inesperada"
+assert_out_lacks "Stop»" || fail_case "el pendiente no debería nombrar un evento con la forma correcta"
+assert_out_lacks "añade a mano" || fail_case "el pendiente no debería proponer añadir los grupos a mano"
+printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo fin"}]}],"PreToolUse":[]}}\n' >"$S"
+run_setup
+assert_exit 0 || fail_case "con la forma corregida, setup debería fusionar y terminar con 0: $RH_ERR"
+[ "$(settings_count "$S" sentinel-guard)" -eq 1 ] || fail_case "con la forma corregida, el Centinela debería quedar cableado"
+[ "$(settings_count "$S" "echo fin")" -eq 1 ] || fail_case "se perdió el hook propio del consumidor"
 cleanup_git_workspace

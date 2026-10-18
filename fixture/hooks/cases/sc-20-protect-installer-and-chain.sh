@@ -17,7 +17,7 @@ for f in ai-specs/skills/setup/setup.sh ai-specs/skills/setup/chain.sh \
          .husky/commit-msg .husky/pre-commit .husky/pre-push .git/hooks/pre-commit \
          .git/config /Users/me/app/.git/config .git/config.worktree \
          /Users/me/sdk/.git/worktrees/opah/config /Users/me/app/.git/modules/lib/config \
-         /Users/me/.gitconfig /Users/me/.config/git/config; do
+         /Users/me/.gitconfig /Users/me/.config/git/config /Users/me/.jq; do
   guard "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$f\",\"content\":\"x\"}}"
   assert_exit 2 || fail_case "escribir $f debería bloquearse"
   guard "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$f\",\"old_string\":\"a\",\"new_string\":\"b\"}}"
@@ -27,7 +27,8 @@ for f in ai-specs/skills/setup/setup.sh ai-specs/skills/setup/chain.sh \
 done
 
 for f in .husky/post-merge ai-specs/skills/setup/SKILL.md \
-         .claude/skills/setup/setup.sh /Users/me/.claude/skills/setup/setup.sh; do
+         .claude/skills/setup/setup.sh /Users/me/.claude/skills/setup/setup.sh \
+         filters/report.jq /Users/me/app/.jq-cache/x; do
   guard "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$f\",\"content\":\"x\"}}"
   assert_exit 0 || fail_case "$f no está protegido: escribirlo no debería bloquearse"
 done
