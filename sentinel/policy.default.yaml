@@ -45,9 +45,11 @@ rules:
     # persona copia a mano, y los hooks donde queda encadenada la Esclusa (husky y .git/hooks).
     # Cuarta revisión: la configuración de git donde vive core.hooksPath, la del repo (también
     # de un worktree o un submódulo) y la global; desde un comando ya la cubre no-hook-disabling.
+    # Quinta revisión: la configuración de jq de la persona (~/.jq), que jq carga en cada
+    # programa; setup ya la aísla, y así tampoco la escribe el agente. Un .jq de un proyecto, no.
     # El instalador tiene sus propias reglas (protect-installer, install-needs-human).
     # AGENTS.md no va aquí: en un consumidor es suyo; el SDK lo protege en su propia policy.yaml.
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.git/(worktrees/[^/]+/|modules/.+/)?config|\.gitconfig|\.config/git/config|\.claude/settings)
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.git/(worktrees/[^/]+/|modules/.+/)?config|\.gitconfig|\.config/git/config|(^|/)\.jq([^[:alnum:]._-]|$)|\.claude/settings)
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
 

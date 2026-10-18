@@ -208,9 +208,9 @@
        `settings.local.json` comprobado con git; configuración gestionada y `BASH_ENV` en `env`;
        finales de línea LF; aviso de `sdd: true`
 - [x] W2. El banco en rojo, también el caso del escape con un escape de verdad
-- [ ] W3. 👤 `setup.sh` (defectos 1, 2 y 5 y los menores del instalador) (**fichero
+- [x] W3. 👤 `setup.sh` (defectos 1, 2 y 5 y los menores del instalador) (**fichero
        protegido**, con llave)
-- [ ] W4. 👤 La política protege `~/.jq` (**fichero protegido**, con llave) y el SDK trae su
+- [x] W4. 👤 La política protege `~/.jq` (**fichero protegido**, con llave) y el SDK trae su
        `.gitattributes`
 - [ ] W5. Textos: guía (Git for Windows, ruta absoluta del enlace, aprobación en la primera
        instalación, `sdd: true`, `.gitattributes` en el commit), skill y límites (configuración
