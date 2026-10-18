@@ -22,15 +22,14 @@ invocación: copia del enforcement, `core.hooksPath`, cableado del Centinela en
 - **WHEN** se ejecuta `setup` dos veces seguidas en el mismo repo
 - **THEN** la segunda ejecución no modifica ningún fichero ni duplica entradas en
   `.claude/settings.json`
-- **AND** también sin `jq`: si `.claude/settings.json` ya tiene el cableado del SDK, no se
-  escribe el fragmento ni queda nada pendiente
 
 ### Requirement: La configuración del consumidor no se pisa
 
-`setup` SHALL preservar la configuración existente del consumidor. Para fusionar
-`.claude/settings.json` SHALL usar `jq` si está instalado; si no lo está, o si la fusión no es
-segura, SHALL dejar `sentinel/settings.fragment.json` con la instrucción manual y no
-sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero existente.
+`setup` SHALL preservar la configuración existente del consumidor. SHALL exigir `jq` (como la
+Esclusa exige gitleaks) y leer, fusionar y comprobar con él `.claude/settings.json`, con la
+semántica con que lo carga Claude Code. Si la fusión no es segura, SHALL dejar
+`sentinel/settings.fragment.json` con la instrucción manual y no sobrescribir nada. Siempre
+SHALL crear un backup antes de tocar un fichero existente.
 
 #### Scenario: Repo con configuración previa (SC-sdk-setup-03)
 
@@ -40,9 +39,9 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
 
 #### Scenario: Sin jq (SC-sdk-setup-04)
 
-- **WHEN** se instala en un repo con `.claude/settings.json` previo y `jq` no está instalado
-- **THEN** el fichero queda intacto, se escribe `sentinel/settings.fragment.json` y la salida
-  explica el paso manual
+- **WHEN** se ejecuta `setup` y no hay `jq` fuera del repo destino
+- **THEN** termina con exit 1 sin escribir nada, y la salida da la instrucción de instalación
+  de `jq`
 
 #### Scenario: Actualizar el cableado (SC-sdk-setup-09)
 
@@ -55,17 +54,40 @@ sobrescribir nada. Siempre SHALL crear un backup antes de tocar un fichero exist
 
 #### Scenario: El instalador no sirve para descablear (SC-sdk-setup-10)
 
-- **WHEN** `setup` se ejecuta con un `jq` que no produce el cableado del SDK, o con un `jq` que
-  está dentro del repo destino (por `SENTINEL_SETUP_JQ` o por el `PATH`)
+- **WHEN** `setup` se ejecuta con un `jq` que está dentro del repo destino (por
+  `SENTINEL_SETUP_JQ` o por el `PATH`), o con uno cuya fusión pierde el cableado, lo saca de su
+  evento, cambia algo fuera de `.hooks` o devuelve algo que no es JSON válido
 - **THEN** `.claude/settings.json` conserva el cableado del Centinela: el `jq` del repo se ignora
-  y un resultado sin el cableado no se escribe (queda pendiente)
-- **AND** la comprobación es de estructura, sin `jq`: cada grupo del cableado del SDK tiene que
-  estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio. La misma
-  comprobación vale sin `jq` para el cableado que la persona pega a mano
-- **AND** un `.claude/settings.json` que no es JSON estricto (una clave repetida, también al pegar
-  el fragmento a mano; escapes en las claves; algo tras el objeto) no cuenta como cableado, y con
-  `disableAllHooks: true` (en `.claude/settings.json` o en `.claude/settings.local.json`) el
-  cableado no es efectivo: queda pendiente, y una fusión no lo puede introducir
+  (se usa otro del `PATH`, si lo hay) y un resultado de la fusión que no pasa la comprobación no
+  se escribe (queda pendiente)
+- **AND** la comprobación es de estructura: cada grupo de cada evento del cableado del SDK tiene
+  que estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio
+- **AND** el fichero se lee como lo carga Claude Code (con `JSON.parse`: de una clave repetida
+  vale la última aparición). Uno que no es JSON válido no cuenta como cableado, tampoco con lo
+  que `jq` acepta y JSON no (`NaN`, `Infinity`, números como `01`, `+1`, `.5` o `5.`, una marca
+  BOM): queda pendiente, diciendo que no es JSON válido y dónde, sin proponer sustituir entradas
+- **AND** un `jq` de fuera del repo manipulado para falsear también la comprobación es el límite
+  documentado «jq manipulado», no parte de esta garantía
+
+#### Scenario: El cableado es efectivo (SC-sdk-setup-14)
+
+- **WHEN** `.claude/settings.json`, `.claude/settings.local.json` o la configuración de usuario
+  de Claude Code (`$CLAUDE_CONFIG_DIR/settings.json`, por defecto `~/.claude/settings.json`)
+  tienen `disableAllHooks` con un valor que no es `false`, o un `env` con variables `SENTINEL_*`
+- **THEN** `setup` termina con exit 3 nombrando el fichero y la clave: con `disableAllHooks`
+  Claude Code no ejecuta ningún hook (y con un valor que no es booleano puede no cargar el
+  fichero entero), y las variables `SENTINEL_*` llegan al Centinela y le cambian la política o
+  la llave
+- **AND** si alguno de esos ficheros existe y no se puede leer como JSON válido, queda pendiente
+  («no se puede comprobar»), nunca se da por bueno
+- **AND** una fusión no puede introducir ninguna de las dos claves (SC-sdk-setup-10)
+
+#### Scenario: Lo personal no se versiona (SC-sdk-setup-15)
+
+- **WHEN** se instala en un repo cuyo git no lee el ignore global donde Claude Code excluye
+  `.claude/settings.local.json` (p. ej. con un `core.excludesFile` propio)
+- **THEN** el `.gitignore` del repo excluye `.claude/settings.local.json`, además de la llave y
+  los backups, y el `git add sentinel .claude .gitignore` que propone `setup` no lo incluye
 
 #### Scenario: Actualización sin pisar la política (SC-sdk-setup-05)
 
@@ -128,6 +150,6 @@ nunca con éxito silencioso.
 
 #### Scenario: Desde la skill expuesta con un enlace (SC-sdk-setup-13)
 
-- **WHEN** se ejecuta `setup.sh` a través de un enlace simbólico a la carpeta de la skill (p. ej.
-  `~/.claude/skills/setup`)
+- **WHEN** se ejecuta `setup.sh` a través de un enlace simbólico a la carpeta de la skill (el que
+  propone la guía, `~/.claude/skills/spec-sentinel-setup`)
 - **THEN** encuentra el SDK real e instala igual que ejecutado desde el SDK

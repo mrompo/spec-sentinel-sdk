@@ -55,19 +55,22 @@ declara, de la distribuida.
 
 La política SHALL bloquear toda modificación o borrado del propio enforcement (hooks, las dos
 políticas, log de overrides, cableado de la herramienta) y todo intento de desactivar los gates
-(`--no-verify`, `core.hooksPath`, cualquier variable `SENTINEL_*` fijada desde un comando).
+(`--no-verify`, `core.hooksPath` desde un comando o editando la configuración de git, cualquier
+variable `SENTINEL_*` fijada desde un comando).
 Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforcement y el cableado.
 
 #### Scenario: Desarmar el guard — bloqueado (SC-sentinel-guard-13)
 
 - **WHEN** el agente intenta escribir o borrar `sentinel/hooks/*`, `sentinel/policy.yaml`,
   `sentinel/policy.default.yaml`, `sentinel/overrides.log`, `.claude/settings.json`, el
-  instalador con las herramientas de edición (`ai-specs/skills/setup/setup.sh` y `chain.sh`;
-  desde la shell pide aprobación, SC-sentinel-guard-21), el fragmento de cableado
-  (`sentinel/settings.fragment.json`) o los hooks donde queda encadenada la Esclusa
-  (`.husky/<hook>`, `.git/hooks/`), ejecutar `git commit --no-verify`, tocar `core.hooksPath` o
-  fijar una variable `SENTINEL_*` en un comando (p. ej. `SENTINEL_POLICY_DEFAULT=` o
-  `SENTINEL_SETUP_JQ=`)
+  instalador con las herramientas de edición (`ai-specs/skills/setup/setup.sh` y `chain.sh`,
+  también por el enlace de la skill, `~/.claude/skills/spec-sentinel-setup/`; desde la shell
+  pide aprobación, SC-sentinel-guard-21), el fragmento de cableado
+  (`sentinel/settings.fragment.json`), los hooks donde queda encadenada la Esclusa
+  (`.husky/<hook>`, `.git/hooks/`) o la configuración de git donde vive `core.hooksPath`
+  (`.git/config`, la de un worktree o un submódulo, `~/.gitconfig`, `~/.config/git/config`),
+  ejecutar `git commit --no-verify`, tocar `core.hooksPath` desde un comando o fijar una
+  variable `SENTINEL_*` en un comando (p. ej. `SENTINEL_POLICY_DEFAULT=` o `SENTINEL_SETUP_JQ=`)
 - **THEN** el hook deniega la acción
 - **AND** otras grafías de esas asignaciones y de `core.hooksPath` son el límite documentado
   «regex evadibles» (decisión de la persona del 2026-10-16), no parte de esta garantía
@@ -76,8 +79,8 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 
 - **WHEN** el agente ejecuta el instalador (`ai-specs/skills/setup/setup.sh`, con `bash` o
   directamente, también por la ruta del enlace de la skill que recomienda la guía,
-  `~/.claude/skills/setup/`) o cualquier comando de shell que nombre el instalador (`setup.sh` o
-  `chain.sh`)
+  `~/.claude/skills/spec-sentinel-setup/`) o cualquier comando de shell que nombre el instalador
+  (`setup.sh` o `chain.sh` en esas dos rutas)
 - **THEN** el hook pide aprobación humana (`confirm`): la persona ve el comando antes de que se
   ejecute. Leerlo con las herramientas de lectura no la pide; escribirlo con las de edición se
   bloquea (SC-sentinel-guard-13)
@@ -86,6 +89,9 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
 - **AND** la regla reconoce las formas habituales de lanzarlo; las rebuscadas son el límite
   documentado «regex evadibles» (la protección la dan la comprobación del cableado y que el
   instalador esté protegido)
+- **AND** una skill propia del consumidor que se llame `setup` (p. ej.
+  `.claude/skills/setup/setup.sh`) no es el instalador del SDK: se edita y se ejecuta sin
+  aprobación
 
 ### Requirement: Hooks auxiliares
 

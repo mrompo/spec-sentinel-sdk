@@ -179,7 +179,7 @@
 
 ### Ronda 5 de `apply`, tras el cuarto `HOLD` (disposición del 2026-10-18: exigir jq; bloqueante, graves y menores baratos)
 
-- [ ] U1. La spec dice lo decidido: `setup` exige jq y lee con la semántica de `JSON.parse`; la
+- [x] U1. La spec dice lo decidido: `setup` exige jq y lee con la semántica de `JSON.parse`; la
        fusión no cambia nada fuera de `.hooks`; un `env` con `SENTINEL_*` o un `disableAllHooks`
        que no sea `false` (proyecto, local o usuario) → pendiente; `.claude/settings.local.json`
        al `.gitignore`; `.git/config` protegido; nombre propio del enlace de la skill
