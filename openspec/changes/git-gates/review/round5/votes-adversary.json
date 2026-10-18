@@ -1,0 +1,21 @@
+{"lens":"adversary","votes":[
+{"id":"A5-1","agree":true,"severity":"major","note":"Real según el código (líneas 60-73): solo se mira la carpeta del destino final, así que un bin/jq del repo que enlaza a un jq escrito en /tmp entra por el PATH. Es justo la vía de entrada que SC-10 quiere cerrar, no solo «jq manipulado»; complementa mi V5-3."},
+{"id":"A5-2","agree":true,"severity":"minor","note":"La misma clase que mi V5-8 (jq y JSON_LEX aceptan algo que JSON.parse rechaza); el agente no escribe settings.json salvo por V5-1 o V5-2, y por esas le basta con quitar el cableado."},
+{"id":"A5-3","agree":true,"severity":"minor","note":"Mismo defecto que mi V5-4 y V5-2: la protección depende del nombre «.git»; la disposición con .bare es poco habitual."},
+{"id":"A5-4","agree":true,"severity":"nit","note":"Real como discrepancia entre spec, código y banco, pero falla en el lado seguro (exit 1): no abre ninguna vía."},
+{"id":"A5-5","agree":true,"severity":"minor","note":"= P5-8. El agente no puede escribir la configuración gestionada (hace falta root); setup dice ✓ solo con una configuración de la organización, y /hooks lo delata."},
+{"id":"A5-6","agree":true,"severity":"nit","note":"Solo afecta al mensaje; el fichero ya queda pendiente."},
+{"id":"A5-7","agree":true,"severity":"minor","note":"= P5-5, y la misma familia que mi V5-5 (SC-15 se comprueba por texto, no con git); no apaga ningún gate."},
+{"id":"A5-prev-A4-5","agree":true,"severity":"minor","note":"Comprobado: las líneas 33-34 de sc-14 no llevan escape. Corrijo mi veredicto anterior (A4-5 resuelto): el código está bien, pero la regla no se falsifica. = P5-prev-A4-5."},
+{"id":"P5-1","agree":true,"severity":"major","note":"Real y muy probable con Git for Windows, pero todo falla cerrado (guard en exit 2, commits rechazados, setup sin escribir): no abre ninguna vía, aunque empuja a la persona a saltarse los gates. Lo bajo de bloqueante mientras el soporte de Windows siga sin decidirse."},
+{"id":"P5-2","agree":true,"severity":"minor","note":"De uso: bloquea de más, no de menos. El riesgo indirecto es que la persona desactive la Esclusa para poder publicar."},
+{"id":"P5-3","agree":true,"severity":"minor","note":"El bucle es real. Cerrar con 0 cuando SAFE falla solo es seguro si está comprobado que Claude Code ignora solo esa entrada y carga el resto del fichero; si no, el exit 3 actual es lo correcto."},
+{"id":"P5-4","agree":true,"severity":"minor","note":"Real y de uso del equipo; no afecta a los gates."},
+{"id":"P5-5","agree":true,"severity":"minor","note":"= A5-7; familia de mi V5-5."},
+{"id":"P5-6","agree":true,"severity":"minor","note":"Falsos positivos reales. Al anclar, que el patrón siga cubriendo config.worktree y que el final no abra «.git/config;» o «>.git/config&&»: usar ([^[:alnum:]._-]|$)."},
+{"id":"P5-7","agree":true,"severity":"minor","note":"Simulado: con CRLF, true también queda pendiente y las claves SENTINEL_* siguen detectándose, así que falla en el lado seguro; es un bucle de uso."},
+{"id":"P5-8","agree":true,"severity":"minor","note":"= A5-5."},
+{"id":"P5-9","agree":true,"severity":"nit","note":"Real; el enlace roto solo impide que la skill aparezca, no abre nada."},
+{"id":"P5-10","agree":true,"severity":"nit","note":"Real: en la primera instalación no hay Centinela que pida aprobación; es un texto."},
+{"id":"P5-prev-A4-5","agree":true,"severity":"minor","note":"= A5-prev-A4-5; comprobado en las líneas 33-34 de sc-14."}
+]}

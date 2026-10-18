@@ -197,7 +197,8 @@
        fuera del repo, subdirectorio, esquema de Claude Code) (A4-6, V4-5, P4-5, V4-3) — la
        skill y la tabla de límites van en `383ea90`
 - [x] U6. La deuda de la cuarta revisión registrada en `STATUS.md`
-- [ ] U7. Relanzar el panel → **Veredicto**
+- [x] U7. Relanzar el panel → **Veredicto** `HOLD`: jq carga `~/.jq`, más cuatro graves
+       ([`review/round5/`](review/round5/README.md))
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 

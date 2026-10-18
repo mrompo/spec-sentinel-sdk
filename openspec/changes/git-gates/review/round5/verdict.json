@@ -1,0 +1,347 @@
+{
+  "verdict": "HOLD",
+  "counts": {
+    "blocker": {
+      "total": 1,
+      "validated": 1
+    },
+    "major": {
+      "total": 4,
+      "validated": 4
+    },
+    "minor": {
+      "total": 17,
+      "validated": 17
+    },
+    "nit": {
+      "total": 5,
+      "validated": 5
+    }
+  },
+  "findings": [
+    {
+      "id": "V5-3",
+      "lens": "adversary",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 58,
+      "title": "jq carga ~/.jq en cada programa: el agente lo escribe (el guard lo deja pasar) y setup, con el jq legítimo del sistema, quita el cableado y dice «✓ Nivel Guardia instalado» (exit 0)"
+    },
+    {
+      "id": "A5-1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 63,
+      "title": "Regresión: un jq del repo que es un enlace a un binario de fuera se usa, porque solo se mira el último destino del enlace y no la ruta por la que se encontró (SC-sdk-setup-10)"
+    },
+    {
+      "id": "P5-1",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 23,
+      "title": "Sin .gitattributes, un clon con Git for Windows por defecto (core.autocrlf=true) tiene CRLF: setup.sh no arranca, y en el clon de un compañero el Centinela deniega todo y la Esclusa rechaza todos los commits"
+    },
+    {
+      "id": "V5-1",
+      "lens": "adversary",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 50,
+      "title": "self-protection protege los ficheros de sentinel/hooks/, sentinel/githooks/ y .claude/, pero no sus carpetas: moverlas o borrarlas pasa sin bloqueo ni aprobación y apaga el Centinela o la Esclusa"
+    },
+    {
+      "id": "V5-2",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 78,
+      "title": "El guard normaliza ./ y ../ pero no resuelve enlaces: con un enlace a .claude, sentinel o .git, Edit y Write tocan los ficheros protegidos (también .git/config, lo que reabre V4-4)"
+    },
+    {
+      "id": "A5-2",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 222,
+      "title": "json_ok da por válido un fichero con bytes NUL (al final, con cualquier jq en macOS; dentro de una cadena, con jq 1.6) que JSON.parse rechaza"
+    },
+    {
+      "id": "A5-3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 50,
+      "title": "La protección de la configuración de git depende de que la carpeta se llame .git: en la disposición «repo bare + worktrees» (.bare/config) el agente edita core.hooksPath con Edit o Write"
+    },
+    {
+      "id": "A5-5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 304,
+      "title": "La comprobación de que el cableado es efectivo no mira la configuración gestionada: allowManagedHooksOnly o disableAllHooks en managed-settings.json dejan sin Centinela y setup sale con 0"
+    },
+    {
+      "id": "A5-prev-A4-5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/install/cases/sc-14-effective-wiring.sh",
+      "line": 35,
+      "title": "Los casos del banco «escrita con un escape» no tienen ningún escape: la lectura de claves escritas con \\u sigue sin falsificarse"
+    },
+    {
+      "id": "P5-2",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 136,
+      "title": "En un repo con openspec/, setup pone sdd: true (nivel Método) sin comprobar nada y termina con ✓; el primer push, el de la propia instalación, se rechaza por openspec validate --strict"
+    },
+    {
+      "id": "P5-3",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 262,
+      "title": "Con una forma inesperada en «hooks», la vía «o añade a mano los grupos» del pendiente (la única que da la guía) lleva a un bucle: setup sigue en exit 3 aunque el cableado ya esté"
+    },
+    {
+      "id": "P5-4",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 440,
+      "title": "La excepción propuesta para .claude/ («!.claude/», «.claude/*», «!.claude/settings.json») hace que nadie del equipo pueda versionar comandos, agentes o skills nuevos de .claude/"
+    },
+    {
+      "id": "P5-5",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 156,
+      "title": "Si .claude/settings.local.json ya está versionado, setup lo añade al .gitignore, dice ✓ y el git add de la guía sigue metiendo sus cambios personales"
+    },
+    {
+      "id": "P5-6",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 50,
+      "title": "La regla nueva de self-protection sobre la configuración de git no está anclada: bloquea cualquier ruta o comando con «.gitconfig», «.config/git/config» o «.git/config», también de solo lectura, y el consumidor no la puede relajar"
+    },
+    {
+      "id": "P5-7",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 292,
+      "title": "Con el jq.exe nativo de Windows, que escribe CRLF, un «\"disableAllHooks\": false» da exit 3 «no es un booleano… ponlo a false»: la propia instrucción lleva al bucle"
+    },
+    {
+      "id": "P5-8",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 306,
+      "title": "No se miran los settings gestionados (managed-settings.json): con disableAllHooks o allowManagedHooksOnly ahí, Claude Code no ejecuta los hooks del proyecto y setup termina con 0"
+    },
+    {
+      "id": "P5-prev-A4-5",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/install/cases/sc-14-effective-wiring.sh",
+      "line": 35,
+      "title": "Los dos casos «escrita con un escape» del banco no llevan ningún escape: son idénticos a los casos simples y la regla sigue sin falsificarse"
+    },
+    {
+      "id": "V5-4",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "sentinel/policy.default.yaml",
+      "line": 69,
+      "title": "core.hooksPath se cambia desde un comando sin nombrarlo ni nombrar .git/config: git config --remove-section core, o include.path / includeIf.path hacia un fichero que el agente escribe con Write"
+    },
+    {
+      "id": "V5-5",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 157,
+      "title": "SC-15 se comprueba con grep de la línea y no con git check-ignore: una negación posterior en .gitignore, que el agente puede escribir, deja .claude/settings.local.json fuera del ignore y setup sale con 0"
+    },
+    {
+      "id": "V5-6",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 300,
+      "title": "check_effective solo mira las variables SENTINEL_* de env, pero BASH_ENV (y quizá PATH o CLAUDE_PROJECT_DIR) también llegan al proceso del hook y lo anulan"
+    },
+    {
+      "id": "V5-7",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 50,
+      "title": "La configuración de usuario de Claude Code solo está protegida en su ruta por defecto: con CLAUDE_CONFIG_DIR en otra ruta, el agente puede escribir disableAllHooks en ella"
+    },
+    {
+      "id": "V5-8",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 201,
+      "title": "Con jq 1.6 (el de Debian 12), un U+001F crudo dentro de una cadena pasa jq y JSON_LEX, que ignora el contenido de las cadenas: setup da «ya cableado» y JSON.parse descarta el fichero"
+    },
+    {
+      "id": "A5-4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 59,
+      "title": "Con SENTINEL_SETUP_JQ dentro del repo no se usa el jq del PATH, al contrario de lo que dice SC-sdk-setup-10, y el error pide instalar jq aunque esté instalado"
+    },
+    {
+      "id": "A5-6",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 223,
+      "title": "Para lo que acepta jq y JSON no (NaN, 01, BOM) el pendiente no dice dónde falla, y SC-sdk-setup-10 pide «diciendo que no es JSON válido y dónde»"
+    },
+    {
+      "id": "A5-7",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 506,
+      "title": "Si .claude/settings.local.json ya está versionado, la línea del .gitignore no lo saca del commit y el «git add sentinel .claude .gitignore» que propone setup mete sus cambios personales"
+    },
+    {
+      "id": "P5-10",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 138,
+      "title": "«Antes, el Centinela te pedirá aprobación» no se cumple en la primera instalación: en el repo aún no hay Centinela"
+    },
+    {
+      "id": "P5-9",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 135,
+      "title": "El ln -sfn de la guía con una <ruta-al-sdk> relativa crea un enlace roto sin error"
+    }
+  ]
+}
