@@ -25,6 +25,13 @@ assert_exit 0 || fail_case "a través del enlace a la skill, setup debería inst
 [ -f "$WS/sentinel/hooks/sentinel-guard.sh" ] || fail_case "a través del enlace no se instaló el enforcement"
 [ "$(git_in_ws config --get core.hooksPath)" = "sentinel/githooks" ] || fail_case "a través del enlace no se activó la Esclusa"
 
+# Una copia de la carpeta de la skill (lo que hace ln -s en Git Bash sin enlaces nativos) no
+# encuentra el SDK: setup lo dice y sugiere enlazarla (P6-5)
+cp -R "$REPO_ROOT/ai-specs/skills/setup" "$home/copia"
+_capture env "$(gl_ok)" bash "$home/copia/setup.sh" "$WS"
+assert_exit 1 || fail_case "desde una copia de la skill debería terminar con 1: $RH_ERR"
+assert_out_contains "enlaz" || fail_case "desde una copia de la skill, la salida debería sugerir enlazarla"
+
 # El nombre de la skill es el del enlace
 grep -qx "name: spec-sentinel-setup" "$REPO_ROOT/ai-specs/skills/setup/SKILL.md" \
   || fail_case "la skill debería llamarse como su enlace (name: spec-sentinel-setup)"

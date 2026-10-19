@@ -22,6 +22,7 @@ case_in() {
     managed) f="$WS.cc/managed-settings.json" ;;
     *) f="$WS/$where" ;;
   esac
+  body="${body//@WS@/$WS}"
   printf '%s\n' "$body" >"$f"
   case "$body" in *"${bs}u"*) grep -qF "${bs}u" "$f" || fail_case "el caso «$what» no lleva el escape en el fichero" ;; esac
   run_setup CLAUDE_CONFIG_DIR="$WS.cc" SENTINEL_SETUP_MANAGED="$WS.cc/managed-settings.json"
@@ -43,14 +44,35 @@ case_in .claude/settings.local.json '{"disableAllHooks": false, "disableAllHooks
 case_in .claude/settings.local.json '{"disableAllHooks": true, "disableAllHooks": false}' 0 "" "disableAllHooks repetida, la última false"
 case_in .claude/settings.local.json "{\"disable${bs}u0041llHooks\": true}" 3 disableAllHooks "disableAllHooks escrita con un escape"
 case_in .claude/settings.local.json "{\"env\": {\"SENTINEL_${bs}u004fVERRIDE\": \"x\"}}" 3 SENTINEL_OVERRIDE "SENTINEL_OVERRIDE escrita con un escape"
-# Variables que cambian cómo arranca bash o dónde busca el Centinela su política (V5-6)
-for var in BASH_ENV ENV SHELLOPTS BASHOPTS CLAUDE_PROJECT_DIR; do
+# Variables que cambian cómo arranca bash, qué ejecuta, la configuración de git o dónde busca el
+# Centinela su política (V5-6, A6-prev-V5-6)
+for var in BASH_ENV SHELLOPTS BASHOPTS CLAUDE_PROJECT_DIR GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS \
+           GIT_CONFIG_GLOBAL GIT_DIR GIT_WORK_TREE GIT_EXEC_PATH LD_PRELOAD LD_LIBRARY_PATH \
+           DYLD_INSERT_LIBRARIES 'BASH_FUNC_grep%%'; do
   case_in .claude/settings.local.json "{\"env\": {\"$var\": \"x\"}}" 3 "$var" "un env con $var"
 done
+# PATH: con una entrada relativa o dentro del repo, sí; con rutas absolutas de fuera, no
+case_in .claude/settings.local.json '{"env": {"PATH": "./bin:/usr/bin:/bin"}}' 3 PATH "un PATH con una entrada relativa"
+case_in .claude/settings.local.json '{"env": {"PATH": "@WS@/.tools:/usr/bin:/bin"}}' 3 PATH "un PATH con una entrada del repo"
+case_in .claude/settings.local.json '{"env": {"PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"}}' 0 "" "un PATH con rutas absolutas de fuera"
+# ENV no lo lee un bash no interactivo y es un nombre habitual de variable de aplicación (P6-8)
+case_in .claude/settings.local.json '{"env": {"ENV": "staging"}}' 0 "" "un env con ENV"
 # La configuración gestionada de la organización (A5-5 = P5-8)
 case_in managed '{"allowManagedHooksOnly": true}' 3 allowManagedHooksOnly "allowManagedHooksOnly en la configuración gestionada"
 case_in managed '{"disableAllHooks": true}' 3 disableAllHooks "disableAllHooks en la configuración gestionada"
 case_in managed '{"allowManagedHooksOnly": false, "permissions": {"deny": []}}' 0 "" "una configuración gestionada que no apaga los hooks"
+# En la gestionada, los pendientes van dirigidos a quien la administra, también si no se puede
+# leer o si su env llega al Centinela (P6-6)
+case_in managed '{"env": {"BASH_ENV": "x"}}' 3 "quien administra" "un env con BASH_ENV en la configuración gestionada"
+mk_git_workspace
+mkdir -p "$WS.cc"; printf '{}\n' >"$WS.cc/managed-settings.json"; chmod 000 "$WS.cc/managed-settings.json"
+if [ ! -r "$WS.cc/managed-settings.json" ]; then
+  run_setup CLAUDE_CONFIG_DIR="$WS.cc" SENTINEL_SETUP_MANAGED="$WS.cc/managed-settings.json"
+  assert_exit 3 || fail_case "con la configuración gestionada ilegible debería terminar con 3: $RH_ERR"
+  assert_out_contains "no se puede leer" || fail_case "con la configuración gestionada ilegible, la salida debería decir que no se puede leer"
+  assert_out_contains "quien administra" || fail_case "con la configuración gestionada ilegible, el pendiente es para quien la administra"
+fi
+chmod 600 "$WS.cc/managed-settings.json"; rm -rf "$WS.cc"; cleanup_git_workspace
 # Un fichero que no se puede leer: no se puede comprobar, así que queda pendiente
 case_in .claude/settings.local.json '{"disableAllHooks": true,}' 3 "no se puede comprobar" "un settings.local.json que no es JSON válido"
 case_in user '{"disableAllHooks": NaN}' 3 "no se puede comprobar" "una configuración de usuario que no es JSON válido"

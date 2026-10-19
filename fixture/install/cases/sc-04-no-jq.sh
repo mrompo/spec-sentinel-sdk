@@ -59,6 +59,15 @@ assert_out_contains "no es JSON válido" || fail_case "con bytes NUL, la salida 
 printf '{"hooks":%s,"model":"x\037y"}\n' "$H" >"$S"
 run_setup
 assert_exit 3 || fail_case "con un byte de control en una cadena debería terminar con 3: $RH_ERR"
+# jq 1.7 o posterior ya rechaza ese byte, así que el léxico de setup (JSON_LEX) se prueba
+# directamente: con jq 1.6, que lo acepta, es lo único que lo detecta (A6-4)
+lex="$(sed -n "/^JSON_LEX='/,/^END { exit failed }'/p" "$SETUP" | sed -e "1s/^JSON_LEX='//" -e "\$s/'\$//")"
+[ -n "$lex" ] || fail_case "no se encuentra el léxico JSON_LEX en setup.sh"
+printf '{"a":"x\037y"}\n' >"$WS/ctl.json"
+out="$(LC_ALL=C awk "$lex" "$WS/ctl.json")" && fail_case "el léxico de setup acepta un byte de control dentro de una cadena"
+case "$out" in *"byte de control"*) ;; *) fail_case "el léxico debería decir que hay un byte de control (dice: $out)" ;; esac
+printf '{"a":"x\\ty","b":"\\u0001"}\n' >"$WS/ctl.json"
+LC_ALL=C awk "$lex" "$WS/ctl.json" >/dev/null || fail_case "el léxico de setup rechaza escapes válidos dentro de una cadena"
 printf '{"hooks":%s,\n"x":\nNaN}\n' "$H" >"$S"
 run_setup
 assert_exit 3 || fail_case "con un NaN en la línea 3 debería terminar con 3: $RH_ERR"

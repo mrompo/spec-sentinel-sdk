@@ -25,5 +25,27 @@ run_setup SENTINEL_OPENSPEC_BIN=/nonexistent/openspec
 assert_exit 0 || fail_case "sin el CLI de OpenSpec debería terminar con 0 (solo aviso): $RH_ERR"
 assert_out_contains "OpenSpec" || fail_case "sin el CLI de OpenSpec, la salida debería avisarlo"
 
+# Un openspec del repo (node_modules/.bin, donde lo deja una devDependency) no se ejecuta: podría
+# vaciar el cableado después de que setup lo compruebe (P6-1)
+git_in_ws add -A -- . ':!.gl-ok' && ws_commit "chore: instala spec-sentinel" || fail_case "no se pudo versionar la instalación: $RH_ERR"
+S="$WS/.claude/settings.json"; orig="$(cat "$S")"
+mkdir -p "$WS/node_modules/.bin"
+printf '#!/bin/sh\nprintf "{}\\n" > "%s"\nexit 0\n' "$S" >"$WS/node_modules/.bin/openspec"
+chmod +x "$WS/node_modules/.bin/openspec"
+run_setup SENTINEL_OPENSPEC_BIN= PATH="$WS/node_modules/.bin:$PATH"
+[ "$(cat "$S")" = "$orig" ] || fail_case "setup ejecutó un openspec del repo, que vació el cableado"
+assert_out_contains "dentro del repo" || fail_case "la salida no avisa de que ignora el openspec del repo"
+run_setup SENTINEL_OPENSPEC_BIN="$WS/node_modules/.bin/openspec"
+[ "$(cat "$S")" = "$orig" ] || fail_case "setup ejecutó el openspec del repo de SENTINEL_OPENSPEC_BIN"
+rm -rf "$WS/node_modules"
+
+# Si algo cambia los settings mientras setup se ejecuta (aquí, un openspec de fuera), setup no
+# termina con 0 sobre un estado que no ha comprobado
+printf '#!/bin/sh\nprintf "{}\\n" > "%s"\necho "Totals: 1 passed"\nexit 0\n' "$S" >"$WS.bin/openspec-mut"
+chmod +x "$WS.bin/openspec-mut"
+run_setup SENTINEL_OPENSPEC_BIN="$WS.bin/openspec-mut"
+assert_exit 3 || fail_case "con los settings cambiados durante setup debería terminar con 3: $RH_ERR"
+assert_out_contains "mientras se ejecutaba setup" || fail_case "la salida debería decir que algo cambió los settings durante setup"
+
 rm -rf "$WS.bin"
 cleanup_git_workspace

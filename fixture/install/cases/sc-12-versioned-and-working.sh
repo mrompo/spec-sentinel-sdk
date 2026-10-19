@@ -84,6 +84,19 @@ GIT_CONFIG_GLOBAL="$gcfg" git -C "$WS" check-ignore -q .claude/settings.local.js
 done_e
 cleanup_git_workspace
 
+# e2) la regla viene de un .gitignore de una subcarpeta: la excepción va en ese fichero y relativa
+#     a él, donde tiene efecto; en el de la raíz no serviría (P6-4)
+mk_git_workspace
+mkdir -p "$WS/.claude"; printf '*\n!.gitignore\n' >"$WS/.claude/.gitignore"
+run_setup
+assert_exit 3 || fail_case "con .claude/ ignorado desde .claude/.gitignore debería terminar con 3: $RH_ERR"
+assert_out_contains ".claude/.gitignore" || fail_case "el pendiente debería nombrar .claude/.gitignore como el sitio de la excepción"
+assert_out_contains "!settings.json" || fail_case "la excepción en .claude/.gitignore debería ser relativa a él (!settings.json)"
+printf '!settings.json\n' >>"$WS/.claude/.gitignore"
+run_setup
+assert_exit 0 || fail_case "con la excepción en .claude/.gitignore debería terminar con 0: $RH_ERR"
+cleanup_git_workspace
+
 # f) core.fileMode=false: git no guarda el +x y en los clones ignora los hooks (P2-7)
 mk_git_workspace
 git_in_ws config core.fileMode false

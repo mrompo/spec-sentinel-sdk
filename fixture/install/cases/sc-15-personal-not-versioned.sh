@@ -46,5 +46,23 @@ git_in_ws rm -q --cached .claude/settings.local.json
 run_setup
 assert_exit 0 || fail_case "con settings.local.json fuera del índice debería terminar con 0: $RH_ERR"
 
+# Los backups también se comprueban con git (A6-6)
+cp "$WS/.gitignore" "$WS.gi"; printf '!sentinel/.backup/\n' >>"$WS/.gitignore"
+run_setup
+assert_exit 3 || fail_case "con una negación posterior de sentinel/.backup/ debería terminar con 3: $RH_ERR"
+assert_out_contains "sentinel/.backup/" || fail_case "el pendiente debería nombrar sentinel/.backup/"
+mv "$WS.gi" "$WS/.gitignore"
+
+# Una llave que ya está al instalar deja pasar la primera acción que el Centinela bloquee: se
+# avisa, y la decide la persona (A6-3)
+printf 'una llave de antes\n' >"$WS/sentinel/.override"
+run_setup
+assert_exit 3 || fail_case "con una llave sentinel/.override ya presente debería terminar con 3: $RH_ERR"
+assert_out_contains "sentinel/.override" || fail_case "el pendiente debería nombrar la llave"
+[ -f "$WS/sentinel/.override" ] || fail_case "setup no debe gastar ni borrar la llave"
+rm -f "$WS/sentinel/.override"
+run_setup
+assert_exit 0 || fail_case "sin la llave debería terminar con 0: $RH_ERR"
+
 rm -rf "$WS.home"
 cleanup_git_workspace

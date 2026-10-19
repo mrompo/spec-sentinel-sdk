@@ -33,6 +33,18 @@ out="$(cd "$clone" && printf '{"tool_name":"Bash","tool_input":{"command":"true"
 git -C "$clone" config core.hooksPath sentinel/githooks
 out="$(cd "$clone" && env "$(gl_ok)" git commit -q --allow-empty -m "feat: prueba en el clon" 2>&1)" \
   || fail_case "en el clon con core.autocrlf=true, la Esclusa rechaza un commit conforme: $out"
+# setup en ese clon reconoce las líneas de .gitignore y .gitattributes aunque lleguen con CRLF:
+# no repite nada ni cambia nada (P6-3)
+_capture env "$(gl_ok)" bash "$sdk/ai-specs/skills/setup/setup.sh" "$clone"
+assert_exit 0 || fail_case "setup en el clon con core.autocrlf=true debería terminar con 0: $RH_ERR"
+[ -z "$(git -C "$clone" status --porcelain)" ] \
+  || fail_case "setup en el clon con core.autocrlf=true cambió ficheros: $(git -C "$clone" status --porcelain | tr '\n' ' ')"
+
+# 2b) una regla posterior del .gitattributes que anula la de sentinel/ deja pendiente (A6-4)
+printf 'sentinel/hooks/* eol=crlf\n' >>"$WS/.gitattributes"
+_capture env "$(gl_ok)" bash "$sdk/ai-specs/skills/setup/setup.sh" "$WS"
+assert_exit 3 || fail_case "con una regla posterior que anula eol=lf en sentinel/ debería terminar con 3: $RH_ERR"
+assert_out_contains "LF" || fail_case "el pendiente debería decir que sentinel/ no queda en LF"
 
 # 3) Una copia del SDK con un fichero distribuido en CRLF: setup no instala nada
 rm -rf "$clone"; cleanup_git_workspace; mk_git_workspace
@@ -43,6 +55,14 @@ _capture env "$(gl_ok)" bash "$sdk/ai-specs/skills/setup/setup.sh" "$WS"
 assert_exit 1 || fail_case "desde un SDK con un fichero en CRLF debería terminar con 1: $RH_ERR"
 assert_out_contains "CRLF" || fail_case "la salida debería explicar que hay finales de línea CRLF"
 [ "$before" = "$(ws_snapshot)" ] || fail_case "desde un SDK con CRLF no debería escribirse nada"
+# La orden que da setup deja de verdad la copia en LF, también la de un clon anterior al
+# .gitattributes que se actualizó (A6-2 = P6-2)
+fixcmd="$(printf '%s\n' "$RH_ERR" | sed -n 's/.*\(git rm -r -q --cached \. .*\)$/\1/p' | head -1)"
+[ -n "$fixcmd" ] || fail_case "la salida debería dar la orden «git rm -r -q --cached . …» para pasar el SDK a LF"
+( cd "$sdk" && eval "$fixcmd" ) || fail_case "la orden que da setup falló: $fixcmd"
+has_cr "$f" && fail_case "tras la orden que da setup, $f sigue con CRLF"
+_capture env "$(gl_ok)" bash "$sdk/ai-specs/skills/setup/setup.sh" "$WS"
+assert_exit 0 || fail_case "tras la orden que da setup, debería instalar y terminar con 0: $RH_ERR"
 
 rm -rf "$sdk"
 cleanup_git_workspace

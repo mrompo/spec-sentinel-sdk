@@ -51,6 +51,27 @@ assert_exit 0 || fail_case "con un enlace del repo a un jq de fuera debería usa
 [ "$(cat "$S")" = "$orig" ] || fail_case "setup usó un jq al que se llega por un enlace dentro del repo"
 assert_out_contains "dentro del repo" || fail_case "la salida no avisa de que ignora el enlace del repo"
 
+# b4) una CARPETA del repo que enlaza a otra de fuera, en el PATH (bin/, tools/ de direnv o una
+#     venv): el jq se encuentra por el repo aunque el fichero viva fuera (A6-prev-A5-1)
+mkdir -p "$WS.out"; cp "$WS.bin/lost" "$WS.out/jq"; ln -s "$WS.out" "$WS/tools2"
+run_setup PATH="$WS/tools2:$PATH"
+assert_exit 0 || fail_case "con una carpeta del repo enlazada fuera en el PATH debería usar el siguiente jq y terminar con 0: $RH_ERR"
+[ "$(cat "$S")" = "$orig" ] || fail_case "setup usó un jq al que se llega por una carpeta del repo enlazada fuera"
+assert_out_contains "dentro del repo" || fail_case "la salida no avisa de que ignora el jq de la carpeta enlazada"
+run_setup SENTINEL_SETUP_JQ="$WS/tools2/jq"
+assert_exit 0 || fail_case "con SENTINEL_SETUP_JQ por una carpeta del repo enlazada fuera debería usar el del PATH: $RH_ERR"
+[ "$(cat "$S")" = "$orig" ] || fail_case "setup usó el SENTINEL_SETUP_JQ al que se llega por una carpeta del repo"
+rm -rf "$WS.out"
+
+# b5) en un sistema de ficheros que no distingue mayúsculas (macOS), la ruta del repo escrita con
+#     otras mayúsculas sigue siendo el repo (A6-1)
+WSU="$(printf '%s' "$WS" | tr '[:lower:]' '[:upper:]')"
+if [ "$WSU" != "$WS" ] && [ -d "$WSU" ]; then
+  run_setup PATH="$WSU/tools:$PATH"
+  assert_exit 0 || fail_case "con el repo escrito con otras mayúsculas en el PATH debería usar el siguiente jq: $RH_ERR"
+  [ "$(cat "$S")" = "$orig" ] || fail_case "setup usó un jq del repo escrito con otras mayúsculas"
+fi
+
 # b3) la configuración de jq de la persona (~/.jq) no cambia lo que hacen los programas de setup:
 #     con el jq legítimo, una definición ahí no puede quitar el cableado ni esconder lo que apaga
 #     los hooks (V5-3)
