@@ -39,4 +39,19 @@ del de la sesión.
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente de una persona.
+Decidida por una persona el 2026-10-19: arreglar en esta PR lo del instalador, llevar el
+comportamiento del hook a `sentinel-paths` y hacer el merge tras el banco, sin octavo panel
+(ronda 8 de `apply`, slices Y1-Y5 de `tasks.md`).
+
+- **En esta PR**: `setup` quita de su propio `PATH`, al arrancar y antes de ejecutar nada, las
+  entradas vacías, relativas o que se alcanzan desde el repo, y lo dice (defecto 1); la foto
+  final cubre también el enforcement copiado, las dos políticas, `.gitignore` y `.gitattributes`
+  (A7-3); el `PATH` de `env` vacío o enlazado hacia el repo deja pendiente (defecto 3, salvo la
+  entrada absoluta de fuera, que queda en el límite «jq manipulado»); `GIT_COMMON_DIR` y
+  `GREP_OPTIONS` entran en la lista (defecto 4). Menores: la carpeta personal como repo (P7-1) y
+  `mklink` en Git Bash (P7-4).
+- **A `sentinel-paths`**: el defecto 2. Que el cableado ejecute el Centinela con un entorno que
+  no dependa del de la sesión; mientras tanto, límite documentado («PATH de la sesión») y aviso
+  de `setup` cuando el `PATH` con el que se ejecuta llega al repo.
+- **Deuda**: los falsos positivos de `LD_LIBRARY_PATH` y compañía en `env` (P7-2), el `PATH` de
+  Windows en `env` (P7-3) y el `.gitignore` anidado que ignora una carpeta (A7-4).

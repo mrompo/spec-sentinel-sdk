@@ -65,8 +65,12 @@ SHALL crear un backup antes de tocar un fichero existente.
   se ejecuta (se usa otro del `PATH`, si lo hay), reconociendo el repo por la identidad de cada
   carpeta de la ruta y no por su texto; jq se ejecuta sin la configuración de la persona, y un
   resultado de la fusión que no pasa la comprobación no se escribe (queda pendiente)
-- **AND** si, mientras `setup` se ejecuta, algo cambia los settings que comprobó o
-  `core.hooksPath`, queda pendiente: no termina con 0 sobre un estado que no ha comprobado
+- **AND** antes de ejecutar nada, `setup` quita de su propio `PATH` las entradas vacías,
+  relativas o que se alcanzan desde el repo, y lo dice: ningún programa que ejecute (git, bash,
+  el intérprete de openspec…) sale del repo
+- **AND** si, mientras `setup` se ejecuta, algo cambia lo que comprobó (los settings,
+  `core.hooksPath`, el enforcement copiado, las dos políticas, `.gitignore` o `.gitattributes`),
+  queda pendiente: no termina con 0 sobre un estado que no ha comprobado
 - **AND** la comprobación es de estructura: cada grupo de cada evento del cableado del SDK tiene
   que estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio
 - **AND** el fichero se lee como lo carga Claude Code (con `JSON.parse`: de una clave repetida
@@ -83,8 +87,9 @@ SHALL crear un backup antes de tocar un fichero existente.
   de Claude Code (`$CLAUDE_CONFIG_DIR/settings.json`, por defecto `~/.claude/settings.json`)
   tienen `disableAllHooks` con un valor que no es `false`, o un `env` con variables `SENTINEL_*`,
   con las que cambian cómo arranca bash o qué ejecuta (`BASH_ENV`, `SHELLOPTS`, `BASHOPTS`,
-  `BASH_FUNC_*`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_*`, un `PATH` con entradas relativas o
-  dentro del repo), con las que cambian la configuración de git (`GIT_CONFIG_*`, `GIT_DIR`,
+  `BASH_FUNC_*`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_*`, `GREP_OPTIONS`, un `PATH` vacío o
+  con entradas relativas o que se alcanzan desde el repo, también a través de un enlace), con
+  las que cambian la configuración de git (`GIT_CONFIG_*`, `GIT_DIR`, `GIT_COMMON_DIR`,
   `GIT_WORK_TREE`, `GIT_EXEC_PATH`) o con `CLAUDE_PROJECT_DIR`
 - **THEN** `setup` termina con exit 3 nombrando el fichero y la clave: con `disableAllHooks`
   Claude Code no ejecuta ningún hook (y con un valor que no es booleano puede no cargar el
@@ -195,6 +200,15 @@ nunca con éxito silencioso.
   de edición (p. ej. una política del consumidor ilegible, con una regla sin `mode:` o con una
   regex inválida)
 - **THEN** `setup` termina con exit 3 y muestra el motivo que da el Centinela
+
+#### Scenario: La carpeta personal no es un proyecto (SC-sdk-setup-18)
+
+- **WHEN** el repo destino es la carpeta personal (un repo de dotfiles), o su `.claude/` es la
+  configuración de usuario de Claude Code
+- **THEN** `setup` termina con exit 1 sin escribir nada: el cableado acabaría en la
+  configuración de usuario y fallaría en todos los demás proyectos
+- **AND** si se ejecuta en una carpeta sin git propio dentro de ese repo, el error sugiere
+  `git init` en la carpeta del proyecto, no ejecutar `setup` en la carpeta personal
 
 #### Scenario: Desde la skill expuesta con un enlace (SC-sdk-setup-13)
 

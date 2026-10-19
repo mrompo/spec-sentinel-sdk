@@ -235,6 +235,17 @@
 - [x] X7. Relanzar el panel → **Veredicto** `CONDITIONAL`: sin bloqueantes; cuatro graves de la
        misma clase, el entorno de la sesión ([`review/round7/`](review/round7/README.md))
 
+### Ronda 8 de `apply`, tras el segundo `CONDITIONAL` (disposición del 2026-10-19: el instalador aquí, el hook en `sentinel-paths`, merge tras el banco)
+
+- [x] Y1. La spec dice lo decidido: `setup` limpia su `PATH` al arrancar, la foto final cubre el
+       enforcement, el `PATH` de `env` vacío o enlazado, `GIT_COMMON_DIR` y `GREP_OPTIONS`, y la
+       carpeta personal como repo
+- [ ] Y2. El banco en rojo
+- [ ] Y3. 👤 `setup.sh` (**fichero protegido**, con llave)
+- [ ] Y4. Textos: el límite «PATH de la sesión», `mklink` en Git Bash, `sentinel-paths` con el
+       cableado de entorno limpio y la deuda en `STATUS.md`
+- [ ] Y5. El banco completo en verde → listo para el merge (12)
+
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
 ## Notas de diseño (design gate)
