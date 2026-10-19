@@ -240,7 +240,7 @@
 - [x] Y1. La spec dice lo decidido: `setup` limpia su `PATH` al arrancar, la foto final cubre el
        enforcement, el `PATH` de `env` vacío o enlazado, `GIT_COMMON_DIR` y `GREP_OPTIONS`, y la
        carpeta personal como repo
-- [ ] Y2. El banco en rojo
+- [x] Y2. El banco en rojo
 - [ ] Y3. 👤 `setup.sh` (**fichero protegido**, con llave)
 - [ ] Y4. Textos: el límite «PATH de la sesión», `mklink` en Git Bash, `sentinel-paths` con el
        cableado de entorno limpio y la deuda en `STATUS.md`

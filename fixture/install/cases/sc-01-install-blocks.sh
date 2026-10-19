@@ -56,3 +56,17 @@ _capture env "$(gl_ok)" bash "$SETUP" "$WS/sub"
 assert_err_contains "no es la raíz del repo" || fail_case "el fallo debería decir que no es la raíz"
 [ -z "$(ls -A "$WS/sub")" ] || fail_case "en un subdirectorio no debe escribir nada"
 cleanup_git_workspace
+
+# SC-sdk-setup-18: la carpeta personal como repo (dotfiles) no es un proyecto: su .claude/ es la
+# configuración de usuario y el cableado fallaría en todos los demás proyectos (P7-1)
+mk_git_workspace
+before="$(ws_snapshot)"
+run_setup HOME="$WS"
+assert_exit 1 || fail_case "con el repo en la carpeta personal debería terminar con 1: $RH_ERR"
+assert_out_contains "configuración de usuario" || fail_case "el fallo debería decir que .claude/ sería la configuración de usuario"
+[ "$before" = "$(ws_snapshot)" ] || fail_case "con el repo en la carpeta personal no debe escribir nada"
+mkdir -p "$WS/dev/proj"
+_capture env "$(gl_ok)" HOME="$WS" bash "$SETUP" "$WS/dev/proj"
+assert_exit 1 || fail_case "en una carpeta sin git propio dentro de la carpeta personal debería terminar con 1"
+assert_out_contains "git init" || fail_case "el fallo debería sugerir git init en la carpeta del proyecto"
+cleanup_git_workspace

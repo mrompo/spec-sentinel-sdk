@@ -48,13 +48,23 @@ case_in .claude/settings.local.json "{\"env\": {\"SENTINEL_${bs}u004fVERRIDE\": 
 # Centinela su política (V5-6, A6-prev-V5-6)
 for var in BASH_ENV SHELLOPTS BASHOPTS CLAUDE_PROJECT_DIR GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS \
            GIT_CONFIG_GLOBAL GIT_DIR GIT_WORK_TREE GIT_EXEC_PATH LD_PRELOAD LD_LIBRARY_PATH \
-           DYLD_INSERT_LIBRARIES 'BASH_FUNC_grep%%'; do
+           DYLD_INSERT_LIBRARIES 'BASH_FUNC_grep%%' GIT_COMMON_DIR GREP_OPTIONS; do
   case_in .claude/settings.local.json "{\"env\": {\"$var\": \"x\"}}" 3 "$var" "un env con $var"
 done
 # PATH: con una entrada relativa o dentro del repo, sí; con rutas absolutas de fuera, no
 case_in .claude/settings.local.json '{"env": {"PATH": "./bin:/usr/bin:/bin"}}' 3 PATH "un PATH con una entrada relativa"
 case_in .claude/settings.local.json '{"env": {"PATH": "@WS@/.tools:/usr/bin:/bin"}}' 3 PATH "un PATH con una entrada del repo"
 case_in .claude/settings.local.json '{"env": {"PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"}}' 0 "" "un PATH con rutas absolutas de fuera"
+# Un PATH vacío es la carpeta actual, la raíz del repo (V7-1); un enlace de fuera hacia una
+# carpeta del repo también es del repo (A7-prev-V6-1)
+case_in .claude/settings.local.json '{"env": {"PATH": ""}}' 3 PATH "un PATH vacío"
+mk_git_workspace
+mkdir -p "$WS/.claude" "$WS/.tools" "$WS.cc"; ln -s "$WS/.tools" "$WS.lnk"
+printf '{"env": {"PATH": "%s:/usr/bin:/bin"}}\n' "$WS.lnk" >"$WS/.claude/settings.local.json"
+run_setup CLAUDE_CONFIG_DIR="$WS.cc"
+assert_exit 3 || fail_case "con un PATH en env que enlaza desde fuera a una carpeta del repo debería terminar con 3: $RH_ERR"
+assert_out_contains "PATH" || fail_case "con un PATH enlazado al repo, la salida debería nombrar PATH"
+rm -f "$WS.lnk"; rm -rf "$WS.cc"; cleanup_git_workspace
 # ENV no lo lee un bash no interactivo y es un nombre habitual de variable de aplicación (P6-8)
 case_in .claude/settings.local.json '{"env": {"ENV": "staging"}}' 0 "" "un env con ENV"
 # La configuración gestionada de la organización (A5-5 = P5-8)

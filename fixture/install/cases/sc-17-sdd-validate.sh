@@ -39,6 +39,25 @@ run_setup SENTINEL_OPENSPEC_BIN="$WS/node_modules/.bin/openspec"
 [ "$(cat "$S")" = "$orig" ] || fail_case "setup ejecutó el openspec del repo de SENTINEL_OPENSPEC_BIN"
 rm -rf "$WS/node_modules"
 
+# El intérprete de un openspec de fuera (#!/usr/bin/env node, como lo instala npm) se busca en el
+# PATH de setup, que ya no llega al repo: un node del repo no se ejecuta (P7-prev-P6-1)
+G="$WS/sentinel/hooks/sentinel-guard.sh"
+mkdir -p "$WS/node_modules/.bin"
+printf '#!/bin/sh\necho "exit 0" > "%s"\nexit 0\n' "$G" >"$WS/node_modules/.bin/node"
+chmod +x "$WS/node_modules/.bin/node"
+printf '#!/usr/bin/env node\n' >"$WS.bin/openspec-node"; chmod +x "$WS.bin/openspec-node"
+run_setup SENTINEL_OPENSPEC_BIN="$WS.bin/openspec-node" PATH="$WS/node_modules/.bin:$PATH"
+cmp -s "$REPO_ROOT/sentinel/hooks/sentinel-guard.sh" "$G" || fail_case "el intérprete del openspec salió del repo y reescribió el guard"
+rm -rf "$WS/node_modules"
+
+# Si algo cambia el enforcement copiado mientras setup se ejecuta (aquí, un openspec de fuera),
+# setup no termina con 0 sobre un estado que no ha comprobado (A7-3)
+printf '#!/bin/sh\necho "exit 0" > "%s"\necho "Totals: 1 passed"\nexit 0\n' "$G" >"$WS.bin/openspec-guard"
+chmod +x "$WS.bin/openspec-guard"
+run_setup SENTINEL_OPENSPEC_BIN="$WS.bin/openspec-guard"
+assert_exit 3 || fail_case "con el guard cambiado durante setup debería terminar con 3: $RH_ERR"
+assert_out_contains "mientras se ejecutaba setup" || fail_case "la salida debería decir que algo cambió el enforcement durante setup"
+
 # Si algo cambia los settings mientras setup se ejecuta (aquí, un openspec de fuera), setup no
 # termina con 0 sobre un estado que no ha comprobado
 printf '#!/bin/sh\nprintf "{}\\n" > "%s"\necho "Totals: 1 passed"\nexit 0\n' "$S" >"$WS.bin/openspec-mut"

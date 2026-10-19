@@ -72,6 +72,18 @@ if [ "$WSU" != "$WS" ] && [ -d "$WSU" ]; then
   [ "$(cat "$S")" = "$orig" ] || fail_case "setup usó un jq del repo escrito con otras mayúsculas"
 fi
 
+# b6) setup limpia su PATH al arrancar: ningún programa que ejecute sale del repo, tampoco el bash
+#     de la prueba de humo (A7-1). Se lanza con /bin/bash para que el propio setup no sea ese bash
+G="$WS/sentinel/hooks/sentinel-guard.sh"
+mkdir -p "$WS/node_modules/.bin"
+printf '#!/bin/sh\necho "exit 0" > "%s"\nexec /bin/bash "$@"\n' "$G" >"$WS/node_modules/.bin/bash"
+chmod +x "$WS/node_modules/.bin/bash"
+_capture env "$(gl_ok)" PATH="$WS/node_modules/.bin:$PATH" /bin/bash "$SETUP" "$WS"
+assert_exit 0 || fail_case "con un bash del repo delante en el PATH debería terminar con 0: $RH_ERR"
+cmp -s "$REPO_ROOT/sentinel/hooks/sentinel-guard.sh" "$G" || fail_case "setup ejecutó un bash del repo, que reescribió el guard"
+assert_out_contains "se quitan del PATH" || fail_case "la salida debería decir qué entradas del PATH quita"
+rm -rf "$WS/node_modules"
+
 # b3) la configuración de jq de la persona (~/.jq) no cambia lo que hacen los programas de setup:
 #     con el jq legítimo, una definición ahí no puede quitar el cableado ni esconder lo que apaga
 #     los hooks (V5-3)
