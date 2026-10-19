@@ -222,7 +222,7 @@
 
 ### Ronda 7 de `apply`, tras el `CONDITIONAL` (disposición del 2026-10-19: los tres graves y los menores baratos, y panel de confirmación)
 
-- [ ] X1. La spec dice lo decidido: programas del repo por identidad de carpeta (jq y openspec),
+- [x] X1. La spec dice lo decidido: programas del repo por identidad de carpeta (jq y openspec),
        comprobación final de que nada cambió durante `setup`, la lista de `env`, la llave previa,
        los backups, la receta de CRLF, el clon CRLF idempotente y el `.gitignore` anidado
 - [ ] X2. El banco en rojo, también las dos reglas que no se falsificaban (A6-4)

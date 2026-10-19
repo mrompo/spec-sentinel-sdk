@@ -55,14 +55,18 @@ SHALL crear un backup antes de tocar un fichero existente.
 
 #### Scenario: El instalador no sirve para descablear (SC-sdk-setup-10)
 
-- **WHEN** `setup` se ejecuta con un `jq` que está dentro del repo destino (por
-  `SENTINEL_SETUP_JQ` o por el `PATH`, también como enlace del repo a un binario de fuera), con
-  una configuración de jq de la persona (`~/.jq`) que cambia lo que hacen sus programas, o con
-  un `jq` cuya fusión pierde el cableado, lo saca de su evento, cambia algo fuera de `.hooks` o
+- **WHEN** `setup` se ejecuta con un `jq` o un `openspec` al que se llega desde dentro del repo
+  destino (por `SENTINEL_SETUP_JQ`, `SENTINEL_OPENSPEC_BIN` o el `PATH`; como fichero, como
+  enlace a un binario de fuera o por una carpeta del repo que enlaza a otra de fuera), con una
+  configuración de jq de la persona (`~/.jq`) que cambia lo que hacen sus programas, o con un
+  `jq` cuya fusión pierde el cableado, lo saca de su evento, cambia algo fuera de `.hooks` o
   devuelve algo que no es JSON válido
-- **THEN** `.claude/settings.json` conserva el cableado del Centinela: el `jq` del repo se ignora
-  (se usa otro del `PATH`, si lo hay), jq se ejecuta sin la configuración de la persona y un
+- **THEN** `.claude/settings.json` conserva el cableado del Centinela: el programa del repo no
+  se ejecuta (se usa otro del `PATH`, si lo hay), reconociendo el repo por la identidad de cada
+  carpeta de la ruta y no por su texto; jq se ejecuta sin la configuración de la persona, y un
   resultado de la fusión que no pasa la comprobación no se escribe (queda pendiente)
+- **AND** si, mientras `setup` se ejecuta, algo cambia los settings que comprobó o
+  `core.hooksPath`, queda pendiente: no termina con 0 sobre un estado que no ha comprobado
 - **AND** la comprobación es de estructura: cada grupo de cada evento del cableado del SDK tiene
   que estar, tal cual, en su evento; no basta con que los textos aparezcan en otro sitio
 - **AND** el fichero se lee como lo carga Claude Code (con `JSON.parse`: de una clave repetida
@@ -78,8 +82,10 @@ SHALL crear un backup antes de tocar un fichero existente.
 - **WHEN** `.claude/settings.json`, `.claude/settings.local.json` o la configuración de usuario
   de Claude Code (`$CLAUDE_CONFIG_DIR/settings.json`, por defecto `~/.claude/settings.json`)
   tienen `disableAllHooks` con un valor que no es `false`, o un `env` con variables `SENTINEL_*`,
-  con las que cambian cómo arranca bash (`BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS`) o con
-  `CLAUDE_PROJECT_DIR`
+  con las que cambian cómo arranca bash o qué ejecuta (`BASH_ENV`, `SHELLOPTS`, `BASHOPTS`,
+  `BASH_FUNC_*`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_*`, un `PATH` con entradas relativas o
+  dentro del repo), con las que cambian la configuración de git (`GIT_CONFIG_*`, `GIT_DIR`,
+  `GIT_WORK_TREE`, `GIT_EXEC_PATH`) o con `CLAUDE_PROJECT_DIR`
 - **THEN** `setup` termina con exit 3 nombrando el fichero y la clave: con `disableAllHooks`
   Claude Code no ejecuta ningún hook (y con un valor que no es booleano puede no cargar el
   fichero entero), y esas variables llegan al proceso del Centinela y le cambian la política, la
@@ -98,10 +104,12 @@ SHALL crear un backup antes de tocar un fichero existente.
   `.claude/settings.local.json` (p. ej. con un `core.excludesFile` propio)
 - **THEN** el `.gitignore` del repo excluye `.claude/settings.local.json`, además de la llave y
   los backups, y el `git add` que propone `setup` no lo incluye
-- **AND** se comprueba con git (`git check-ignore`), no buscando la línea: si una regla
-  posterior la anula, queda pendiente
-- **AND** si `.claude/settings.local.json` ya está versionado, queda pendiente con el comando
-  que lo saca del índice (`git rm --cached`), que ejecuta la persona
+- **AND** se comprueba con git (`git check-ignore`), no buscando la línea, para los tres: si una
+  regla posterior la anula, queda pendiente
+- **AND** si alguno ya está versionado, queda pendiente con el comando que lo saca del índice
+  (`git rm --cached`), que ejecuta la persona
+- **AND** si al instalar ya hay una llave (`sentinel/.override`), queda pendiente: el Centinela
+  dejaría pasar la primera acción que bloquee, y la decisión de conservarla es de la persona
 
 #### Scenario: Finales de línea (SC-sdk-setup-16)
 
@@ -111,7 +119,11 @@ SHALL crear un backup antes de tocar un fichero existente.
   y `setup` añade al del consumidor `sentinel/** text eol=lf`; en ese clon, el Centinela deja
   pasar lo inocuo y la Esclusa acepta un commit conforme
 - **AND** si la copia del SDK desde la que se ejecuta tiene ficheros distribuidos con CRLF,
-  `setup` termina con 1 sin escribir nada y lo dice
+  `setup` termina con 1 sin escribir nada y da una orden que la deja en LF (también en un clon
+  anterior al `.gitattributes`)
+- **AND** en el clon CRLF de un compañero, `setup` reconoce las líneas que ya están en
+  `.gitignore` y `.gitattributes` aunque lleguen con CRLF: no las repite ni cambia nada
+- **AND** si una regla posterior del `.gitattributes` anula la de `sentinel/`, queda pendiente
 
 #### Scenario: El nivel Método se avisa (SC-sdk-setup-17)
 
@@ -172,6 +184,8 @@ nunca con éxito silencioso.
   y la excepción propuesta funciona aunque la regla venga de fuera del repo (`core.excludesFile`)
 - **AND** la excepción para `.claude/` reincluye `.claude/settings.json` sin esconder lo que el
   equipo comparte en `.claude/` (comandos, agentes, skills)
+- **AND** si la regla viene de un `.gitignore` de una subcarpeta, la excepción se propone en ese
+  fichero y relativa a él, donde tiene efecto
 - **AND** si el repo tiene `core.fileMode=false`, avisa de que los ejecutables hay que marcarlos
   en el índice (`git add --chmod=+x`) hasta que lo estén: sin el permiso, git ignora los hooks
 

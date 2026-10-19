@@ -69,7 +69,7 @@ Ejecutar el instalador SHALL requerir aprobación humana: reescribe el enforceme
   (`sentinel/settings.fragment.json`), los hooks donde queda encadenada la Esclusa
   (`.husky/<hook>`, `.git/hooks/`) o la configuración de git donde vive `core.hooksPath`
   (`.git/config`, la de un worktree o un submódulo, `~/.gitconfig`, `~/.config/git/config`), la
-  configuración de jq que lee el instalador (`~/.jq`),
+  configuración de jq de la persona que lee el instalador (`~/.jq`, no un `.jq` de un proyecto),
   ejecutar `git commit --no-verify`, tocar `core.hooksPath` desde un comando o fijar una
   variable `SENTINEL_*` en un comando (p. ej. `SENTINEL_POLICY_DEFAULT=` o `SENTINEL_SETUP_JQ=`)
 - **THEN** el hook deniega la acción
