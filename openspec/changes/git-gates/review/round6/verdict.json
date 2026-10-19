@@ -1,0 +1,259 @@
+{
+  "verdict": "CONDITIONAL",
+  "counts": {
+    "major": {
+      "total": 4,
+      "validated": 4
+    },
+    "minor": {
+      "total": 8,
+      "validated": 8
+    },
+    "nit": {
+      "total": 8,
+      "validated": 7
+    }
+  },
+  "findings": [
+    {
+      "id": "A6-prev-A5-1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 84,
+      "title": "Un jq al que se llega por una carpeta del repo que es un enlace a una carpeta de fuera se usa: jq_in_repo solo mira la ruta física, no la carpeta del repo por la que se encuentra (SC-sdk-setup-10)"
+    },
+    {
+      "id": "A6-prev-V5-6",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 372,
+      "title": "El env de los settings se comprueba con una lista cerrada: PATH (que V5-6 nombraba) anula el Centinela y GIT_CONFIG_* anula la Esclusa, y setup sale con 0"
+    },
+    {
+      "id": "P6-1",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 517,
+      "title": "El openspec que ejecuta el aviso de sdd: true (nuevo en la ronda 6) sale del PATH sin mirar si está en el repo y corre DESPUÉS de comprobar el cableado: un openspec del repo puede descablear y setup sale con exit 0 «✓»"
+    },
+    {
+      "id": "P6-prev-A5-1",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 84,
+      "title": "Un jq del repo al que se llega por una CARPETA enlazada (repo/tools -> fuera) se usa: jq_in_repo mira la ruta física de la carpeta, no la ruta del repo por la que se encontró, y setup dice «✓ Nivel Guardia instalado» con el cableado borrado"
+    },
+    {
+      "id": "A6-1",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 80,
+      "title": "En macOS (APFS sin distinguir mayúsculas), una entrada del PATH que nombra el repo con otras mayúsculas no se reconoce como del repo y su jq se usa"
+    },
+    {
+      "id": "A6-2",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 60,
+      "title": "La orden que da setup para pasar a LF una copia del SDK con CRLF («git add --renormalize . && git checkout -- .») no cambia nada: la copia sigue en CRLF y setup no instala"
+    },
+    {
+      "id": "A6-3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 571,
+      "title": "Una llave sentinel/.override que ya existe al instalar no se avisa: la primera acción bloqueada pasa"
+    },
+    {
+      "id": "A6-4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/install/cases/sc-04-no-jq.sh",
+      "line": 59,
+      "title": "Dos reglas nuevas de setup no se falsifican en el banco: el control de bytes de control dentro de las cadenas (JSON_LEX) y el pendiente de check-attr eol"
+    },
+    {
+      "id": "P6-2",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 60,
+      "title": "La receta para un SDK con CRLF («git add --renormalize . && git checkout -- .») no convierte nada: quien actualiza con pull un clon de Windows anterior al .gitattributes se queda en exit 1"
+    },
+    {
+      "id": "P6-3",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 195,
+      "title": "add_lines compara con grep -qxF y no reconoce las líneas con CRLF: en el clon de un compañero en Git for Windows, setup duplica las líneas de .gitignore y .gitattributes, hace backup y deja los dos ficheros modificados (rompe SC-02 en el escenario que SC-16 declara soportado)"
+    },
+    {
+      "id": "P6-4",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 546,
+      "title": "Si quien ignora un fichero es un .gitignore anidado (p. ej. .claude/.gitignore con «*»), la excepción se propone en el .gitignore de la raíz, donde no tiene efecto: bucle de exit 3"
+    },
+    {
+      "id": "P6-5",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 146,
+      "title": "La nota de Windows dice que con Git Bash funciona, pero el ln -sfn de la guía crea en Git Bash una copia de la skill: la comprobación «ls …/SKILL.md» pasa y setup falla con «SDK incompleto en ~»"
+    },
+    {
+      "id": "A6-5",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 113,
+      "title": "Con SENTINEL_SETUP_JQ dentro del repo y ningún otro jq en el PATH, el error dice que ese jq «no existe» justo después de decir que se ignora"
+    },
+    {
+      "id": "A6-6",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 571,
+      "title": "Los backups no se comprueban con git: una regla posterior «!sentinel/.backup/» deja que el git add propuesto los versione y setup sale con 0"
+    },
+    {
+      "id": "P6-6",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 353,
+      "title": "En la configuración gestionada, los mensajes de «no es JSON válido» (también si no se puede leer) y de «env» piden a la persona que lo corrija ella, aunque solo puede hacerlo la organización"
+    },
+    {
+      "id": "P6-7",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 52,
+      "title": "La regla nueva de ~/.jq bloquea cualquier .jq de un proyecto (Edit y Bash, también de solo lectura), al contrario de lo que dice el comentario de la línea 49 («Un .jq de un proyecto, no»)"
+    },
+    {
+      "id": "P6-8",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 373,
+      "title": "ENV en «env» deja un pendiente aunque no cambia cómo arranca el Centinela: bash no interactivo no lo lee, y ENV es un nombre habitual de variable de aplicación"
+    },
+    {
+      "id": "P6-9",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": ".gitignore",
+      "line": 9,
+      "title": "El .gitignore del propio SDK no tiene .claude/settings.local.json: con un core.excludesFile propio (como en esta máquina) no se ignora, y setup sobre el propio SDK deja «M .gitignore»"
+    },
+    {
+      "id": "V6-1",
+      "lens": "adversary",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 372,
+      "title": "check_effective no vigila env.PATH: un settings con env.PATH neutraliza el hook y setup da ✓, pero está fuera de la lista de claves que promete SC-14 y el agente no puede escribir settings"
+    },
+    {
+      "id": "A6-7",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": false,
+      "support": 1,
+      "against": 2,
+      "file": "STATUS.md",
+      "line": 92,
+      "title": "La deuda de la tercera revisión sigue diciendo que la excepción de .claude/ es demasiado amplia (A3-2 = P3-5), y en esta ronda se ha corregido (P5-4)"
+    }
+  ]
+}

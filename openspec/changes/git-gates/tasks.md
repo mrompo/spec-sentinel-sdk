@@ -217,7 +217,8 @@
        gestionada por MDM o servidor)
 - [x] W6. `STATUS.md`: la deuda de la quinta revisión y el cambio
        [`sentinel-paths`](../sentinel-paths/proposal.md) (abierto con la disposición)
-- [ ] W7. Relanzar el panel → **Veredicto**
+- [x] W7. Relanzar el panel → **Veredicto** `CONDITIONAL`: sin bloqueantes, tres graves
+       ([`review/round6/`](review/round6/README.md))
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
