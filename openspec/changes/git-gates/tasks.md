@@ -232,7 +232,8 @@
        llave), y el `.gitignore` del SDK (`39881a9`)
 - [x] X5. Textos: Git Bash, la lista de `env` y el punto desfasado de `STATUS.md`
 - [x] X6. `STATUS.md`: la séptima ronda
-- [ ] X7. Relanzar el panel → **Veredicto**
+- [x] X7. Relanzar el panel → **Veredicto** `CONDITIONAL`: sin bloqueantes; cuatro graves de la
+       misma clase, el entorno de la sesión ([`review/round7/`](review/round7/README.md))
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 

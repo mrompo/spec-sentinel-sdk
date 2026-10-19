@@ -1,0 +1,163 @@
+{
+  "verdict": "CONDITIONAL",
+  "counts": {
+    "major": {
+      "total": 6,
+      "validated": 6
+    },
+    "minor": {
+      "total": 3,
+      "validated": 3
+    },
+    "nit": {
+      "total": 3,
+      "validated": 3
+    }
+  },
+  "findings": [
+    {
+      "id": "A7-1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 704,
+      "title": "Con una carpeta del repo en el PATH, setup sigue ejecutando programas del repo que no son jq ni openspec (el bash de la prueba de humo, el intérprete del openspec). Reescriben el guard sin tocar los settings y setup dice ✓ (SC-sdk-setup-10)"
+    },
+    {
+      "id": "A7-2",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 419,
+      "title": "setup no avisa de un PATH de la sesión con una carpeta del repo: el Centinela ejecuta un bash del repo en cada acción y setup dice ✓, aunque deja pendiente ese mismo PATH cuando viene en «env» (SC-sdk-setup-14)"
+    },
+    {
+      "id": "A7-prev-A6-prev-V5-6",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 410,
+      "title": "La lista de env sigue siendo cerrada: GIT_COMMON_DIR apaga la Esclusa y setup sale con 0"
+    },
+    {
+      "id": "A7-prev-V6-1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 427,
+      "title": "El PATH de «env» solo se rechaza si una entrada es relativa o está en el repo según su ruta escrita. Pasan una entrada absoluta de fuera (la reproducción de V6-1) y un enlace de fuera a una carpeta del repo: setup da ✓ y el hook sale con 0"
+    },
+    {
+      "id": "P7-prev-P6-1",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 589,
+      "title": "El arreglo de P6-1 se salta con un paso más: el openspec de fuera del repo (npm -g, «#!/usr/bin/env node») ejecuta el node del repo, y la comprobación final no mira el enforcement copiado; setup sale con 0 «✓» y el Centinela no hace nada"
+    },
+    {
+      "id": "V7-1",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 421,
+      "title": "Sin comprobar: la regla de PATH en env solo mira un valor no vacío y entradas que existen dentro del repo al instalar, y el resto del env sigue siendo una lista cerrada"
+    },
+    {
+      "id": "A7-3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 540,
+      "title": "La comprobación final cubre los settings y core.hooksPath, pero no el enforcement que setup copió: un programa que se ejecuta después deja el guard en exit 0 y setup sale con 0"
+    },
+    {
+      "id": "P7-1",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 74,
+      "title": "Si la carpeta personal es un repo de dotfiles, setup manda a instalar en ~; hacerlo cablea el Centinela en la configuración de usuario de Claude Code y el hook falla con 127 en cada tool call de todos los demás proyectos"
+    },
+    {
+      "id": "P7-2",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 414,
+      "title": "La lista nueva de env deja exit 3 permanente con valores habituales y absolutos de fuera del repo: LD_LIBRARY_PATH (CUDA), DYLD_FALLBACK_LIBRARY_PATH (brew) y GIT_CONFIG_GLOBAL, mientras que a PATH sí se le da el matiz"
+    },
+    {
+      "id": "A7-4",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 632,
+      "title": "Si un .gitignore anidado ignora una carpeta (sentinel/.gitignore con «hooks/»), la excepción que se propone en ese fichero (!hooks/<fichero>) no tiene efecto: bucle de exit 3"
+    },
+    {
+      "id": "P7-3",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 426,
+      "title": "El PATH de env se parte por «:» sin más: «~/bin» (bash lo expande) y un PATH de Windows («C:\\tools;…») salen como entradas relativas"
+    },
+    {
+      "id": "P7-4",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 150,
+      "title": "La nota de Git Bash propone «mklink /J» sin decir que es de cmd: escrito en Git Bash no existe, y MSYS reescribe «/J» como si fuera una ruta"
+    }
+  ]
+}
