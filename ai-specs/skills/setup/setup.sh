@@ -49,7 +49,10 @@ dist_files() {
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
 [ -f "$SDK_ROOT/sentinel/hooks/sentinel-guard.sh" ] && [ -f "$SDK_ROOT/sentinel/policy.default.yaml" ] \
   && [ -f "$SDK_ROOT/ai-specs/skills/setup/chain.sh" ] && [ -f "$SDK_ROOT/.claude/settings.json" ] \
-  || die "SDK incompleto en $SDK_ROOT: falta sentinel/, chain.sh o .claude/settings.json — ejecuta setup.sh desde una copia íntegra del SDK"
+  || die "SDK incompleto en $SDK_ROOT: falta sentinel/, chain.sh o .claude/settings.json — ejecuta setup.sh desde una copia íntegra del SDK.
+    Si lo ejecutas desde ~/.claude/skills/spec-sentinel-setup, comprueba que sea un enlace a la
+    carpeta de la skill del SDK y no una copia (en Git Bash, ln -s copia: enlaza con
+    MSYS=winsymlinks:nativestrict o con mklink /J, y compruébalo con test -L)"
 # Con CRLF (un clon de Git for Windows sin el .gitattributes del SDK), bash no ejecuta los hooks:
 # el Centinela lo denegaría todo y la Esclusa lo rechazaría todo (SC-sdk-setup-16)
 CR="$(printf '\r')"
@@ -57,7 +60,8 @@ crlf="$( { dist_files; echo ai-specs/skills/setup/chain.sh; } | while IFS= read 
            LC_ALL=C grep -q "$CR" "$SDK_ROOT/$f" 2>/dev/null && printf ' %s' "$f"; done )"
 [ -z "$crlf" ] || die "la copia del SDK tiene finales de línea CRLF en:$crlf.
     Con CRLF, bash no ejecuta los hooks. Vuelve a clonar el SDK (su .gitattributes lo evita) o,
-    dentro de él, conviértelos a LF con: git add --renormalize . && git checkout -- .
+    dentro de él y sin cambios locales (esto los descartaría), vuelve a sacar sus ficheros con LF:
+    git rm -r -q --cached . && git reset -q --hard
     No se ha instalado nada"
 # shellcheck source=chain.sh
 source "$SDK_ROOT/ai-specs/skills/setup/chain.sh"
@@ -72,17 +76,26 @@ SELF=0; [ "$TARGET" = "$SDK_ROOT" ] && SELF=1
 
 echo "Instalando el nivel Guardia en $TARGET"
 
-# jq es obligatorio (SC-sdk-setup-04): con él se lee, se fusiona y se comprueba .claude/settings.json
-# como lo carga Claude Code. Nunca uno del repo destino (el agente podría poner ahí uno que
-# «fusione» quitando el cableado), se llegue a él como se llegue: ni el fichero, ni la carpeta
-# por la que se encuentra, ni ningún salto de su enlace pueden estar dentro (SC-sdk-setup-10). El
-# de SENTINEL_SETUP_JQ o, si no se puede usar por estar en el repo, el primero del PATH que valga
-in_repo_dir() { case "$1/" in "$TARGET"/*) return 0 ;; esac; return 1; }
-jq_in_repo() { # $1=ruta → 0 si ella, la carpeta por la que se llega o algún salto de su enlace están en el repo
-  local p="$1" d lnk hops=0
+# Los programas que setup ejecuta (jq, openspec) nunca pueden venir del repo destino: el agente
+# podría poner ahí uno que «fusione» quitando el cableado o que lo vacíe al validar. Se llegue a
+# él como se llegue (SC-sdk-setup-10): ni la ruta por la que se encuentra, ni su carpeta real, ni
+# ningún salto de su enlace pueden estar dentro. El repo se reconoce por la identidad de cada
+# carpeta (-ef), no por el texto: vale con carpetas enlazadas y con otras mayúsculas (macOS)
+under_repo() { # $1=ruta absoluta → 0 si ella o alguna carpeta por encima es el repo destino
+  local d="$1"
   while :; do
+    [ "$d" -ef "$TARGET" ] && return 0
+    case "$d" in /|"") return 1 ;; esac
+    d="$(dirname "$d")"
+  done
+}
+in_repo_bin() { # $1=ruta de un programa → 0 si se alcanza desde el repo
+  local p="$1" d lnk hops=0
+  case "$p" in /*) ;; *) p="$PWD/$p" ;; esac
+  while :; do
+    under_repo "$(dirname "$p")" && return 0
     d="$(cd "$(dirname "$p")" 2>/dev/null && pwd -P)" || return 0
-    in_repo_dir "$d" && return 0
+    under_repo "$d" && return 0
     [ -L "$p" ] || return 1
     [ "$hops" -lt 40 ] || return 0
     lnk="$(readlink "$p")"
@@ -90,27 +103,39 @@ jq_in_repo() { # $1=ruta → 0 si ella, la carpeta por la que se llega o algún 
     hops=$((hops + 1))
   done
 }
-JQ_BIN=""; JQ_SKIPPED=0
-jq_pick() { # $@=candidatos → JQ_BIN, el primero que existe y no se alcanza desde el repo
-  local cand
+pick_bin() { # $1=nombre $2..=candidatos → PICKED, el primero que existe y no se alcanza desde el repo
+  local what="$1" cand; shift
   for cand in "$@"; do
     cand="$(command -v "$cand" 2>/dev/null)" && [ -n "$cand" ] || continue
-    if jq_in_repo "$cand"; then
-      note "se ignora el jq de $cand: está dentro del repo destino o se llega a él desde dentro"
-      JQ_SKIPPED=1; continue
+    if in_repo_bin "$cand"; then
+      note "se ignora el $what de $cand: está dentro del repo destino o se llega a él desde dentro"
+      PICK_SKIPPED=1; continue
     fi
-    JQ_BIN="$cand"; return 0
+    PICKED="$cand"; return 0
   done
   return 1
 }
-path_jqs="$(type -aP jq 2>/dev/null)"
-pick_from_path() { local IFS=$'\n'; set -f; jq_pick $path_jqs; local rc=$?; set +f; return $rc; }
+# resolve_bin <nombre> <explícito o vacío> → PICKED: el explícito o, si no se puede usar por
+# alcanzarse desde el repo, el primero del PATH que valga. PICK_SKIPPED=1 si descartó alguno
+resolve_bin() {
+  local name="$1" explicit="$2" path_list rc
+  PICKED=""; PICK_SKIPPED=0
+  if [ -n "$explicit" ]; then
+    pick_bin "$name" "$explicit" && return 0
+    [ "$PICK_SKIPPED" -eq 1 ] || return 1
+  fi
+  path_list="$(type -aP "$name" 2>/dev/null)"
+  local IFS=$'\n'; set -f
+  pick_bin "$name" $path_list; rc=$?
+  set +f; return $rc
+}
+resolve_bin jq "${SENTINEL_SETUP_JQ:-}"; JQ_BIN="$PICKED"
+jq_why=""
 if [ -n "${SENTINEL_SETUP_JQ:-}" ]; then
-  jq_pick "$SENTINEL_SETUP_JQ" || { [ "$JQ_SKIPPED" -eq 0 ] || pick_from_path; }
-else
-  pick_from_path
+  if [ "$PICK_SKIPPED" -eq 1 ]; then jq_why="; el de SENTINEL_SETUP_JQ ($SENTINEL_SETUP_JQ) se alcanza desde el repo y no se usa"
+  else jq_why="; el de SENTINEL_SETUP_JQ ($SENTINEL_SETUP_JQ) no existe"; fi
 fi
-[ -n "$JQ_BIN" ] || die "setup necesita jq (fuera del repo destino) para cablear el Centinela en .claude/settings.json${SENTINEL_SETUP_JQ:+; el de SENTINEL_SETUP_JQ ($SENTINEL_SETUP_JQ) no existe}.
+[ -n "$JQ_BIN" ] || die "setup necesita jq (fuera del repo destino) para cablear el Centinela en .claude/settings.json${jq_why}.
     macOS: brew install jq · Windows: scoop install jq · Linux: apt install jq o dnf install jq
     (comprueba con: jq --version) y vuelve a ejecutar setup. No se ha instalado nada"
 # jq lee ~/.jq en cada programa: con un HOME vacío, la configuración de la persona (que el agente
@@ -192,7 +217,8 @@ fi
 add_lines() {
   local rel="$1" f="$TARGET/$1" line added=""; shift
   for line in "$@"; do
-    [ -f "$f" ] && grep -qxF "$line" "$f" && continue
+    # Sin el \r final: en un clon de Git for Windows las líneas llegan con CRLF (SC-sdk-setup-16)
+    [ -f "$f" ] && tr -d '\r' <"$f" | grep -qxF -- "$line" && continue
     [ -f "$f" ] && [ -z "$added" ] && backup "$rel"
     [ -s "$f" ] && [ -n "$(tail -c1 "$f")" ] && echo >>"$f"
     echo "$line" >>"$f"; added="$added $line"
@@ -346,13 +372,22 @@ fi
 # Claude Code lo lee: el proyecto, el local, la configuración de usuario y la gestionada. Se
 # decide con el código de salida de jq, no comparando su texto (el jq.exe de Windows escribe CRLF)
 check_effective() { # $1=fichero $2=cómo nombrarlo [$3=managed: la configuración gestionada]
-  local f="$1" name="$2" kind="${3:-}" v keys fixer="Quítalo (o ponlo a false) y vuelve a ejecutar setup"
+  local f="$1" name="$2" kind="${3:-}" v keys envpath rest e bad_path=""
+  local fixer="Quítalo (o ponlo a false) y vuelve a ejecutar setup"
+  local fix_file="Corrígelo y vuelve a ejecutar setup" fix_env="Quítalas y vuelve a ejecutar setup"
   [ -f "$f" ] || return 0
-  [ "$kind" != managed ] || fixer="Lo cambia quien administra la configuración gestionada de tu organización"
+  if [ "$kind" = managed ]; then
+    fixer="Lo cambia quien administra la configuración gestionada de tu organización"
+    fix_file="$fixer"; fix_env="$fixer"
+  fi
+  if [ ! -r "$f" ]; then
+    todo "$name no se puede leer: no se puede comprobar si apaga los hooks (disableAllHooks) o le
+    cambia la política al Centinela (su «env»). $fix_file"
+    return 0
+  fi
   if ! json_ok "$f"; then
     todo "$name no es JSON válido ($JSON_ERR): no se puede comprobar si apaga los hooks
-    (disableAllHooks) o le cambia la política al Centinela (su «env»). Corrígelo y vuelve a
-    ejecutar setup"
+    (disableAllHooks) o le cambia la política al Centinela (su «env»). $fix_file"
     return 0
   fi
   if jqx -e 'has("disableAllHooks") and .disableAllHooks != false' "$f" >/dev/null 2>&1; then
@@ -369,13 +404,34 @@ check_effective() { # $1=fichero $2=cómo nombrarlo [$3=managed: la configuraci�
     todo "$name tiene «\"allowManagedHooksOnly\": true»: Claude Code solo ejecuta los hooks
     gestionados, no los del proyecto, así que el Centinela no actúa. $fixer"
   fi
+  # Las variables de «env» llegan al proceso del Centinela y a la shell del agente: las que
+  # cambian su política o su llave, cómo arranca bash o qué ejecuta, y la configuración de git
+  # (que puede apagar core.hooksPath, es decir, la Esclusa)
   keys="$(jqx -r '.env | objects | keys[]
-      | select(startswith("SENTINEL_") or . == "BASH_ENV" or . == "ENV" or . == "SHELLOPTS"
-               or . == "BASHOPTS" or . == "CLAUDE_PROJECT_DIR")' \
+      | select(startswith("SENTINEL_") or startswith("GIT_CONFIG") or startswith("DYLD_")
+               or startswith("BASH_FUNC_") or . == "BASH_ENV" or . == "SHELLOPTS" or . == "BASHOPTS"
+               or . == "CLAUDE_PROJECT_DIR" or . == "GIT_DIR" or . == "GIT_WORK_TREE"
+               or . == "GIT_EXEC_PATH" or . == "LD_PRELOAD" or . == "LD_LIBRARY_PATH")' \
       "$f" 2>/dev/null | tr -d '\r' | tr '\n' ' ')"
   [ -z "$keys" ] || todo "$name fija ${keys% } en «env»: Claude Code pasa esas variables al
-    proceso del Centinela, que cambia de política, de llave o de código sin aviso. Quítalas y vuelve
-    a ejecutar setup"
+    proceso del Centinela, que cambia de política, de llave o de código sin aviso, o a git, que
+    puede dejar sin efecto la Esclusa. $fix_env"
+  # PATH: con rutas absolutas de fuera del repo es lo normal; una entrada relativa (o vacía, que
+  # es la carpeta actual) o dentro del repo haría que el Centinela ejecutara un bash del repo
+  envpath="$(jqx -r '.env | objects | .PATH | strings' "$f" 2>/dev/null | tr -d '\r')"
+  if [ -n "$envpath" ]; then
+    rest="$envpath:"
+    while [ -n "$rest" ]; do
+      e="${rest%%:*}"; rest="${rest#*:}"
+      case "$e" in
+        /*) under_repo "$e" && bad_path="$bad_path «${e}»" ;;
+        *) bad_path="$bad_path «${e:-(vacía)}»" ;;
+      esac
+    done
+  fi
+  [ -z "$bad_path" ] || todo "$name fija PATH en «env» con entradas relativas o dentro del repo
+    (${bad_path# }): el Centinela podría ejecutar un bash o un git del repo. Usa rutas absolutas de
+    fuera del repo. $fix_env"
 }
 [ "$S_OK" -eq 0 ] || check_effective "$S" ".claude/settings.json"
 check_effective "$TARGET/.claude/settings.local.json" ".claude/settings.local.json"
@@ -478,6 +534,18 @@ else
   fi
 fi
 
+# Lo comprobado hasta aquí (los settings de Claude Code y core.hooksPath) no puede cambiar en lo
+# que queda: setup aún ejecuta programas (openspec, la prueba de humo del Centinela). Se toma una
+# foto y al final se compara (SC-sdk-setup-10)
+checked_snapshot() {
+  local f
+  for f in "$S" "$TARGET/.claude/settings.local.json" "$UC" "$MANAGED"; do
+    if [ -f "$f" ]; then cksum <"$f" 2>/dev/null || echo "?"; else echo "-"; fi
+  done
+  git -C "$TARGET" config --get core.hooksPath 2>/dev/null || echo "-"
+}
+CHECKED="$(checked_snapshot)"
+
 # ── 5. Adaptador de stack: se propone, nunca se aplica solo ──────────────────────────────
 A="$TARGET/sentinel/adapters"
 if [ -f "$A/stack.yaml" ]; then
@@ -508,10 +576,14 @@ else
     https://github.com/gitleaks/gitleaks/releases (comprueba con: gitleaks version)"
 fi
 # Nivel Método (sdd: true): el pre-push exigirá openspec validate --strict. Si ya falla, el primer
-# push se rechazaría por sorpresa: se dice ahora y cómo desactivarlo (SC-sdk-setup-17)
-OPENSPEC="${SENTINEL_OPENSPEC_BIN:-openspec}"
+# push se rechazaría por sorpresa: se dice ahora y cómo desactivarlo (SC-sdk-setup-17). El
+# openspec, con la misma regla que jq: nunca uno al que se llega desde el repo (SC-sdk-setup-10)
 if [ -d "$TARGET/openspec" ] && grep -qE '^[[:space:]]*sdd:[[:space:]]*true' "$CP" 2>/dev/null; then
-  if ! command -v "$OPENSPEC" >/dev/null 2>&1; then
+  resolve_bin openspec "${SENTINEL_OPENSPEC_BIN:-}"; OPENSPEC="$PICKED"
+  if [ -z "$OPENSPEC" ] && [ "$PICK_SKIPPED" -eq 1 ]; then
+    note "sentinel/policy.yaml tiene sdd: true (nivel Método); el único openspec disponible se
+    alcanza desde el repo y setup no lo ejecuta: se omite la comprobación de specs"
+  elif [ -z "$OPENSPEC" ]; then
     note "sentinel/policy.yaml tiene sdd: true (nivel Método), pero el CLI de OpenSpec no está
     instalado: la Esclusa omitirá con aviso la validación de specs en cada push"
   elif ! os_out="$(cd "$TARGET" && "$OPENSPEC" validate --all --strict 2>&1)"; then
@@ -545,39 +617,63 @@ exception_for() {
   done
   if [ -n "$top" ]; then printf '!%s/\n' "$top"; else printf '!%s\n' "$f"; fi
 }
-ignored=""; exceptions=""
+ignored=""; exceptions=""; nested=""
 while IFS= read -r f; do
   # -q decide (una excepción «!…» también aparece en -v, pero no ignora); -v solo dice qué regla
   git -C "$TARGET" check-ignore -q -- "$f" 2>/dev/null || continue
   why="$(git -C "$TARGET" check-ignore -v -- "$f" 2>/dev/null | cut -f1)"
-  rest="${why#*:}"
+  src="${why%%:*}"; rest="${why#*:}"
   ignored="$ignored
-      $f — lo ignora «${rest#*:}» (${why%%:*}, línea ${rest%%:*})"
+      $f — lo ignora «${rest#*:}» ($src, línea ${rest%%:*})"
+  # La regla está en el .gitignore de una subcarpeta del repo: la excepción va en ese fichero y
+  # relativa a él; en el de la raíz no tendría efecto (SC-sdk-setup-11)
+  case "$src" in
+    /*|.gitignore) ;;
+    */.gitignore) nested="$nested
+$src|!${f#"${src%/.gitignore}"/}"; continue ;;
+  esac
   exceptions="$exceptions
 $(exception_for "$f")"
 done < <(versioned)
 if [ -n "$ignored" ]; then
-  exceptions="$(printf '%s\n' "$exceptions" | awk 'NF && !seen[$0]++' | sed 's/^/      /')"
+  where=""
+  if [ -n "$(printf '%s' "$exceptions" | tr -d '[:space:]')" ]; then
+    where="
+    Añade al final del .gitignore del repo (vale aunque la regla venga de fuera, p. ej. de
+    core.excludesFile):
+$(printf '%s\n' "$exceptions" | awk 'NF && !seen[$0]++' | sed 's/^/      /')"
+  fi
+  [ -z "$nested" ] || where="$where
+$(printf '%s\n' "$nested" | awk -F'|' 'NF == 2 && !seen[$0]++ {
+      if (!($1 in lines)) order[++n] = $1
+      lines[$1] = lines[$1] "      " $2 "\n" }
+    END { for (i = 1; i <= n; i++)
+            printf "    Añade al final de %s (la regla está ahí: una excepción en otro .gitignore no la anula):\n%s", order[i], lines[order[i]] }')"
   todo "el .gitignore deja fuera ficheros que hay que versionar:$ignored
     Sin ellos en git, tus compañeros no reciben el Centinela o la Esclusa, o la bitácora se queda
-    en tu máquina. Añade al final del .gitignore del repo (vale aunque la regla venga de fuera,
-    p. ej. de core.excludesFile):
-$exceptions
+    en tu máquina.$where
     Compruébalo con: git check-ignore -v <fichero>"
 fi
-# Y lo que no debe viajar: la llave y la configuración personal de Claude Code. Se comprueba con
-# git, no buscando la línea (una regla posterior puede anularla), y un fichero ya versionado no lo
-# saca el .gitignore del índice (SC-sdk-setup-15)
-for f in sentinel/.override .claude/settings.local.json; do
+# Y lo que no debe viajar: la llave, los backups y la configuración personal de Claude Code. Se
+# comprueba con git, no buscando la línea (una regla posterior puede anularla), y lo que ya está
+# versionado no lo saca el .gitignore del índice (SC-sdk-setup-15)
+for f in sentinel/.override sentinel/.backup/ .claude/settings.local.json; do
   if git -C "$TARGET" ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
-    todo "$f está versionado y es de cada persona: el .gitignore no lo saca del índice, así que sus
-    cambios irían en tus commits. Sácalo (lo ejecutas tú; el fichero se queda en tu disco):
-    git rm --cached $f"
+    case "$f" in */) rmcmd="git rm -r --cached $f" ;; *) rmcmd="git rm --cached $f" ;; esac
+    todo "$f está versionado y no debe viajar con el repo: el .gitignore no lo saca del índice, así
+    que sus cambios irían en tus commits. Sácalo (lo ejecutas tú; se queda en tu disco):
+    $rmcmd"
   elif ! git -C "$TARGET" check-ignore -q --no-index -- "$f" 2>/dev/null; then
     todo "$f no está ignorado por git, aunque el .gitignore tiene su línea: una regla posterior la
     anula ($(git -C "$TARGET" check-ignore -v --no-index -n -- "$f" 2>/dev/null | cut -f1)). Quita esa regla y vuelve a ejecutar setup"
   fi
 done
+# Una llave que ya está al instalar (se pudo escribir cuando aún no había Centinela) deja pasar,
+# y registra, la primera acción que el Centinela bloquee: la decide la persona (SC-sdk-setup-15)
+[ ! -e "$TARGET/sentinel/.override" ] || todo "hay una llave sin usar (sentinel/.override): el Centinela
+    dejará pasar, y registrará en la bitácora, la primera acción que bloquee, venga de quien venga.
+    Si no la pusiste tú para algo concreto que aún no se ha hecho, bórrala (el agente no puede):
+    rm sentinel/.override"
 # El .gitattributes que pone sentinel/ en LF tiene que aplicarse (SC-sdk-setup-16)
 [ "$(git -C "$TARGET" check-attr eol -- sentinel/hooks/sentinel-guard.sh 2>/dev/null | sed 's/.*: //')" = lf ] \
   || todo "el .gitattributes del repo no deja sentinel/ en LF (una regla posterior anula
@@ -615,6 +711,11 @@ leer un fichero|{"tool_name":"Read","tool_input":{"file_path":"$smoke_path"}}
 editar un fichero|{"tool_name":"Edit","tool_input":{"file_path":"$smoke_path","old_string":"a","new_string":"b"}}
 EOF
 fi
+
+[ "$(checked_snapshot)" = "$CHECKED" ] \
+  || todo "los settings de Claude Code o core.hooksPath cambiaron mientras se ejecutaba setup (lo
+    hizo alguno de los programas que ejecuta después de comprobarlos): lo comprobado ya no vale.
+    Revisa qué ha cambiado y vuelve a ejecutar setup"
 
 echo
 if [ "$pending" -eq 1 ]; then

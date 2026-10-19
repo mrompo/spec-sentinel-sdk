@@ -226,9 +226,9 @@
        comprobación final de que nada cambió durante `setup`, la lista de `env`, la llave previa,
        los backups, la receta de CRLF, el clon CRLF idempotente y el `.gitignore` anidado
 - [x] X2. El banco en rojo, también las dos reglas que no se falsificaban (A6-4)
-- [ ] X3. 👤 `setup.sh` (los tres graves y los menores del instalador) (**fichero protegido**,
+- [x] X3. 👤 `setup.sh` (los tres graves y los menores del instalador) (**fichero protegido**,
        con llave)
-- [ ] X4. 👤 La regla de `~/.jq`, anclada a la carpeta personal (**fichero protegido**, con
+- [x] X4. 👤 La regla de `~/.jq`, anclada a la carpeta personal (**fichero protegido**, con
        llave), y el `.gitignore` del SDK
 - [ ] X5. Textos: Git Bash, la lista de `env` y el punto desfasado de `STATUS.md`
 - [ ] X6. `STATUS.md`: la séptima ronda
