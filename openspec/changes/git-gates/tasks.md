@@ -220,6 +220,20 @@
 - [x] W7. Relanzar el panel → **Veredicto** `CONDITIONAL`: sin bloqueantes, tres graves
        ([`review/round6/`](review/round6/README.md))
 
+### Ronda 7 de `apply`, tras el `CONDITIONAL` (disposición del 2026-10-19: los tres graves y los menores baratos, y panel de confirmación)
+
+- [ ] X1. La spec dice lo decidido: programas del repo por identidad de carpeta (jq y openspec),
+       comprobación final de que nada cambió durante `setup`, la lista de `env`, la llave previa,
+       los backups, la receta de CRLF, el clon CRLF idempotente y el `.gitignore` anidado
+- [ ] X2. El banco en rojo, también las dos reglas que no se falsificaban (A6-4)
+- [ ] X3. 👤 `setup.sh` (los tres graves y los menores del instalador) (**fichero protegido**,
+       con llave)
+- [ ] X4. 👤 La regla de `~/.jq`, anclada a la carpeta personal (**fichero protegido**, con
+       llave), y el `.gitignore` del SDK
+- [ ] X5. Textos: Git Bash, la lista de `env` y el punto desfasado de `STATUS.md`
+- [ ] X6. `STATUS.md`: la séptima ronda
+- [ ] X7. Relanzar el panel → **Veredicto**
+
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 
 ## Notas de diseño (design gate)

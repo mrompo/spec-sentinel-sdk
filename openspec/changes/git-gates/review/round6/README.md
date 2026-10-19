@@ -36,4 +36,18 @@ instalación. Todos fallan solo si una persona reinstala con ese `PATH` o esa co
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente de una persona.
+Decidida por una persona el 2026-10-19: arreglar en esta PR los tres graves y los menores baratos
+(ronda 7 de `apply`, slices X1-X7 de `tasks.md`) y relanzar el panel para confirmar el cierre
+antes del merge.
+
+- Defecto 1: un programa del repo se reconoce por la identidad de cada carpeta de la ruta
+  (`-ef`), la lógica y la física, no por el texto.
+- Defecto 2: `openspec` con la misma regla que jq, y al final `setup` comprueba que los
+  settings y `core.hooksPath` no han cambiado mientras se ejecutaba.
+- Defecto 3: el `env` vigila también `GIT_CONFIG_*`, `GIT_DIR`, `GIT_WORK_TREE`,
+  `GIT_EXEC_PATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_*`, `BASH_FUNC_*` y un `PATH` con
+  entradas relativas o dentro del repo; `ENV` sale de la lista (P6-8).
+- Menores: la receta de CRLF (A6-2 = P6-2), líneas con CRLF (P6-3), el `.gitignore` anidado
+  (P6-4), Git Bash (P6-5), la llave previa (A6-3), el banco (A6-4), los mensajes (A6-5, P6-6),
+  los backups (A6-6), la regla de `~/.jq` anclada a la carpeta personal (P6-7), el `.gitignore`
+  del SDK (P6-9) y, aunque no se validó, el punto desfasado de `STATUS.md` (A6-7).
