@@ -227,11 +227,11 @@
        los backups, la receta de CRLF, el clon CRLF idempotente y el `.gitignore` anidado
 - [x] X2. El banco en rojo, también las dos reglas que no se falsificaban (A6-4)
 - [x] X3. 👤 `setup.sh` (los tres graves y los menores del instalador) (**fichero protegido**,
-       con llave)
+       con llave, `39881a9`)
 - [x] X4. 👤 La regla de `~/.jq`, anclada a la carpeta personal (**fichero protegido**, con
-       llave), y el `.gitignore` del SDK
-- [ ] X5. Textos: Git Bash, la lista de `env` y el punto desfasado de `STATUS.md`
-- [ ] X6. `STATUS.md`: la séptima ronda
+       llave), y el `.gitignore` del SDK (`39881a9`)
+- [x] X5. Textos: Git Bash, la lista de `env` y el punto desfasado de `STATUS.md`
+- [x] X6. `STATUS.md`: la séptima ronda
 - [ ] X7. Relanzar el panel → **Veredicto**
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`

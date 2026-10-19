@@ -145,7 +145,10 @@ comando; al reinstalar o actualizar, el Centinela te pide aprobación antes de e
 
 **Windows**: el SDK y `setup` son bash. Con Git Bash o WSL funcionan, y el `.gitattributes` del
 SDK (y el que `setup` deja en tu repo) mantiene en LF lo que ejecuta bash aunque Git for
-Windows convierta a CRLF. Windows nativo no está soportado de forma oficial.
+Windows convierta a CRLF. En Git Bash, `ln -s` copia la carpeta en vez de enlazarla: crea el
+enlace con `MSYS=winsymlinks:nativestrict ln -sfn …` (necesita el modo desarrollador) o con
+`mklink /J`, y compruébalo con `test -L ~/.claude/skills/spec-sentinel-setup`. Windows nativo
+no está soportado de forma oficial.
 
 | Qué hace | Qué deja en tu repo |
 |---|---|
@@ -189,7 +192,10 @@ Windows convierta a CRLF. Windows nativo no está soportado de forma oficial.
   nivel Método, pon `sdd: false` en `sentinel/policy.yaml`.
 - **Tu `.gitignore` deja fuera algo que hay que versionar** (la plantilla de Node ignora
   `*.log`; hay repos que ignoran `.claude/`) → te dice qué fichero, qué regla lo ignora y la
-  excepción que hay que añadir.
+  excepción que hay que añadir, y dónde: si la regla está en el `.gitignore` de una subcarpeta,
+  la excepción va en ese.
+- **Hay una llave sin usar** (`sentinel/.override`) → el Centinela dejaría pasar la primera
+  acción que bloquee. Si no la pusiste tú para algo concreto, bórrala.
 - **El Centinela lo deniega todo** → tu `sentinel/policy.yaml` tiene un error; `setup` te
   muestra el motivo.
 - **Tu repo tiene `core.fileMode=false`** (habitual en Git for Windows y en WSL sobre `/mnt/c`)
@@ -199,9 +205,13 @@ Windows convierta a CRLF. Windows nativo no está soportado de forma oficial.
   `.claude/settings.local.json` o en tu configuración de usuario (`~/.claude/settings.json`) →
   Claude Code no ejecuta ningún hook, tampoco el Centinela (con un valor que no es booleano,
   puede no cargar el fichero entero). Quítalo o ponlo a `false`.
-- **Hay un `env` con variables `SENTINEL_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS` o
-  `CLAUDE_PROJECT_DIR`** en alguno de esos ficheros → Claude Code se las pasa al proceso del
-  Centinela, que cambiaría de política, de llave o de código. Quítalas.
+- **Hay un `env` que llega al Centinela o a git** en alguno de esos ficheros: variables
+  `SENTINEL_*`, las que cambian cómo arranca bash o qué ejecuta (`BASH_ENV`, `SHELLOPTS`,
+  `BASHOPTS`, `BASH_FUNC_*`, `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_*`), las de la
+  configuración de git (`GIT_CONFIG_*`, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_EXEC_PATH`),
+  `CLAUDE_PROJECT_DIR` o un `PATH` con entradas relativas o dentro del repo → Claude Code se las
+  pasa al proceso del Centinela y a git, que cambiarían de política, de llave o de código, o
+  dejarían sin efecto la Esclusa. Quítalas.
 - **La configuración gestionada de tu organización** (`managed-settings.json`) tiene
   `allowManagedHooksOnly: true` o un `disableAllHooks` que no es `false` → Claude Code no
   ejecuta los hooks del proyecto. Lo resuelve quien administra esa configuración.
