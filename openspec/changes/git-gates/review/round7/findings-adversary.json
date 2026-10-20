@@ -1,0 +1,24 @@
+{"lens":"adversary","findings":[
+{"id":"V7-1","severity":"major","file":"ai-specs/skills/setup/setup.sh","line":421,"title":"Sin comprobar: la regla de PATH en env solo mira un valor no vacío y entradas que existen dentro del repo al instalar, y el resto del env sigue siendo una lista cerrada","evidence":"Solo lectura, sin reproducir: «[ -n \"$envpath\" ]» se salta un PATH vacío, y under_repo decide con el estado del disco al ejecutar setup. Por eso es posible que un env escrito antes de la primera instalación impida que el comando «bash …sentinel-guard.sh» se ejecute (exit 127, que no bloquea) sin que setup deje pendiente","fix":"Que el PATH de env no sea una lista de entradas prohibidas: si un settings fija PATH, resolver «bash» con ese PATH y exigir que exista, esté fuera del repo y sea el mismo que usa setup; si no, dejar pendiente. Y añadir el caso al banco (sc-14)"}
+],
+"prior":[
+{"id":"A6-prev-A5-1","resolved":true,"note":"under_repo/in_repo_bin comparan con -ef carpeta a carpeta; en el código, sin reproducir"},
+{"id":"P6-prev-A5-1","resolved":true,"note":"Lo mismo que A6-prev-A5-1; sin reproducir"},
+{"id":"A6-1","resolved":true,"note":"-ef cubre la ruta con otras mayúsculas en APFS; sin reproducir"},
+{"id":"P6-1","resolved":true,"note":"openspec pasa por resolve_bin y checked_snapshot compara al final; sin reproducir"},
+{"id":"A6-prev-V5-6","resolved":true,"note":"Lista ampliada y comprobación de PATH; ver V7-1 por el alcance de PATH"},
+{"id":"V6-1","resolved":true,"note":"PATH ya se vigila, con el alcance que describe V7-1"},
+{"id":"A6-2","resolved":true,"note":"Receta cambiada a git rm -r --cached + reset --hard; sin probar"},
+{"id":"P6-2","resolved":true,"note":"Igual que A6-2; sin probar"},
+{"id":"P6-3","resolved":true,"note":"add_lines quita el retorno de carro antes de grep -qxF; sin reproducir"},
+{"id":"P6-4","resolved":true,"note":"La excepción se propone en el .gitignore anidado y relativa a él; sin reproducir"},
+{"id":"P6-5","resolved":true,"note":"El mensaje de SDK incompleto explica lo de Git Bash; la guía no la he revisado"},
+{"id":"A6-3","resolved":true,"note":"Una llave previa deja pendiente"},
+{"id":"A6-4","resolved":true,"note":"El diff añade casos en sc-04 y sc-16; no he ejecutado el banco"},
+{"id":"A6-5","resolved":true,"note":"El mensaje distingue «se alcanza desde el repo» de «no existe»"},
+{"id":"A6-6","resolved":true,"note":"sentinel/.backup/ se comprueba con check-ignore y ls-files"},
+{"id":"P6-6","resolved":true,"note":"Los mensajes de la configuración gestionada remiten a la organización"},
+{"id":"P6-7","resolved":true,"note":"path_re ancla .jq a ~, $HOME, /Users/<persona>, /home/<persona> y /root; no he probado un .jq de proyecto"},
+{"id":"P6-8","resolved":true,"note":"ENV ya no está en la lista"},
+{"id":"P6-9","resolved":true,"note":"El .gitignore del SDK incluye .claude/settings.local.json"}
+]}

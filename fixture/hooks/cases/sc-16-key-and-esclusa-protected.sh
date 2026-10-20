@@ -5,12 +5,12 @@
 #   adaptador) ni saltar sus comprobaciones con las variables de prueba. Los ficheros del
 #   consumidor y la documentación siguen siendo editables.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
-P="$REPO_ROOT/sentinel/policy.yaml"
+P="$DEFAULT_POLICY"
 
 # Deben bloquearse (exit 2)
 while IFS= read -r payload; do
   [ -n "$payload" ] || continue
-  run_hook "$GUARD_HOOK" "$payload" SENTINEL_POLICY="$P"
+  run_hook "$GUARD_HOOK" "$payload" SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
   assert_exit 2 || { echo "    debería bloquearse: $payload" >&2; exit 1; }
 done <<'EOF'
 {"tool_name":"Write","tool_input":{"file_path":"sentinel/.override","content":"motivo"}}
@@ -30,7 +30,7 @@ EOF
 # Deben seguir permitidos (exit 0): ficheros del consumidor y documentación
 while IFS= read -r payload; do
   [ -n "$payload" ] || continue
-  run_hook "$GUARD_HOOK" "$payload" SENTINEL_POLICY="$P"
+  run_hook "$GUARD_HOOK" "$payload" SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
   assert_exit 0 || { echo "    debería permitirse: $payload" >&2; exit 1; }
 done <<'EOF'
 {"tool_name":"Write","tool_input":{"file_path":"sentinel/adapters/stack.yaml","content":"tests: npm test"}}

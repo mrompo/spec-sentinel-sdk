@@ -1,0 +1,11 @@
+{"lens":"adversary","findings":[
+{"id":"V3-1","severity":"minor","file":"sentinel/README.md","line":22,"title":"El contrato documentado sigue diciendo «en cada fichero decide la primera regla que matchea», que contradice la spec (SC-sentinel-guard-20/21) y el guard; igual en sentinel/hooks/README.md, y los recuentos del banco del README están desfasados (19/16/12 frente a 20/16/13)","evidence":"Contra el guard del clon, sin política del consumidor: «rm -rf src # jest.config» → pide confirmación [destructive]. Con primera coincidencia, como documenta el README, decidiría coverage-thresholds (warn). El comportamiento real es el de la spec; la documentación que CLAUDE.md nombra como contrato no.","fix":"Reescribir sentinel/README.md y sentinel/hooks/README.md con la regla vigente (la más estricta de todas las que coinciden; a igualdad, la primera, y las del SDK van antes) y actualizar los recuentos."}
+],
+"prior":[
+{"id":"A2-1","resolved":true,"note":"Dentro de cada política gana la más estricta; un bloqueo que además nombra el instalador sigue bloqueado con su regla."},
+{"id":"V2-1","resolved":true,"note":"= A2-1."},
+{"id":"A2-prevA4","resolved":true,"note":"Comprobación por estructura en awk; residual de defensa en profundidad: no es un parser JSON completo (no verificado como vía)."},
+{"id":"V2-prevA4","resolved":true,"note":"= A2-prevA4, mismo residual."},
+{"id":"V2-4","resolved":true,"note":"El fragmento está protegido y wired_ok exige el grupo íntegro en su evento."},
+{"id":"V2-5","resolved":true,"note":"protect-installer bloquea Edit/Write también en la copia del SDK; desde la shell, nombrarlo pide aprobación."}
+]}

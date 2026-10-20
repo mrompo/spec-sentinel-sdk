@@ -1,0 +1,21 @@
+{"lens":"adversary","votes":[
+{"id":"A3-prev-A2-prevA4","agree":true,"severity":"blocker","note":"event_array se queda con la primera clave y el primer evento, no decodifica \\u y no valida lo que va tras el objeto, mientras que jq/JSON.parse se quedan con la última; el instalador certifica un descableado. Corrige mi «resuelto» de la ronda anterior; = P3-1."},
+{"id":"A3-prev-A2-5","agree":true,"severity":"major","note":"Por la ruta que recomienda la guía ninguna de las dos reglas coincide y el guard no resuelve enlaces: reabre V2-5 por el camino normal; = P3-2."},
+{"id":"A3-prev-V2-6","agree":true,"severity":"major","note":"La spec promete una protección que el código no da; con la spec como contrato, deja sin banco una vía que la spec da por cerrada."},
+{"id":"A3-prev-A2-7","agree":true,"severity":"minor","note":"Real, pero falla cerrado: deniega de más, no abre ninguna vía."},
+{"id":"A3-1","agree":true,"severity":"major","note":"Con disableAllHooks: true setup sale con 0 y el Centinela no corre nunca; la comprobación del cableado debería tratarlo como no efectivo."},
+{"id":"A3-2","agree":true,"severity":"minor","note":"Daño colateral de una propuesta que aplica la persona, no una vía; = P3-5."},
+{"id":"A3-3","agree":true,"severity":"minor","note":"La protección que añade el consumidor desaparece sin aviso; el agente no puede provocarlo (policy.yaml está protegido)."},
+{"id":"A3-4","agree":true,"severity":"minor","note":"Coincide con mi V3-1 y con P3-7."},
+{"id":"A3-5","agree":true,"severity":"minor","note":"La proposal de hook-coexistence dice que los hooks encadenados ya están protegidos y no es del todo así: documentarlo o no darlo por bueno."},
+{"id":"A3-6","agree":true,"severity":"nit","note":"Falso aviso en sentido seguro, sin vía."},
+{"id":"P3-1","agree":true,"severity":"blocker","note":"Mismo defecto que A3-prev-A2-prevA4, y más grave porque basta un error habitual al pegar a mano, sin jq ni malicia."},
+{"id":"P3-2","agree":true,"severity":"major","note":"= A3-prev-A2-5; reabre V2-5 por otra ruta."},
+{"id":"P3-3","agree":true,"severity":"minor","note":"Real e incoherente: bloquea AGENTS.md en cada consumidor y deja pasar CLAUDE.md; moverla a la policy.yaml del propio SDK."},
+{"id":"P3-4","agree":true,"severity":"major","note":"Vía para relajar el SDK con «✓»: setup instala lo que haya en SDK_ROOT sin comparar versión; la bajada aparece en el diff y pasa por la PR."},
+{"id":"P3-5","agree":true,"severity":"minor","note":"= A3-2."},
+{"id":"P3-6","agree":true,"severity":"minor","note":"El paso 6 de SKILL.md nombra un fichero protegido en un comando; empuja al agente a buscar una grafía que pase."},
+{"id":"P3-7","agree":true,"severity":"minor","note":"Coincide con mi V3-1 y con A3-4."},
+{"id":"P3-8","agree":true,"severity":"nit","note":"Sin efecto en los gates."},
+{"id":"P3-9","agree":true,"severity":"nit","note":"Documentación, sin vía."}
+]}

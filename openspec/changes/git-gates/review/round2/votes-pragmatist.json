@@ -1,0 +1,20 @@
+{"lens":"pragmatist","votes":[
+{"id":"A2-1","agree":true,"severity":"major","note":"Reproducido en main: «git commit -m x» → BLOCK, pero «bash …/setup.sh . && git add -A && git commit -m …» → ASK. Es lo que haría un agente siguiendo el paso 6 de SKILL.md."},
+{"id":"A2-2","agree":true,"severity":"blocker","note":"Es mi P2-1, reproducido con la plantilla Python real en Linux: lib/ sin versionar, setup sale con 0 y al compañero se le rechazan todos los commits (incumple SC-sdk-setup-11)."},
+{"id":"A2-prevA4","agree":true,"severity":"major","note":"Reproducido: un jq fuera del repo que mueve el guard a SessionStart da «✓ Centinela cableado», exit 0 y 0 guards en PreToolUse. Incumple SC-sdk-setup-10, pero exige un jq hecho a propósito."},
+{"id":"A2-3","agree":true,"severity":"minor","note":"Reproducido: con permissions.deny que nombra el guard y jq real, exit 3 en cada ejecución. La parte sin jq coincide con mi P2-9."},
+{"id":"A2-4","agree":true,"severity":"minor","note":"Reproducido: con las líneas en .git/hooks sin +x, session-start no avisa y el commit no conforme entra; setup sí sale con 3."},
+{"id":"A2-5","agree":true,"severity":"major","note":"Es mi P2-6: «SDK incompleto en $HOME» y ningún ask por esa ruta; es el camino que la guía propone para el agente."},
+{"id":"A2-6","agree":true,"severity":"minor","note":"«cd …/skills/setup && bash setup.sh» no lleva el texto que busca la regex; instalar sin aprobación hace poco daño por sí solo."},
+{"id":"A2-7","agree":true,"severity":"minor","note":"Reproducido: una regla Read|Edit|Write con regex inválida da setup exit 0 y el Centinela deniega el Read de README.md."},
+{"id":"A2-8","agree":true,"severity":"nit","note":"Real por lectura, pero un core.hooksPath con «~» a la propia Esclusa es muy raro."},
+{"id":"V2-1","agree":true,"severity":"major","note":"Mismo defecto que A2-1, reproducido con «… && git push --force origin main» → ASK. Pasa también sin intención maliciosa."},
+{"id":"V2-2","agree":true,"severity":"major","note":"Real: self-protection no cubre .husky/<hook> ni .git/hooks, y un agente que ve fallar un hook de husky suele editarlo. Major y no blocker: editar .git/config ya era posible antes."},
+{"id":"V2-3","agree":true,"severity":"minor","note":"Real por lectura: el literal HUSKY=0 (la forma habitual) está cubierto; las variantes piden intención."},
+{"id":"V2-prevA4","agree":true,"severity":"major","note":"Mismo defecto que A2-prevA4; merged_ok tampoco comprueba la estructura."},
+{"id":"V2-prevV1","agree":true,"severity":"minor","note":"Mismo defecto que A2-6; la forma relevante es cd + ./setup.sh."},
+{"id":"V2-4","agree":true,"severity":"minor","note":"Real por lectura, pero exige que el agente manipule el fragmento mientras la persona hace el paso manual."},
+{"id":"V2-5","agree":true,"severity":"minor","note":"Real por lectura (ai-specs/skills/setup no está en self-protection); el daño descrito exige una edición maliciosa."},
+{"id":"V2-6","agree":true,"severity":"minor","note":"Reproducido: «git -c core.hookspath=/dev/null commit -m x» pasa; git trata las claves sin distinguir mayúsculas."},
+{"id":"V2-7","agree":true,"severity":"minor","note":"Reproducido; además «git config --get core.hooksPath» de §Verification en SKILL.md se bloquea, así que el flujo documentado choca con el Centinela."}
+]}

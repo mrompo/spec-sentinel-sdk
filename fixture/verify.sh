@@ -12,7 +12,9 @@ ok()  { echo "✓ $1"; }
 for d in docs ai-specs/agents ai-specs/skills sentinel/hooks sentinel/githooks sentinel/ci sentinel/adapters openspec/changes fixture; do
   [ -d "$d" ] && ok "dir $d" || err "falta el directorio $d"
 done
-[ -f sentinel/policy.yaml ] && ok "sentinel/policy.yaml" || err "falta sentinel/policy.yaml"
+for f in sentinel/policy.default.yaml sentinel/policy.yaml; do
+  [ -f "$f" ] && ok "$f" || err "falta $f (política distribuida + del consumidor, slice 6 de git-gates)"
+done
 [ -f openspec/project.md ] && ok "openspec/project.md" || err "falta openspec/project.md"
 
 # Symlinks multi-copilot → fuente única (SC-sdk-method-03/04)
@@ -110,6 +112,14 @@ if ls fixture/githooks/cases/*.sh >/dev/null 2>&1; then
   bash fixture/githooks/run.sh || fail=1
 elif [ -n "$GH_HOOKS" ]; then
   err "hay hooks en sentinel/githooks pero no casos en fixture/githooks/cases — sin test, el hook no entra"
+fi
+
+# Runner de instalación (skill setup): sus casos son obligatorios — la instalación es el DoD de la
+# fase 2 y un instalador sin banco no entra (tampoco hay instalador sin casos ni casos sin instalador)
+if ls fixture/install/cases/*.sh >/dev/null 2>&1; then
+  bash fixture/install/run.sh || fail=1
+elif [ -f ai-specs/skills/setup/setup.sh ]; then
+  err "existe ai-specs/skills/setup/setup.sh pero no casos en fixture/install/cases — sin test, el instalador no entra"
 fi
 
 [ "$fail" -eq 0 ] && echo "— fixture: OK" || { echo "— fixture: FALLOS" >&2; exit 1; }

@@ -1,0 +1,13 @@
+{"lens":"pragmatist","votes":[
+{"id":"A3-prev-A2-prevA4","agree":true,"severity":"blocker","note":"Coincide con P3-1; ocurre también sin jq cuando la persona pega el fragmento como segunda clave «hooks»."},
+{"id":"A3-prev-A2-5","agree":true,"severity":"blocker","note":"Coincide con P3-2: por la ruta que recomienda la guía, Edit/Write del instalador da rc=0 y ejecutarlo no pide aprobación."},
+{"id":"A3-prev-V2-6","agree":true,"severity":"minor","note":"Reproducido; basta con alinear el texto de la spec con lo que decidió una persona."},
+{"id":"A3-prev-A2-7","agree":true,"severity":"minor","note":"Reproducido: una regla Write con regex inválida → setup exit 0 y todo Write denegado."},
+{"id":"A3-1","agree":true,"severity":"major","note":"Coincide con parte de P3-1: con disableAllHooks: true, setup dice «✓ Centinela cableado» y Claude Code no ejecuta ningún hook."},
+{"id":"A3-2","agree":true,"severity":"major","note":"Coincide con P3-5; silencioso y afecta a todo el equipo."},
+{"id":"A3-3","agree":true,"severity":"major","note":"Reproducido: una regla con comentario en línea no se aplica nunca y nadie avisa; ahora la persona escribe su policy.yaml."},
+{"id":"A3-4","agree":true,"severity":"minor","note":"Coincide con P3-7."},
+{"id":"A3-5","agree":true,"severity":"minor","note":"Reproducido: con un core.hooksPath propio encadenado, Write de su pre-commit da rc=0; o se documenta o se protege."},
+{"id":"A3-6","agree":true,"severity":"nit","note":"Reproducido; formas raras."},
+{"id":"V3-1","agree":true,"severity":"minor","note":"Coincide con P3-7 y A3-4."}
+]}

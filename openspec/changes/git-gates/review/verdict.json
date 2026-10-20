@@ -1,0 +1,311 @@
+{
+  "verdict": "HOLD",
+  "counts": {
+    "blocker": {
+      "total": 1,
+      "validated": 1
+    },
+    "major": {
+      "total": 13,
+      "validated": 12
+    },
+    "minor": {
+      "total": 7,
+      "validated": 6
+    },
+    "nit": {
+      "total": 3,
+      "validated": 2
+    }
+  },
+  "findings": [
+    {
+      "id": "A1",
+      "lens": "auditor",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 159,
+      "title": "Sin jq, reinstalar no es idempotente (SC-sdk-setup-02): la segunda ejecución crea el fragmento, sale con 3 y pide duplicar el cableado"
+    },
+    {
+      "id": "A2",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 227,
+      "title": "Una regla warn o confirm del SDK decide antes que cualquier block del consumidor: «puedes añadir protección» no se cumple"
+    },
+    {
+      "id": "A3",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 200,
+      "title": "Seguir la instrucción de encadenado deja la Esclusa sin bloquear: pre-push pierde stdin, el código añadido tras un exit no se ejecuta y en un hooksPath global rompe los demás repos"
+    },
+    {
+      "id": "A4",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 164,
+      "title": "El agente puede reescribir .claude/settings.json (protegido) a través de setup con un jq propio, y el Centinela lo permite"
+    },
+    {
+      "id": "A5",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 106,
+      "title": "Con *.log en .gitignore (habitual en Node), la bitácora sentinel/overrides.log nunca se versiona y setup no avisa"
+    },
+    {
+      "id": "P1",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 200,
+      "title": "Con husky v9, setup manda encadenar la Esclusa en «.husky/_», que husky genera, git ignora y npm install sobrescribe"
+    },
+    {
+      "id": "P2",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 209,
+      "title": "Con hooks en .git/hooks (git-lfs, pre-commit), el consejo de moverlos a sentinel/githooks encadenados se pierde en el siguiente setup"
+    },
+    {
+      "id": "P3",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 189,
+      "title": "Tras resolver bien un pendiente (encadenar hooks, fusionar el fragmento sin jq), setup sigue saliendo con 3 para siempre y la skill dice que solo el 0 cierra la instalación"
+    },
+    {
+      "id": "P4",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 202,
+      "title": "Con un core.hooksPath global con hooks, la línea de encadenado propuesta rompe los commits en todos los demás repos de la máquina"
+    },
+    {
+      "id": "P5",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 161,
+      "title": "core.hooksPath es config de cada clon: en los compañeros la Esclusa queda inactiva y nada se lo dice"
+    },
+    {
+      "id": "P6",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 107,
+      "title": "setup no comprueba si lo que hay que versionar está ignorado: con '*.log' (plantilla Node de GitHub) la bitácora no se versiona, y con '.claude/' tampoco el cableado"
+    },
+    {
+      "id": "P8",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 147,
+      "title": "La fusión de settings.json deduplica por cadena exacta: los cambios de cableado del SDK no llegan al actualizar, y un comando equivalente se duplica"
+    },
+    {
+      "id": "V1",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 60,
+      "title": "El agente puede ejecutar setup.sh y sobrescribir ficheros protegidos o activar core.hooksPath sin que el Centinela lo vea"
+    },
+    {
+      "id": "P7",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": false,
+      "support": 1,
+      "against": 2,
+      "file": "sentinel/githooks/pre-push",
+      "line": 26,
+      "title": "Regresión: el consumidor ya no puede proteger sus ramas (develop de GitFlow, staging, release/*) en el pre-push, y si toca la distribuida setup se lo revierte"
+    },
+    {
+      "id": "A6",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 82,
+      "title": "setup dice «Nivel Guardia instalado» (exit 0) aunque la política del consumidor deje el Centinela denegándolo todo"
+    },
+    {
+      "id": "A7",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 187,
+      "title": "Exit 3 perpetuo: setup no reconoce una Esclusa ya activa con otra grafía ni un encadenado ya hecho, y la skill entra en bucle"
+    },
+    {
+      "id": "A8",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 143,
+      "title": "Fusión de settings.json: SAFE deja pasar formas con las que MERGE falla (exit 1 con la instalación a medias) y la deduplicación por comando ignora el matcher"
+    },
+    {
+      "id": "A9",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 226,
+      "title": "Ficheros existentes modificados sin backup: se pierde la revisión de stack.proposed.yaml y .gitignore se toca sin copia"
+    },
+    {
+      "id": "P10",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "docs/guia-uso.md",
+      "line": 129,
+      "title": "«Puedes pedírselo al agente: la skill setup…», pero la skill no se instala en ningún sitio donde el agente la encuentre"
+    },
+    {
+      "id": "P9",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 213,
+      "title": "«1 = error, nada a medias» no es cierto: varios die() ocurren después de haber escrito ficheros"
+    },
+    {
+      "id": "V2",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": false,
+      "support": 1,
+      "against": 2,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 22,
+      "title": "setup.sh copia el enforcement desde la carpeta en la que está, sin comprobar que sea un SDK de confianza"
+    },
+    {
+      "id": "A10",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/install/cases/sc-01-install-blocks.sh",
+      "line": 44,
+      "title": "El caso «fuera de un repo git» no está fuera de un repo: prueba la rama «no es la raíz» y la de «no es un repo git» queda sin cubrir"
+    },
+    {
+      "id": "V3",
+      "lens": "adversary",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 47,
+      "title": "no-hook-disabling no incluye SENTINEL_SETUP_JQ, que hace que el instalador ejecute el binario indicado"
+    },
+    {
+      "id": "V4",
+      "lens": "adversary",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": false,
+      "support": 1,
+      "against": 2,
+      "file": "sentinel/policy.default.yaml",
+      "line": 41,
+      "title": "Los backups del instalador (sentinel/.backup/) no están protegidos"
+    }
+  ]
+}

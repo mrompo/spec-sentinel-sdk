@@ -17,5 +17,25 @@ if [ -d "$ROOT/openspec/changes" ]; then
   [ -n "${names% }" ] && ACTIVE="cambio(s) activo(s): ${names% } — trabaja dentro y marca tasks.md"
 fi
 
-echo "[sentinel] Rama: $BRANCH · $ACTIVE · Estado: STATUS.md · Reglas: sentinel/policy.yaml"
+echo "[sentinel] Rama: $BRANCH · $ACTIVE · Estado: STATUS.md · Reglas: sentinel/policy.default.yaml (SDK) + sentinel/policy.yaml (proyecto)"
+
+# Los git hooks no viajan con el clon: si el repo tiene la Esclusa pero aquí no está activa ni
+# encadenada (p. ej. un clon recién hecho), se avisa (SC-sentinel-guard-22)
+if [ -d "$ROOT/sentinel/githooks" ]; then
+  # --type=path: git expande «~» como cuando ejecuta los hooks (A2-8)
+  hp="$(git -C "$ROOT" config --type=path --get core.hooksPath 2>/dev/null || true)"; hp="${hp%/}"; hp="${hp#./}"
+  esclusa=0
+  case "$hp" in
+    sentinel/githooks) esclusa=1 ;;
+    /*) [ -d "$hp" ] && [ "$(cd "$hp" && pwd -P)" = "$(cd "$ROOT/sentinel/githooks" && pwd -P)" ] && esclusa=1 ;;
+  esac
+  if [ "$esclusa" -eq 0 ]; then
+    # ¿Encadenada en los hooks que git ejecuta? (con husky v9, los de la persona están en .husky/)
+    hd="$(git -C "$ROOT" rev-parse --git-path hooks 2>/dev/null || true)"; hd="${hd%/}"
+    case "$hd" in /*) ;; *) hd="$ROOT/$hd" ;; esac
+    case "$hd" in */.husky/_) hd="${hd%/_}" ;; esac
+    grep -qsF 'sentinel/githooks/pre-commit "$@"' "$hd/pre-commit" && esclusa=1
+  fi
+  [ "$esclusa" -eq 1 ] || echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon: actívala con «git config core.hooksPath sentinel/githooks» o ejecuta setup"
+fi
 exit 0

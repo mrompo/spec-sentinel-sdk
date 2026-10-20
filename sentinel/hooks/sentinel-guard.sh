@@ -5,7 +5,13 @@
 #   exit 0            → la acción pasa (con JSON en stdout si hay aviso que el agente debe ver)
 #   exit 2 + stderr   → denegada, con motivo (stderr sí se reinyecta al agente en exit 2)
 #   stdout JSON ask   → requiere aprobación humana (permissionDecision del harness)
-# Reglas: sentinel/policy.yaml (esquema v1 plano). Primera regla que matchea decide.
+# Reglas (esquema v1 plano) en dos políticas:
+#   1) sentinel/policy.default.yaml — la distribuida (viene con el SDK, la actualiza setup)
+#   2) sentinel/policy.yaml         — la del consumidor (opcional; solo AÑADE protección)
+# De todas las reglas que matchean, en las dos políticas, gana la decisión más estricta
+# (block > confirm > warn) y, a igualdad, la primera (las del SDK van antes): ninguna regla que
+# solo confirma o avisa tapa un bloqueo. Un id repetido es un error de política
+# (opción A del slice 6 de git-gates, SC-sentinel-guard-17..21).
 # Sin dependencias: bash + grep/sed. Endurecido tras el panel adversarial (ver §Limitaciones
 # en sentinel/README.md: lo que este puesto NO puede garantizar lo cubren Esclusa y Aduana).
 set -uo pipefail
@@ -13,6 +19,7 @@ set -uo pipefail
 # Anclaje: el project dir del harness manda (monorepo/submódulo/worktree), luego la raíz git.
 REPO_ROOT_DIR="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 [ -d "$REPO_ROOT_DIR/sentinel" ] || REPO_ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+DEFAULT_POLICY="${SENTINEL_POLICY_DEFAULT:-$REPO_ROOT_DIR/sentinel/policy.default.yaml}"
 POLICY="${SENTINEL_POLICY:-$REPO_ROOT_DIR/sentinel/policy.yaml}"
 OVERRIDES_LOG="${SENTINEL_OVERRIDES_LOG:-$REPO_ROOT_DIR/sentinel/overrides.log}"
 OVERRIDE_TOKEN="$REPO_ROOT_DIR/sentinel/.override"
@@ -22,13 +29,29 @@ deny() { echo "sentinel-guard: $1" >&2; exit 2; }
 json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | tr '\n' ' '; }
 
 # ── Fail-closed (SC-02) ──────────────────────────────────────────────────────────────────
-[ -f "$POLICY" ] \
-  || deny "política no encontrada ($POLICY) — restaura sentinel/policy.yaml o exporta SENTINEL_POLICY"
-grep -q '^version:' "$POLICY" && grep -q '^rules:' "$POLICY" \
-  || deny "política ilegible ($POLICY): faltan las claves 'version:' y/o 'rules:' — revisa el fichero"
-RULE_COUNT="$(grep -cE '^[[:space:]]*-[[:space:]]+id:[[:space:]]*[^[:space:]]' "$POLICY" || true)"
+# La distribuida es obligatoria; la del consumidor, opcional, pero si existe tiene que leerse.
+[ -f "$DEFAULT_POLICY" ] \
+  || deny "política distribuida no encontrada ($DEFAULT_POLICY) — reinstala el SDK (setup) o exporta SENTINEL_POLICY_DEFAULT"
+POLICIES="$DEFAULT_POLICY"
+[ -f "$POLICY" ] && POLICIES="$DEFAULT_POLICY
+$POLICY"
+while IFS= read -r p; do
+  grep -q '^version:' "$p" && grep -q '^rules:' "$p" \
+    || deny "política ilegible ($p): faltan las claves 'version:' y/o 'rules:' — revisa el fichero"
+done <<EOF
+$POLICIES
+EOF
+ID_RE='^[[:space:]]*-[[:space:]]+id:[[:space:]]*'
+RULE_COUNT="$(grep -cE "$ID_RE[^[:space:]]" "$DEFAULT_POLICY" || true)"
 [ "${RULE_COUNT:-0}" -gt 0 ] \
-  || deny "política sin reglas válidas ($POLICY): 0 entradas '- id:' — una política vacía no protege nada"
+  || deny "política sin reglas válidas ($DEFAULT_POLICY): 0 entradas '- id:' — una política vacía no protege nada"
+# Un id del SDK repetido en la del consumidor: error de política, nunca sustitución (SC-19)
+if [ -f "$POLICY" ]; then
+  policy_ids() { sed -nE "s/$ID_RE([^[:space:]]+).*/\1/p" "$1" | LC_ALL=C sort -u; }
+  DUP="$(LC_ALL=C comm -12 <(policy_ids "$DEFAULT_POLICY") <(policy_ids "$POLICY") | tr '\n' ' ')"
+  [ -z "$DUP" ] \
+    || deny "política del consumidor ($POLICY) repite ids del SDK: ${DUP% } — las reglas del SDK no se sustituyen: renombra o quita la tuya"
+fi
 
 # ── Contexto del tool call ───────────────────────────────────────────────────────────────
 PAYLOAD="$(cat || true)"
@@ -43,7 +66,11 @@ COMMAND="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"command"[[:space:]]*:[[:space:
 # Contenido que se ESCRIBE (no old_string): evita bloquear la retirada de un .skip existente
 NEW_CONTENT="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"(new_string|content|new_source)"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\2/p' | head -1)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
-POLICY_SDD="$(sed -nE 's/^[[:space:]]*sdd:[[:space:]]*(true|false).*/\1/p' "$POLICY" | head -1)"
+# sdd: lo declara el consumidor; si no lo hace, vale el de la distribuida
+read_sdd() { sed -nE 's/^[[:space:]]*sdd:[[:space:]]*(true|false).*/\1/p' "$1" | head -1; }
+POLICY_SDD=""
+[ -f "$POLICY" ] && POLICY_SDD="$(read_sdd "$POLICY")"
+[ -n "$POLICY_SDD" ] || POLICY_SDD="$(read_sdd "$DEFAULT_POLICY")"
 
 # Ruta normalizada (./ y ../) para que el matching no dependa de cómo se escriba la ruta
 NORM_PATH=""
@@ -120,7 +147,7 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
       deny "[$id] $reason (excepción auditada: pide a un humano 'echo \"motivo\" > sentinel/.override')"
       ;;
     *)
-      deny "[$id] modo desconocido '$mode' en la política — corrige sentinel/policy.yaml"
+      deny "[$id] modo desconocido '$mode' en la política — corrige $CUR_POLICY"
       ;;
   esac
 }
@@ -128,35 +155,48 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
 # ── Evaluación de reglas ─────────────────────────────────────────────────────────────────
 reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; }
 
+# rank <modo> → cuánto restringe, para quedarse con la decisión más estricta
+rank() { case "$1" in block) echo 3 ;; confirm) echo 2 ;; warn) echo 1 ;; *) echo 0 ;; esac; }
+
+# apply_rule → 0 si la regla en curso matchea, 1 si no. Si matchea y es más estricta que la que
+# ya había en m_id, m_mode, m_reason, m_policy, la sustituye; a igualdad se queda la primera.
 apply_rule() {
-  [ -n "$r_id" ] || return 0
+  [ -n "$r_id" ] || return 1
   # Regla malformada = error de política, no permiso silencioso (fail-closed)
-  [ -n "$r_mode" ] || deny "[${r_id}] regla sin 'mode:' en la política — corrige sentinel/policy.yaml"
-  if [ "$r_requires_sdd" = "true" ] && [ "$POLICY_SDD" != "true" ]; then return 0; fi
-  if [ "$r_no_active" = "true" ] && [ -n "$ACTIVE_CHANGE" ]; then return 0; fi
+  [ -n "$r_mode" ] || deny "[${r_id}] regla sin 'mode:' en la política — corrige $CUR_POLICY"
+  if [ "$r_requires_sdd" = "true" ] && [ "$POLICY_SDD" != "true" ]; then return 1; fi
+  if [ "$r_no_active" = "true" ] && [ -n "$ACTIVE_CHANGE" ]; then return 1; fi
   # match: 0 = matchea · 1 = no matchea · 2+ = regex inválida → error de política (fail-closed),
   # nunca "regla que no aplica" en silencio.
   match() { # $1=texto $2=regex [$3=-i]
     printf '%s' "$1" | grep -qE ${3:-} -- "$2" 2>/dev/null
     local rc=$?
     [ "$rc" -le 1 ] && return $rc
-    deny "[${r_id}] regex inválida en la política ('$2') — corrige sentinel/policy.yaml"
+    deny "[${r_id}] regex inválida en la política ('$2') — corrige $CUR_POLICY"
   }
 
-  if [ -n "$r_tool" ]; then match "$TOOL_NAME" "^($r_tool)$" || return 0; fi
+  if [ -n "$r_tool" ]; then match "$TOOL_NAME" "^($r_tool)$" || return 1; fi
   if [ -n "$r_command_re" ]; then
-    [ -n "$COMMAND" ] || return 0
-    match "$COMMAND" "$r_command_re" || return 0
+    [ -n "$COMMAND" ] || return 1
+    match "$COMMAND" "$r_command_re" || return 1
   fi
   if [ -n "$r_path_re" ]; then
-    match "$PATH_SURFACE" "$r_path_re" -i || return 0
+    match "$PATH_SURFACE" "$r_path_re" -i || return 1
   fi
   if [ -n "$r_content_re" ]; then
     # solo contra lo que se escribe (+ comando en Bash), nunca contra old_string
-    match "$(printf '%s\n%s' "$NEW_CONTENT" "$COMMAND")" "$r_content_re" || return 0
+    match "$(printf '%s\n%s' "$NEW_CONTENT" "$COMMAND")" "$r_content_re" || return 1
   fi
-  if [ -n "$r_branch_re" ]; then match "$BRANCH" "$r_branch_re" || return 0; fi
-  rule_matched "$r_id" "$r_mode" "$r_reason"   # no retorna
+  if [ -n "$r_branch_re" ]; then match "$BRANCH" "$r_branch_re" || return 1; fi
+  case "$r_mode" in
+    block|confirm|warn) ;;
+    *) deny "[$r_id] modo desconocido '$r_mode' en la política — corrige $CUR_POLICY" ;;
+  esac
+  # Se queda con la más estricta de las que matchean; a igualdad, con la primera
+  if [ -z "$m_id" ] || [ "$(rank "$r_mode")" -gt "$(rank "$m_mode")" ]; then
+    m_id="$r_id"; m_mode="$r_mode"; m_reason="$r_reason"; m_policy="$CUR_POLICY"
+  fi
+  return 0
 }
 
 # Parser v1: clave al inicio de línea (tras indentación); comentarios en cualquier columna
@@ -172,27 +212,50 @@ val() {
   printf '%s' "$v"
 }
 
-reset_rule
-while IFS= read -r raw || [ -n "$raw" ]; do
-  line="${raw#"${raw%%[![:space:]]*}"}"          # sin indentación
-  case "$line" in \#*|"") continue ;; esac        # comentario en cualquier columna
-  case "$line" in
-    "- id:"*|"-  id:"*)
-      apply_rule; reset_rule; r_id="$(val "${line#-}")" ;;
-    *)
-      if   kv "$line" "tool";                     then r_tool="$(val "$line")"
-      elif kv "$line" "command_re";               then r_command_re="$(val "$line")"
-      elif kv "$line" "path_re";                  then r_path_re="$(val "$line")"
-      elif kv "$line" "content_re";               then r_content_re="$(val "$line")"
-      elif kv "$line" "branch_re";                then r_branch_re="$(val "$line")"
-      elif kv "$line" "only_if_no_active_change"; then r_no_active="$(val "$line")"
-      elif kv "$line" "requires_sdd";             then r_requires_sdd="$(val "$line")"
-      elif kv "$line" "mode";                     then r_mode="$(val "$line")"
-      elif kv "$line" "reason";                   then r_reason="$(val "$line")"
-      fi ;;
-  esac
-done < "$POLICY"
-apply_rule
+# eval_policy <fichero> → de las reglas del fichero que matchean, la más estricta queda en m_*
+# (m_id vacío si ninguna; a igualdad, la primera). En cuanto una bloquea ya no hay nada más
+# estricto, así que deja de mirar.
+eval_policy() {
+  CUR_POLICY="$1"; m_id=""; m_mode=""; m_reason=""; m_policy=""
+  reset_rule
+  while IFS= read -r raw || [ -n "$raw" ]; do
+    line="${raw#"${raw%%[![:space:]]*}"}"          # sin indentación
+    case "$line" in \#*|"") continue ;; esac        # comentario en cualquier columna
+    case "$line" in
+      "- id:"*|"-  id:"*)
+        apply_rule || true
+        [ "$m_mode" = block ] && return 0
+        reset_rule; r_id="$(val "${line#-}")" ;;
+      *)
+        if   kv "$line" "tool";                     then r_tool="$(val "$line")"
+        elif kv "$line" "command_re";               then r_command_re="$(val "$line")"
+        elif kv "$line" "path_re";                  then r_path_re="$(val "$line")"
+        elif kv "$line" "content_re";               then r_content_re="$(val "$line")"
+        elif kv "$line" "branch_re";                then r_branch_re="$(val "$line")"
+        elif kv "$line" "only_if_no_active_change"; then r_no_active="$(val "$line")"
+        elif kv "$line" "requires_sdd";             then r_requires_sdd="$(val "$line")"
+        elif kv "$line" "mode";                     then r_mode="$(val "$line")"
+        elif kv "$line" "reason";                   then r_reason="$(val "$line")"
+        fi ;;
+    esac
+  done < "$1"
+  apply_rule || true
+}
+
+# De todas las reglas que matchean, en las dos políticas, gana la más estricta y, a igualdad,
+# la del SDK: el consumidor añade protección, nunca la quita (SC-17, SC-18, SC-20)
+eval_policy "$DEFAULT_POLICY"
+d_id="$m_id"; d_mode="$m_mode"; d_reason="$m_reason"; d_policy="$m_policy"
+c_id=""; c_mode=""; c_reason=""; c_policy=""
+if [ -f "$POLICY" ]; then
+  eval_policy "$POLICY"
+  c_id="$m_id"; c_mode="$m_mode"; c_reason="$m_reason"; c_policy="$m_policy"
+fi
+if [ -n "$c_id" ] && [ "$(rank "$c_mode")" -gt "$(rank "$d_mode")" ]; then
+  CUR_POLICY="$c_policy"; rule_matched "$c_id" "$c_mode" "$c_reason"
+elif [ -n "$d_id" ]; then
+  CUR_POLICY="$d_policy"; rule_matched "$d_id" "$d_mode" "$d_reason"
+fi
 
 # Ninguna regla matchea → pasa (SC-01)
 exit 0

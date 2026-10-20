@@ -4,7 +4,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 
 run_hook "$GUARD_HOOK" \
   '{"tool_name":"Edit","tool_input":{"file_path":"jest.config.js","new_string":"coverageThreshold: 10"}}' \
-  SENTINEL_POLICY="$REPO_ROOT/sentinel/policy.yaml"
+  SENTINEL_POLICY_DEFAULT="$DEFAULT_POLICY" SENTINEL_POLICY="$CONSUMER_POLICY"
 assert_exit 0 || exit 1
 assert_err_contains "warn:coverage-thresholds" || exit 1
 exit 0

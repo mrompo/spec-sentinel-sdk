@@ -21,4 +21,5 @@
 ## Mapa
 
 Plan v2: `docs/01-plan-maestro.md` · Contratos: `sentinel/README.md`, `ai-specs/*/README.md`
-· Política de guardarraíles: `sentinel/policy.yaml` · Banco de pruebas: `fixture/`
+· Política de guardarraíles: `sentinel/policy.default.yaml` (la del SDK) + `sentinel/policy.yaml`
+(la de este repo) · Banco de pruebas: `fixture/`

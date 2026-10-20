@@ -61,6 +61,13 @@ omitirlo con aviso si no lo está (la Aduana de la fase 3 lo hace obligatorio).
 - **WHEN** se intenta pushear directamente a `main`/`production` desde una sesión de agente
 - **THEN** el push se rechaza (el commit ya existe: aquí no hay ventana de TOCTOU)
 
+#### Scenario: Ramas y nivel salen de las dos políticas (SC-git-gates-16)
+
+- **WHEN** `pre-push` decide qué ramas están protegidas y si aplica el nivel Método
+- **THEN** la lista de ramas sale de la regla `protected-branches` de la política distribuida
+  (`policy.default.yaml`), igual que en el Centinela; `sdd:` sale de la del consumidor
+  (`policy.yaml`) y, si no lo declara, de la distribuida
+
 ### Requirement: Degradación explícita (skip-vs-fail)
 
 La Esclusa SHALL distinguir "herramienta no instalada" (skip con aviso visible) de "entorno mal

@@ -1,0 +1,6 @@
+# Finales de línea LF en todo el SDK. bash no ejecuta un script con CRLF, y Git for Windows
+# convierte a CRLF por defecto (core.autocrlf=true): sin esto, en ese clon setup no arranca, el
+# Centinela lo deniega todo y la Esclusa lo rechaza todo (SC-sdk-setup-16). La línea de sentinel/
+# es la misma que setup añade al .gitattributes de cada consumidor.
+* text=auto eol=lf
+sentinel/** text eol=lf

@@ -7,15 +7,15 @@ PAYLOAD='{"tool_name":"Edit","tool_input":{"file_path":"src/app.js","new_string"
 
 # Tier 0 (sdd: false): la regla no aplica → silencio
 tier0="$WS/policy-tier0.yaml"
-sed 's/^sdd:.*/sdd: false/' "$REPO_ROOT/sentinel/policy.yaml" > "$tier0"
-RH_CWD="$WS" run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$tier0"
+sed 's/^sdd:.*/sdd: false/' "$DEFAULT_POLICY" > "$tier0"
+RH_CWD="$WS" run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$tier0" SENTINEL_POLICY="$NO_POLICY"
 assert_exit 0 || { cleanup_workspace; exit 1; }
 [ -z "$RH_ERR" ] || { echo "    en Tier 0 no debe avisar: $RH_ERR" >&2; cleanup_workspace; exit 1; }
 
 # Tier 1 (sdd: true) sin cambio activo: warn
 tier1="$WS/policy-tier1.yaml"
-sed 's/^sdd:.*/sdd: true/' "$REPO_ROOT/sentinel/policy.yaml" > "$tier1"
-RH_CWD="$WS" run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY="$tier1"
+sed 's/^sdd:.*/sdd: true/' "$DEFAULT_POLICY" > "$tier1"
+RH_CWD="$WS" run_hook "$GUARD_HOOK" "$PAYLOAD" SENTINEL_POLICY_DEFAULT="$tier1" SENTINEL_POLICY="$NO_POLICY"
 rc=0
 assert_exit 0 || rc=1
 assert_err_contains "warn:spec-guard" || rc=1

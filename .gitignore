@@ -6,3 +6,5 @@ fixture/.tmp/
 # macOS
 .DS_Store
 sentinel/.override
+sentinel/.backup/
+.claude/settings.local.json

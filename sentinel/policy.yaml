@@ -1,116 +1,18 @@
-# sentinel/policy.yaml — LA política de escritura/ejecución (puesto Centinela)
-#
-# Esquema v1 (plano, parseable con bash+sed — sin dependencias):
-#   sdd: true|false            → nivel Método activo (habilita reglas con requires_sdd)
-#   rules:                     → lista ordenada; LA PRIMERA REGLA QUE MATCHEA DECIDE
-#     - id:            único y obligatorio (lo referencia overrides.log)
-#       tool:          regex sobre tool_name (Bash, Edit|Write, …)
-#       command_re:    regex sobre el comando (solo tool Bash)
-#       path_re:       regex sobre file_path (tools de fichero)
-#       content_re:    regex sobre el contenido escrito
-#       branch_re:     regex sobre la rama git actual
-#       only_if_no_active_change: true → solo aplica si NO hay cambio OpenSpec activo
-#       requires_sdd:  true → solo aplica con sdd: true
-#       mode:          block | confirm | warn
-#       reason:        motivo mostrado al denegar/avisar
-#
-# Modos: block → exit 2 con motivo · confirm → exige aprobación humana (SENTINEL_CONFIRM=1
-# tras aprobar) · warn → pasa dejando aviso.
-# Break-glass (block/confirm): SENTINEL_OVERRIDE="<motivo>" permite la acción y la registra
-# en sentinel/overrides.log (fichero versionado; doctor lo reporta — KPI de overrides).
-
+# sentinel/policy.yaml — la política de ESTE proyecto (puesto Centinela).
+# Las reglas del SDK viven en sentinel/policy.default.yaml y setup las actualiza. Aquí solo se
+# AÑADEN reglas propias (mismo esquema): entre las dos políticas gana la decisión más estricta,
+# y un id del SDK repetido es un error de política. Fichero protegido: se cambia en un cambio
+# revisado por una persona.
 version: 1
+# Este repo trabaja con OpenSpec: nivel Método
 sdd: true
 
 rules:
-  # ── autoprotección: el guardarraíl no se desarma a sí mismo ────────────────
-  # (hallazgo #1 del panel adversarial: sin esto, una sola escritura anula el Centinela)
-  - id: self-protection
+  # El mapa de instrucciones de los agentes de ESTE repo (AGENTS.md y sus enlaces CLAUDE.md,
+  # GEMINI.md y codex.md) lo cambia una persona. No va en la política distribuida: en un repo
+  # consumidor, su AGENTS.md es suyo (tercera revisión de git-gates, P3-3).
+  - id: protect-agents-md
     tool: Bash|Edit|Write|MultiEdit|NotebookEdit
-    # La llave (.override) también: si el agente pudiera escribirla, se concedería a sí mismo
-    # el break-glass (hallazgo del 2026-09-30, SC-git-gates-14). La Esclusa entra con sus hooks,
-    # su librería y el lector del adaptador (SC-git-gates-15); su README y el stack.yaml del
-    # consumidor siguen siendo editables.
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy\.yaml|overrides\.log|\.override)|\.claude/settings|AGENTS\.md$)
+    path_re: (AGENTS|CLAUDE|GEMINI|codex)\.md$
     mode: block
-    reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
-
-  - id: no-hook-disabling
-    tool: Bash
-    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_(OVERRIDE|CONFIRM|POLICY|OVERRIDES_LOG|GITLEAKS_BIN|OPENSPEC_BIN|STACK)=)
-    mode: block
-    reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
-
-  # ── gitflow ────────────────────────────────────────────────────────────────
-  - id: protected-branches
-    tool: Bash
-    command_re: (^|[;&|(]|&&)[[:space:]]*git([[:space:]]+(-[^[:space:]]+|[a-zA-Z-]+=[^[:space:]]+))*[[:space:]]+(commit|merge|cherry-pick|rebase|revert|am|apply)([[:space:]]|$)
-    branch_re: ^(main|master|development|preproduction|production)$
-    mode: block
-    reason: Rama protegida — crea una rama feature/fix/hotfix (guía docs/guia-uso.md §ciclo)
-
-  - id: branch-switch-and-commit
-    tool: Bash
-    command_re: git[[:space:]]+(checkout|switch)[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(main|master|development|preproduction|production)([[:space:]]|$)
-    mode: confirm
-    reason: Cambio a rama protegida en el mismo comando (el guard evalúa la rama ANTES de ejecutar — ver limitaciones en sentinel/README.md)
-
-  - id: no-force-push
-    tool: Bash
-    command_re: git([[:space:]]+(-[^[:space:]]+|[a-zA-Z-]+=[^[:space:]]+))*[[:space:]]+push([[:space:]]+.*)?([[:space:]](--force|--force-with-lease|--mirror|--delete|-f|-d)([[:space:]]|$)|[[:space:]]\+[^[:space:]]*:|[[:space:]]:[^[:space:]]+)
-    mode: block
-    reason: Reescritura o borrado de rama remota (force, mirror, delete o refspec con '+'/':') — prohibido
-
-  # ── ficheros gestionados por tooling ──────────────────────────────────────
-  # path_re matchea también contra el comando Bash (hallazgo #4: sed/tee/cp tocan
-  # ficheros protegidos sin traer file_path)
-  - id: managed-files
-    tool: Bash|Edit|Write|MultiEdit|NotebookEdit
-    path_re: (CHANGELOG\.md|package-lock\.json|[^[:space:]]+\.lock|openspec/specs/)
-    mode: block
-    reason: Fichero gestionado por tooling (semantic-release / lockfiles / specs archivadas via openspec archive)
-
-  # ── QA: el agente no debilita la suite (plan §7.1) ─────────────────────────
-  - id: protect-tests
-    tool: Edit|Write|MultiEdit|NotebookEdit
-    path_re: ((^|/)(tests?|spec|specs|e2e|cypress|__tests__)/|\.(test|spec|cy)\.[a-z]+|Test\.php$)
-    content_re: \.[[:space:]\\n]*(skip|only|todo|skipIf)[[:space:]\\n]*\(|x(describe|it|test)[[:space:]\\n]*\(
-    mode: block
-    reason: No se debilita la suite (.skip/.only/.todo) — si un test sobra, su cambio OpenSpec debe ampararlo
-
-  - id: protect-tests-bash
-    tool: Bash
-    command_re: (rm|mv)[[:space:]]+[^|;&]*((^|/)(tests?|spec|specs|e2e|cypress)/|\.(test|spec|cy)\.[a-z]+|Test\.php)|sed[[:space:]]+.*(skip|only)\(
-    mode: block
-    reason: No se borran, renombran ni desactivan tests desde shell — su cambio OpenSpec debe ampararlo
-
-  - id: coverage-thresholds
-    tool: Bash|Edit|Write|MultiEdit
-    path_re: (jest\.config|vitest\.config|phpunit\.xml|\.nycrc|codecov\.ya?ml)
-    mode: warn
-    reason: Tocas configuración de tests/cobertura — asegúrate de que el cambio activo lo ampara
-
-  # ── SDD (solo con sdd: true) ───────────────────────────────────────────────
-  - id: spec-guard
-    requires_sdd: true
-    only_if_no_active_change: true
-    tool: Edit|Write|MultiEdit
-    path_re: ^src/
-    mode: warn
-    reason: Edición de código sin cambio OpenSpec activo — abre el change antes (spec-guard en warn, decisión plan §11)
-
-  # ── destructivos y aislamiento ────────────────────────────────────────────
-  - id: destructive
-    tool: Bash
-    command_re: (^|[;&|])[[:space:]]*rm[[:space:]]+([^|;&]*[[:space:]])?-[a-zA-Z-]*([rR]|-recursive)|rm[[:space:]]+.*--force|find[[:space:]]+.*-delete|[Dd][Rr][Oo][Pp][[:space:]]+([Tt][Aa][Bb][Ll][Ee]|[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee])|[Tt][Rr][Uu][Nn][Cc][Aa][Tt][Ee][[:space:]]+[Tt][Aa][Bb][Ll][Ee]|[Dd][Ee][Ll][Ee][Tt][Ee][[:space:]]+[Ff][Rr][Oo][Mm]|migrate:(fresh|reset)|git[[:space:]]+reset[[:space:]]+--(hard|keep)|git[[:space:]]+clean[[:space:]]+-[a-zA-Z]*[fdx]
-    mode: confirm
-    reason: Comando destructivo — requiere confirmación humana explícita
-
-  - id: isolation-env
-    tool: Bash|Read|Grep|Edit|Write|MultiEdit
-    path_re: \.env\.?(prod|production|pre|preproduction|staging)
-    mode: block
-    reason: Aislamiento — el agente no toca entornos productivos (aplica también al MCP de Boost)
-
-# Regla pendiente de la fase 6 (necesita identidad de subagente, aún no disponible):
-#   design-ownership: solo el software-architect edita openspec/changes/*/design.md
+    reason: El mapa de instrucciones de los agentes de este repo lo cambia una persona en un cambio OpenSpec revisado

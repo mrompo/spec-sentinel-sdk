@@ -1,0 +1,12 @@
+{"lens":"auditor","votes":[
+{"id":"V3-1","agree":true,"severity":"minor","note":"Coincide con mi A3-4 (y con P3-7): los README describen la evaluación anterior por fichero y los recuentos están desfasados."},
+{"id":"P3-1","agree":true,"severity":"blocker","note":"Coincide con mi A3-prev-A2-prevA4 y con A3-1 (disableAllHooks); pegar el fragmento como segunda clave «hooks» agrava el caso: SC-sdk-setup-10 no se cumple."},
+{"id":"P3-2","agree":true,"severity":"blocker","note":"Coincide con mi A3-prev-A2-5. Lo subo a blocker: es la ruta que recomiendan la guía y SKILL.md, así que no se cumple la cláusula de SC-21 sobre las formas habituales."},
+{"id":"P3-3","agree":true,"severity":"major","note":"Reproducido: en un consumidor recién instalado, Edit de AGENTS.md → rc=2 y CLAUDE.md → rc=0. Regla propia del SDK que viaja en la política distribuida."},
+{"id":"P3-4","agree":true,"severity":"major","note":"Reproducido: setup desde un SDK 3 commits atrás → rc=0 y revierte 4 ficheros, protect-installer incluido."},
+{"id":"P3-5","agree":true,"severity":"minor","note":"Coincide con mi A3-2. Minor: es una instrucción que sigue la persona, no un fallo del enforcement."},
+{"id":"P3-6","agree":true,"severity":"minor","note":"Reproducido: el «git add» del paso 6 se bloquea; con «.claude/» pasa."},
+{"id":"P3-7","agree":true,"severity":"minor","note":"Mismo hallazgo que V3-1 y mi A3-4."},
+{"id":"P3-8","agree":true,"severity":"nit","note":"Reproducido: en un consumidor sin OpenSpec, session-start cita STATUS.md, que no existe."},
+{"id":"P3-9","agree":true,"severity":"nit","note":"Cierto: la guía no recoge el pendiente de core.fileMode=false."}
+]}

@@ -6,6 +6,11 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GUARD_HOOK="$REPO_ROOT/sentinel/hooks/sentinel-guard.sh"
+# Las dos políticas (slice 6 de git-gates): la distribuida se evalúa primero, la del consumidor
+# después. NO_POLICY = consumidor sin política (legítimo: protegen las reglas del SDK).
+DEFAULT_POLICY="$REPO_ROOT/sentinel/policy.default.yaml"
+CONSUMER_POLICY="$REPO_ROOT/sentinel/policy.yaml"
+NO_POLICY="/nonexistent/policy.yaml"
 WS=""
 
 mk_workspace() {

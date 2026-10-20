@@ -1,0 +1,21 @@
+{"lens":"adversary","votes":[
+{"id":"A6-prev-A5-1","agree":true,"severity":"major","note":"Real: la spec promete ignorar el jq del repo «se llegue a él como se llegue», y ninguna regla impide al agente crear una carpeta enlazada; queda acotado porque el PATH de la persona tiene que incluir esa carpeta y alguien tiene que reinstalar. Es el mismo defecto que P6-prev-A5-1."},
+{"id":"A6-prev-V5-6","agree":true,"severity":"major","note":"Coincide con mi V6-1, que dejé en nit por tomarlo como inalcanzable: antes de la primera instalación no hay Centinela y el agente puede escribir settings.local.json, así que lo subo a grave; GIT_CONFIG_* además alcanza a la Esclusa."},
+{"id":"A6-1","agree":true,"severity":"minor","note":"Misma raíz que A6-prev-A5-1 (se compara texto en vez de identidad de carpeta), pero exige una grafía distinta del repo en el PATH; el arreglo con -ef cubre los dos."},
+{"id":"A6-2","agree":true,"severity":"minor","note":"La receta de recuperación no hace nada, pero el fallo es cerrado (setup no instala): no deja ningún gate sin efecto, es un problema de uso."},
+{"id":"A6-3","agree":true,"severity":"minor","note":"Real y alcanzable antes de instalar (todavía no hay Centinela); acotado: la llave sirve una vez y deja rastro en la bitácora."},
+{"id":"A6-4","agree":true,"severity":"minor","note":"Dos reglas nuevas que el banco no falsifica (JSON_LEX con jq ≥1.7 y el check-attr eol), contra la regla de CLAUDE.md."},
+{"id":"A6-5","agree":true,"severity":"nit","note":"Mensaje falso («no existe») en un fallo que es seguro."},
+{"id":"A6-6","agree":true,"severity":"nit","note":"Los backups pueden acabar versionados, pero eso no afecta a ningún gate."},
+{"id":"A6-7","agree":false,"severity":"nit","note":"Fuera de alcance: es deuda de STATUS.md, aunque el texto esté desfasado de verdad."},
+{"id":"P6-prev-A5-1","agree":true,"severity":"major","note":"Es el mismo defecto que A6-prev-A5-1, confirmado en tres plataformas."},
+{"id":"P6-1","agree":true,"severity":"major","note":"Nuevo en la ronda 6 y de la misma clase que el jq del repo: un programa externo que puede estar en el repo se ejecuta después de comprobar el cableado; además del arreglo propuesto, conviene volver a comprobar el cableado al final de setup."},
+{"id":"P6-2","agree":true,"severity":"minor","note":"Es lo mismo que A6-2: falla cerrado."},
+{"id":"P6-3","agree":true,"severity":"minor","note":"Rompe la idempotencia en el clon CRLF que la guía da por soportado, pero no deja ningún gate sin efecto."},
+{"id":"P6-4","agree":true,"severity":"minor","note":"Bucle de exit 3 con una instrucción que no funciona; es de uso y venía de antes."},
+{"id":"P6-5","agree":true,"severity":"nit","note":"Documentación de Git Bash; falla cerrado («SDK incompleto»)."},
+{"id":"P6-6","agree":true,"severity":"nit","note":"Texto dirigido a la persona equivocada en la configuración gestionada."},
+{"id":"P6-7","agree":true,"severity":"nit","note":"Lo vi también: la regla bloquea un .jq del proyecto, al contrario de lo que dice el comentario; bloquea de más, no abre ninguna vía."},
+{"id":"P6-8","agree":true,"severity":"nit","note":"ENV no cambia el arranque de un bash no interactivo: es un falso positivo, no un hueco."},
+{"id":"P6-9","agree":true,"severity":"nit","note":"Ocurre en el propio SDK y no afecta a ningún gate del consumidor."}
+]}
