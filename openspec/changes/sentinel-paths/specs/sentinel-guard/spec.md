@@ -33,6 +33,13 @@ las acciones legítimas que solo se parecen a una protegida.
   `docs/.gitconfig.example` o un repo de dotfiles) o lee un fichero protegido
 - **THEN** el hook deja pasar la acción
 
+#### Scenario: El entorno de la sesión no elige el Centinela (SC-sentinel-paths-06)
+
+- **WHEN** Claude Code se abre con una carpeta del repo en el `PATH` (o con variables que
+  cambian cómo arranca bash) y el agente ha escrito ahí un `bash`
+- **THEN** el cableado ejecuta el Centinela del repo con un intérprete que no sale del repo, y
+  el Centinela decide como sin ese entorno
+
 #### Scenario: La llave autoriza la acción prevista (SC-sentinel-paths-05)
 
 - **WHEN** hay una llave y otra acción bloqueada (de cualquier agente de la sesión) llega antes

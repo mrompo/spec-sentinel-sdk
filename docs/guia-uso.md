@@ -146,9 +146,17 @@ comando; al reinstalar o actualizar, el Centinela te pide aprobación antes de e
 **Windows**: el SDK y `setup` son bash. Con Git Bash o WSL funcionan, y el `.gitattributes` del
 SDK (y el que `setup` deja en tu repo) mantiene en LF lo que ejecuta bash aunque Git for
 Windows convierta a CRLF. En Git Bash, `ln -s` copia la carpeta en vez de enlazarla: crea el
-enlace con `MSYS=winsymlinks:nativestrict ln -sfn …` (necesita el modo desarrollador) o con
-`mklink /J`, y compruébalo con `test -L ~/.claude/skills/spec-sentinel-setup`. Windows nativo
-no está soportado de forma oficial.
+enlace con `MSYS=winsymlinks:nativestrict ln -sfn …` (necesita el modo desarrollador) o, desde
+Git Bash, con `cmd //c mklink /J` y rutas de Windows
+(`cmd //c mklink /J "%USERPROFILE%\.claude\skills\spec-sentinel-setup" "<ruta-al-sdk>\ai-specs\skills\setup"`),
+y compruébalo con `test -L ~/.claude/skills/spec-sentinel-setup`. Windows nativo no está
+soportado de forma oficial.
+
+**El `PATH`**: `setup` no ejecuta nada que venga del repo y quita de su `PATH` las carpetas del
+repo (las que añaden direnv o `npm run`), diciéndolo. Abre Claude Code sin esas carpetas en el
+`PATH`: el Centinela se ejecuta con el `bash` que encuentre ahí. Y no instales en tu carpeta
+personal aunque sea un repo (dotfiles): `setup` lo rechaza, porque su `.claude/` es tu
+configuración de usuario.
 
 | Qué hace | Qué deja en tu repo |
 |---|---|

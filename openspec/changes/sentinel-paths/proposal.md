@@ -23,6 +23,9 @@ El Centinela decide por el texto de la ruta y fichero a fichero. La revisión lo
   legítimo que el consumidor no puede relajar (`.gitconfig.example`, un repo de dotfiles, leer
   `.git/config`) (P5-6). Es el mismo problema que el falso positivo de solo lectura que ya
   figuraba como deuda en `STATUS.md`.
+- El cableado ejecuta el Centinela con el `bash` del `PATH` de la sesión: con una carpeta del
+  repo en ese `PATH` (direnv, `npm run`), el Centinela ejecutaría un `bash` que el agente puede
+  escribir (A7-2 de la séptima revisión, que la persona trajo aquí el 2026-10-19).
 - La llave de un solo uso la gasta la primera acción bloqueada de cualquier agente de la sesión,
   también la de un subagente, y no la que la persona tenía en mente: pasó durante la quinta
   revisión con un comando de solo lectura de un agente revisor.
@@ -42,6 +45,9 @@ El Centinela decide por el texto de la ruta y fichero a fichero. La revisión lo
    protegido desde la shell deja de bloquearse cuando el comando solo lee.
 5. La llave se ata a la acción que la persona autoriza (p. ej. la ruta o el comando en el
    motivo), o al menos el aviso de bloqueo dice qué acción la gastaría.
+6. El cableado ejecuta el Centinela con un entorno que no depende del de la sesión: un `bash`
+   y un `PATH` que no salen del repo, sin las variables que cambian cómo arranca bash. Hay que
+   cuidar las plataformas sin `/bin/bash` (NixOS).
 
 ## Impact
 

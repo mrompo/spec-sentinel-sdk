@@ -242,9 +242,10 @@
        carpeta personal como repo
 - [x] Y2. El banco en rojo
 - [x] Y3. 👤 `setup.sh` (**fichero protegido**, con llave)
-- [ ] Y4. Textos: el límite «PATH de la sesión», `mklink` en Git Bash, `sentinel-paths` con el
+- [x] Y4. Textos: el límite «PATH de la sesión», `mklink` en Git Bash, `sentinel-paths` con el
        cableado de entorno limpio y la deuda en `STATUS.md`
-- [ ] Y5. El banco completo en verde → listo para el merge (12)
+- [x] Y5. El banco completo en verde → listo para el merge (12): hooks 20/20, githooks 16/16,
+       install 17/17 (`26e650b`)
 
 - [ ] 12. `merge` a `main` (una persona) → `archive`
 

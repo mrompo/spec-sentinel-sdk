@@ -3,8 +3,9 @@
 **Objetivo**: que el Centinela proteja lo que se toca (carpetas, rutas físicas, la configuración
 de git real) y no el texto con que se escribe, sin bloquear trabajo legítimo, y que la llave
 autorice la acción que la persona tenía en mente.
-**Origen**: V5-1, V5-2, A5-3, V5-4, P5-6 y V5-7 de la quinta revisión de `git-gates`, y la deuda
-del falso positivo de solo lectura de `STATUS.md`.
+**Origen**: V5-1, V5-2, A5-3, V5-4, P5-6 y V5-7 de la quinta revisión de `git-gates`, A7-2 de la
+séptima (el cableado depende del `PATH` de la sesión), y la deuda del falso positivo de solo
+lectura de `STATUS.md`.
 
 ## Engine · antes de teclear
 
