@@ -4,8 +4,8 @@
 ronda 4) · Mismo método que las rondas anteriores: tres lentes nuevas con contexto limpio,
 `counter-review` cruzado y veredicto con [`../synthesis.sh`](../synthesis.sh). Fuera de alcance,
 por decisión de la persona: la convivencia con otros gestores de hooks
-([`hook-coexistence`](../../../hook-coexistence/proposal.md)), la versión del SDK
-([`sdk-version`](../../../sdk-version/proposal.md)), el límite «regex evadibles» y la deuda
+([`hook-coexistence`](../../../../hook-coexistence/proposal.md)), la versión del SDK
+([`sdk-version`](../../../../sdk-version/proposal.md)), el límite «regex evadibles» y la deuda
 registrada en `STATUS.md`.
 
 ## La ronda 3

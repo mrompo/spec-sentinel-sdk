@@ -1,7 +1,7 @@
 # Proposal — sdk-version (qué versión del SDK está instalada, y no retroceder sin querer)
 
 > Nace de la tercera revisión adversarial de `git-gates` (P3-4,
-> [`../git-gates/review/round3/README.md`](../git-gates/review/round3/README.md)). La persona
+> [`../archive/2026-10-20-git-gates/review/round3/README.md`](../archive/2026-10-20-git-gates/review/round3/README.md)). La persona
 > decidió el 2026-10-17 sacarlo de esa PR a su propio cambio.
 
 ## Why

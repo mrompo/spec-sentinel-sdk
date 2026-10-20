@@ -1,7 +1,7 @@
 # Proposal — hook-coexistence (la Esclusa convive con otros gestores de git hooks)
 
 > Nace de la segunda revisión adversarial de `git-gates` (tema 4,
-> [`../git-gates/review/round2/README.md`](../git-gates/review/round2/README.md)). La persona
+> [`../archive/2026-10-20-git-gates/review/round2/README.md`](../archive/2026-10-20-git-gates/review/round2/README.md)). La persona
 > decidió el 2026-10-16 sacarlo de esa PR: no es un fallo puntual, sino una decisión de diseño.
 
 ## Why
