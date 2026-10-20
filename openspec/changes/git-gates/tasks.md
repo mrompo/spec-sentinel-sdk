@@ -241,7 +241,7 @@
        enforcement, el `PATH` de `env` vacío o enlazado, `GIT_COMMON_DIR` y `GREP_OPTIONS`, y la
        carpeta personal como repo
 - [x] Y2. El banco en rojo
-- [ ] Y3. 👤 `setup.sh` (**fichero protegido**, con llave)
+- [x] Y3. 👤 `setup.sh` (**fichero protegido**, con llave)
 - [ ] Y4. Textos: el límite «PATH de la sesión», `mklink` en Git Bash, `sentinel-paths` con el
        cableado de entorno limpio y la deuda en `STATUS.md`
 - [ ] Y5. El banco completo en verde → listo para el merge (12)

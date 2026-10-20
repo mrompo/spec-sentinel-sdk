@@ -24,12 +24,13 @@
 # mismos que la Esclusa), CLAUDE_CONFIG_DIR (la configuración de usuario de Claude Code, como en
 # Claude Code), SENTINEL_SETUP_MANAGED (la configuración gestionada; por defecto, la de la
 # plataforma).
-# Falsifica: SC-sdk-setup-01..17 (fixture/install/cases/).
+# Falsifica: SC-sdk-setup-01..18 (fixture/install/cases/).
 set -uo pipefail
 
 # cd -P primero: a través de un enlace a la skill (~/.claude/skills/spec-sentinel-setup) se sube
-# desde la real
-SDK_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && cd ../../.. && pwd -P)"
+# desde la real. Sin dirname: hasta limpiar el PATH no se ejecuta ningún programa
+case "${BASH_SOURCE[0]}" in */*) here="${BASH_SOURCE[0]%/*}" ;; *) here=. ;; esac
+SDK_ROOT="$(cd -P "$here" && cd ../../.. && pwd -P)"
 GITLEAKS="${SENTINEL_GITLEAKS_BIN:-gitleaks}"
 HOOKS_PATH="sentinel/githooks"
 
@@ -47,6 +48,40 @@ dist_files() {
 }
 
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
+[ -d "${1:-.}" ] || die "no existe el directorio ${1:-.}"
+TARGET="$(cd "${1:-.}" && pwd -P)"
+
+# Nada de lo que setup ejecuta puede venir del repo destino: el agente podría poner ahí un jq que
+# «fusione» quitando el cableado, un bash, un git o el intérprete de otro programa que reescriban
+# el enforcement (SC-sdk-setup-10). Se reconoce el repo por la identidad de cada carpeta (-ef), no
+# por el texto: vale con carpetas enlazadas y con otras mayúsculas (macOS). Solo con builtins de
+# bash, porque se usa antes de limpiar el PATH
+under_repo() { # $1=ruta absoluta → 0 si ella o alguna carpeta por encima es el repo destino
+  local d="$1"
+  while :; do
+    [ "$d" -ef "$TARGET" ] && return 0
+    case "$d" in /|"") return 1 ;; esac
+    d="${d%/*}"; [ -n "$d" ] || d=/
+  done
+}
+# path_entry_bad <entrada del PATH> → vacía (la carpeta actual), relativa o que se alcanza desde
+# el repo, por su ruta escrita o por la real
+path_entry_bad() {
+  local e="$1" pe
+  case "$e" in /*) ;; *) return 0 ;; esac
+  under_repo "$e" && return 0
+  pe="$(cd -P "$e" 2>/dev/null && pwd -P)" && under_repo "$pe" && return 0
+  return 1
+}
+# El PATH de setup, limpio antes de ejecutar nada: sin entradas vacías, relativas ni del repo
+PATH_DROPPED=""; clean_path=""; rest="${PATH:-}:"
+while [ -n "$rest" ]; do
+  e="${rest%%:*}"; rest="${rest#*:}"
+  if path_entry_bad "$e"; then PATH_DROPPED="$PATH_DROPPED «${e:-(vacía)}»"; continue; fi
+  clean_path="${clean_path:+$clean_path:}$e"
+done
+PATH="$clean_path"; export PATH
+
 [ -f "$SDK_ROOT/sentinel/hooks/sentinel-guard.sh" ] && [ -f "$SDK_ROOT/sentinel/policy.default.yaml" ] \
   && [ -f "$SDK_ROOT/ai-specs/skills/setup/chain.sh" ] && [ -f "$SDK_ROOT/.claude/settings.json" ] \
   || die "SDK incompleto en $SDK_ROOT: falta sentinel/, chain.sh o .claude/settings.json — ejecuta setup.sh desde una copia íntegra del SDK.
@@ -65,36 +100,40 @@ crlf="$( { dist_files; echo ai-specs/skills/setup/chain.sh; } | while IFS= read 
     No se ha instalado nada"
 # shellcheck source=chain.sh
 source "$SDK_ROOT/ai-specs/skills/setup/chain.sh"
-[ -d "${1:-.}" ] || die "no existe el directorio ${1:-.}"
-TARGET="$(cd "${1:-.}" && pwd -P)"
 TOP="$(git -C "$TARGET" rev-parse --show-toplevel 2>/dev/null)" \
   || die "$TARGET no es un repo git — inicialízalo (git init) y vuelve a ejecutar setup"
 # Solo en la raíz: dentro de un subdirectorio, la instalación caería en otro sitio (o en un repo padre)
-[ "$(cd "$TOP" && pwd -P)" = "$TARGET" ] \
-  || die "$TARGET no es la raíz del repo — ejecuta setup en $TOP"
+if [ "$(cd "$TOP" && pwd -P)" != "$TARGET" ]; then
+  [ ! "$TOP" -ef "${HOME:-/nonexistent}" ] || die "$TARGET no tiene git propio: el repo que lo
+    contiene es tu carpeta personal ($TOP). Inicializa el proyecto con «git init» en $TARGET y
+    vuelve a ejecutar setup ahí (SC-sdk-setup-18)"
+  die "$TARGET no es la raíz del repo — ejecuta setup en $TOP"
+fi
+# La carpeta personal no es un proyecto: su .claude/ es la configuración de usuario de Claude
+# Code, y el cableado fallaría en todos los demás proyectos (SC-sdk-setup-18)
+if [ "$TARGET" -ef "${HOME:-/nonexistent}" ] || [ "$TARGET/.claude" -ef "${CLAUDE_CONFIG_DIR:-${HOME:-/nonexistent}/.claude}" ]; then
+  die "$TARGET es tu carpeta personal, o su .claude/ es tu configuración de usuario de Claude
+    Code: el cableado del Centinela acabaría ahí y fallaría en todos tus demás proyectos. Instala
+    en la carpeta de cada proyecto, con su propio git. No se ha instalado nada"
+fi
 SELF=0; [ "$TARGET" = "$SDK_ROOT" ] && SELF=1
 
 echo "Instalando el nivel Guardia en $TARGET"
+[ -z "$PATH_DROPPED" ] || note "se quitan del PATH de setup las entradas vacías, relativas o que
+    están dentro del repo destino (también a través de un enlace):$PATH_DROPPED. setup no ejecuta
+    nada que venga del repo. Ojo: si abres Claude Code con ese PATH, el Centinela ejecutaría un
+    bash del repo (límite «PATH de la sesión»)"
 
-# Los programas que setup ejecuta (jq, openspec) nunca pueden venir del repo destino: el agente
-# podría poner ahí uno que «fusione» quitando el cableado o que lo vacíe al validar. Se llegue a
-# él como se llegue (SC-sdk-setup-10): ni la ruta por la que se encuentra, ni su carpeta real, ni
-# ningún salto de su enlace pueden estar dentro. El repo se reconoce por la identidad de cada
-# carpeta (-ef), no por el texto: vale con carpetas enlazadas y con otras mayúsculas (macOS)
-under_repo() { # $1=ruta absoluta → 0 si ella o alguna carpeta por encima es el repo destino
-  local d="$1"
-  while :; do
-    [ "$d" -ef "$TARGET" ] && return 0
-    case "$d" in /|"") return 1 ;; esac
-    d="$(dirname "$d")"
-  done
-}
+# Además del PATH limpio, los programas que se eligen por variable (SENTINEL_SETUP_JQ,
+# SENTINEL_OPENSPEC_BIN) tampoco pueden venir del repo, se llegue a ellos como se llegue: ni la
+# ruta por la que se encuentran, ni su carpeta real, ni ningún salto de su enlace
 in_repo_bin() { # $1=ruta de un programa → 0 si se alcanza desde el repo
-  local p="$1" d lnk hops=0
+  local p="$1" d lnk hops=0 pd
   case "$p" in /*) ;; *) p="$PWD/$p" ;; esac
   while :; do
-    under_repo "$(dirname "$p")" && return 0
-    d="$(cd "$(dirname "$p")" 2>/dev/null && pwd -P)" || return 0
+    pd="${p%/*}"; [ -n "$pd" ] || pd=/
+    under_repo "$pd" && return 0
+    d="$(cd "$pd" 2>/dev/null && pwd -P)" || return 0
     under_repo "$d" && return 0
     [ -L "$p" ] || return 1
     [ "$hops" -lt 40 ] || return 0
@@ -410,28 +449,27 @@ check_effective() { # $1=fichero $2=cómo nombrarlo [$3=managed: la configuraci�
   keys="$(jqx -r '.env | objects | keys[]
       | select(startswith("SENTINEL_") or startswith("GIT_CONFIG") or startswith("DYLD_")
                or startswith("BASH_FUNC_") or . == "BASH_ENV" or . == "SHELLOPTS" or . == "BASHOPTS"
-               or . == "CLAUDE_PROJECT_DIR" or . == "GIT_DIR" or . == "GIT_WORK_TREE"
-               or . == "GIT_EXEC_PATH" or . == "LD_PRELOAD" or . == "LD_LIBRARY_PATH")' \
+               or . == "CLAUDE_PROJECT_DIR" or . == "GIT_DIR" or . == "GIT_COMMON_DIR"
+               or . == "GIT_WORK_TREE" or . == "GIT_EXEC_PATH" or . == "LD_PRELOAD"
+               or . == "LD_LIBRARY_PATH" or . == "GREP_OPTIONS")' \
       "$f" 2>/dev/null | tr -d '\r' | tr '\n' ' ')"
   [ -z "$keys" ] || todo "$name fija ${keys% } en «env»: Claude Code pasa esas variables al
     proceso del Centinela, que cambia de política, de llave o de código sin aviso, o a git, que
     puede dejar sin efecto la Esclusa. $fix_env"
   # PATH: con rutas absolutas de fuera del repo es lo normal; una entrada relativa (o vacía, que
   # es la carpeta actual) o dentro del repo haría que el Centinela ejecutara un bash del repo
-  envpath="$(jqx -r '.env | objects | .PATH | strings' "$f" 2>/dev/null | tr -d '\r')"
-  if [ -n "$envpath" ]; then
+  # Un PATH vacío también cuenta: es la carpeta actual, la raíz del proyecto (SC-sdk-setup-14)
+  if jqx -e '.env | objects | has("PATH")' "$f" >/dev/null 2>&1; then
+    envpath="$(jqx -r '.env.PATH | if type == "string" then . else "" end' "$f" 2>/dev/null | tr -d '\r')"
     rest="$envpath:"
     while [ -n "$rest" ]; do
       e="${rest%%:*}"; rest="${rest#*:}"
-      case "$e" in
-        /*) under_repo "$e" && bad_path="$bad_path «${e}»" ;;
-        *) bad_path="$bad_path «${e:-(vacía)}»" ;;
-      esac
+      path_entry_bad "$e" && bad_path="$bad_path «${e:-(vacía)}»"
     done
   fi
-  [ -z "$bad_path" ] || todo "$name fija PATH en «env» con entradas relativas o dentro del repo
-    (${bad_path# }): el Centinela podría ejecutar un bash o un git del repo. Usa rutas absolutas de
-    fuera del repo. $fix_env"
+  [ -z "$bad_path" ] || todo "$name fija PATH en «env» con entradas vacías, relativas o que se
+    alcanzan desde el repo (${bad_path# }): el Centinela podría ejecutar un bash o un git del repo,
+    o ninguno. Usa rutas absolutas de fuera del repo. $fix_env"
 }
 [ "$S_OK" -eq 0 ] || check_effective "$S" ".claude/settings.json"
 check_effective "$TARGET/.claude/settings.local.json" ".claude/settings.local.json"
@@ -538,10 +576,15 @@ fi
 # que queda: setup aún ejecuta programas (openspec, la prueba de humo del Centinela). Se toma una
 # foto y al final se compara (SC-sdk-setup-10)
 checked_snapshot() {
-  local f
-  for f in "$S" "$TARGET/.claude/settings.local.json" "$UC" "$MANAGED"; do
+  local f rel
+  for f in "$S" "$TARGET/.claude/settings.local.json" "$UC" "$MANAGED" "$CP" \
+           "$TARGET/.gitignore" "$TARGET/.gitattributes"; do
     if [ -f "$f" ]; then cksum <"$f" 2>/dev/null || echo "?"; else echo "-"; fi
   done
+  # El enforcement copiado en el paso 1 (A7-3)
+  while IFS= read -r rel; do
+    if [ -f "$TARGET/$rel" ]; then cksum <"$TARGET/$rel" 2>/dev/null || echo "?"; else echo "-"; fi
+  done < <(dist_files)
   git -C "$TARGET" config --get core.hooksPath 2>/dev/null || echo "-"
 }
 CHECKED="$(checked_snapshot)"
@@ -713,9 +756,10 @@ EOF
 fi
 
 [ "$(checked_snapshot)" = "$CHECKED" ] \
-  || todo "los settings de Claude Code o core.hooksPath cambiaron mientras se ejecutaba setup (lo
-    hizo alguno de los programas que ejecuta después de comprobarlos): lo comprobado ya no vale.
-    Revisa qué ha cambiado y vuelve a ejecutar setup"
+  || todo "los settings de Claude Code, core.hooksPath, el enforcement copiado, las políticas,
+    .gitignore o .gitattributes cambiaron mientras se ejecutaba setup (lo hizo alguno de los
+    programas que ejecuta después de comprobarlos): lo comprobado ya no vale. Revisa qué ha
+    cambiado (git status) y vuelve a ejecutar setup"
 
 echo
 if [ "$pending" -eq 1 ]; then
