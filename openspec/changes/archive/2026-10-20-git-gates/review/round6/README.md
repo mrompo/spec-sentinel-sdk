@@ -4,7 +4,7 @@
 la ronda 6) · Mismo método que las rondas anteriores: tres lentes nuevas con contexto limpio,
 `counter-review` cruzado y veredicto con [`../synthesis.sh`](../synthesis.sh). Fuera de alcance,
 por decisión de la persona: lo del Centinela
-([`sentinel-paths`](../../../sentinel-paths/proposal.md)), la convivencia con otros gestores de
+([`sentinel-paths`](../../../../sentinel-paths/proposal.md)), la convivencia con otros gestores de
 hooks, la versión del SDK, la tabla de límites y la deuda registrada en `STATUS.md`.
 
 ## La ronda 5

@@ -4,7 +4,7 @@
 ronda 3) · Mismo método que las rondas anteriores: tres lentes nuevas con contexto limpio,
 `counter-review` cruzado y veredicto con [`../synthesis.sh`](../synthesis.sh). Fuera de alcance,
 por decisión de la persona: el tema 4 de la ronda 2 (convivencia con otros gestores de hooks,
-cambio [`hook-coexistence`](../../../hook-coexistence/proposal.md)) y el límite «regex evadibles».
+cambio [`hook-coexistence`](../../../../hook-coexistence/proposal.md)) y el límite «regex evadibles».
 
 ## La ronda 2
 

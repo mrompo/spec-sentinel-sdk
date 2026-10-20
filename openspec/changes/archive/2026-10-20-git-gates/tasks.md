@@ -87,7 +87,9 @@
 
 ## Tribunal y Delivery
 
-- [ ] 11. `review` adversarial (tres lentes) → **Veredicto**: **`HOLD`** el 2026-10-16
+- [x] 11. `review` adversarial (tres lentes) → **Veredicto**: **`HOLD`** el 2026-10-16; siguieron
+       seis paneles más (rondas 2 a 7, abajo), el último `CONDITIONAL`, y la persona decidió el
+       merge tras la ronda 8
        ([`review/`](review/README.md)): 1 bloqueante y 12 graves validados → vuelta a `apply`
        tras la **Resolución** 👤. Foco anotado durante `apply`:
        - el agente puede ejecutar `setup.sh` en un repo consumidor, y eso sobrescribe ficheros
@@ -146,7 +148,7 @@
        comando de shell que lo nombre (`install-needs-human`) — **fichero protegido** (`4798c23`)
 - [x] S5. Retoque (A2-8, también en `session-start`) y documentación: el tema 4 como límite
        conocido en la guía y en `sentinel/README.md`, con su cambio OpenSpec propio,
-       [`hook-coexistence`](../hook-coexistence/proposal.md) (Intención pendiente 👤)
+       [`hook-coexistence`](../../hook-coexistence/proposal.md) (Intención pendiente 👤)
 - [x] S6. 👤 Ficheros protegidos de S2 y S4: en vez de parche, el agente los escribió con cuatro
        llaves de un solo uso que creó una persona (2026-10-17), registradas en
        `sentinel/overrides.log`; banco en verde (20 + 16 + 13 casos)
@@ -172,7 +174,7 @@
        llave), el `git add` de la skill y de `setup` (P3-6), el pendiente de `core.fileMode` y
        el de `disableAllHooks` en la guía (P3-9) y el límite del `core.hooksPath` propio (A3-5)
 - [x] T6. La versión del SDK (P3-4) como cambio propio,
-       [`sdk-version`](../sdk-version/proposal.md), y la deuda registrada en `STATUS.md`
+       [`sdk-version`](../../sdk-version/proposal.md), y la deuda registrada en `STATUS.md`
 - [x] T7. Relanzar el panel → **Veredicto** `HOLD`: la comprobación del cableado sigue sin
        validar la gramática JSON, más cinco graves
        ([`review/round4/`](review/round4/README.md))
@@ -216,7 +218,7 @@
        instalación, `sdd: true`, `.gitattributes` en el commit), skill y límites (configuración
        gestionada por MDM o servidor)
 - [x] W6. `STATUS.md`: la deuda de la quinta revisión y el cambio
-       [`sentinel-paths`](../sentinel-paths/proposal.md) (abierto con la disposición)
+       [`sentinel-paths`](../../sentinel-paths/proposal.md) (abierto con la disposición)
 - [x] W7. Relanzar el panel → **Veredicto** `CONDITIONAL`: sin bloqueantes, tres graves
        ([`review/round6/`](review/round6/README.md))
 
@@ -247,7 +249,7 @@
 - [x] Y5. El banco completo en verde → listo para el merge (12): hooks 20/20, githooks 16/16,
        install 17/17 (`26e650b`)
 
-- [ ] 12. `merge` a `main` (una persona) → `archive`
+- [x] 12. `merge` a `main` (una persona, PR #5, `fdb7a22`, 2026-10-20) → `archive`
 
 ## Notas de diseño (design gate)
 

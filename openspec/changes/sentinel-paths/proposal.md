@@ -1,7 +1,7 @@
 # Proposal — sentinel-paths (el Centinela decide sobre lo que se toca, no sobre cómo se escribe)
 
 > Nace de la quinta revisión adversarial de `git-gates` (V5-1, V5-2, A5-3, V5-4, P5-6, V5-7,
-> [`../git-gates/review/round5/README.md`](../git-gates/review/round5/README.md)). La persona
+> [`../archive/2026-10-20-git-gates/review/round5/README.md`](../archive/2026-10-20-git-gates/review/round5/README.md)). La persona
 > decidió el 2026-10-18 sacar lo del Centinela de la PR del instalador a su propio cambio.
 
 ## Why

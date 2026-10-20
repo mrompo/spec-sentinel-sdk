@@ -4,8 +4,8 @@
 la ronda 5) · Mismo método que las rondas anteriores: tres lentes nuevas con contexto limpio,
 `counter-review` cruzado y veredicto con [`../synthesis.sh`](../synthesis.sh). Fuera de alcance,
 por decisión de la persona: la convivencia con otros gestores de hooks
-([`hook-coexistence`](../../../hook-coexistence/proposal.md)), la versión del SDK
-([`sdk-version`](../../../sdk-version/proposal.md)), los límites «regex evadibles» y «jq
+([`hook-coexistence`](../../../../hook-coexistence/proposal.md)), la versión del SDK
+([`sdk-version`](../../../../sdk-version/proposal.md)), los límites «regex evadibles» y «jq
 manipulado», el resto de la tabla de límites y la deuda registrada en `STATUS.md`.
 
 ## La ronda 4
@@ -52,7 +52,7 @@ Decidida por una persona el 2026-10-18:
     configuración gestionada (A5-5 = P5-8), el aviso de `sdd: true` (P5-2), el banco del escape
     (A5-prev-A4-5 = P5-prev-A4-5) y los textos de la guía (P5-9, P5-10).
 - **Cambio propio** para el Centinela,
-  [`sentinel-paths`](../../../sentinel-paths/proposal.md): carpetas protegidas (V5-1), rutas
+  [`sentinel-paths`](../../../../sentinel-paths/proposal.md): carpetas protegidas (V5-1), rutas
   físicas y enlaces (V5-2), la disposición «repo bare + worktrees» (A5-3), otras vías hacia
   `core.hooksPath` (V5-4), los falsos positivos de la configuración de git (P5-6) y
   `CLAUDE_CONFIG_DIR` en otra ruta (V5-7). Recoge también que la llave la gaste la primera
