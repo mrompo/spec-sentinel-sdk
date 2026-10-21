@@ -18,6 +18,7 @@
        «TBD»)
 - [x] 2. 👤 El `Purpose` de las seis specs vivas: parche `spec-purposes.patch` que aplica una
        persona con `git apply --index` (ficheros gestionados)
-- [ ] 3. El banco en verde y `openspec validate --all --strict`
-- [ ] 4. `STATUS.md`: la deuda del `Purpose` sale y entra la regla
+- [x] 3. El banco en verde y `openspec validate --all --strict`: hooks 20/20, githooks 16/16,
+       install 17/17 y el check del `Purpose`; 10/10
+- [x] 4. `STATUS.md`: la deuda del `Purpose` sale y entra la regla
 - [ ] 5. `merge` a `main` (una persona) → `archive`
