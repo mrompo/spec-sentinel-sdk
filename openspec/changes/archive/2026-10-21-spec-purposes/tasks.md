@@ -21,4 +21,4 @@
 - [x] 3. El banco en verde y `openspec validate --all --strict`: hooks 20/20, githooks 16/16,
        install 17/17 y el check del `Purpose`; 10/10
 - [x] 4. `STATUS.md`: la deuda del `Purpose` sale y entra la regla
-- [ ] 5. `merge` a `main` (una persona) → `archive`
+- [x] 5. `merge` a `main` (una persona, PR #7, `9e5d2e7`, 2026-10-21) → `archive`
