@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-20 · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · siguientes: los gates Intención de `hook-coexistence`, `sdk-version` y `sentinel-paths`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
+**Última actualización**: 2026-10-21 · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` en `apply`: el `Purpose` de las seis specs vivas y la regla que impide dejarlo en «TBD» · siguientes: los gates Intención de `hook-coexistence`, `sdk-version` y `sentinel-paths`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0, 1 y **2** ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · siguiente: fase 3 (`ci-gate`) |
-| **Loop** | Ningún cambio en `apply`. Tres expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md), [`sdk-version`](openspec/changes/sdk-version/proposal.md) y [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
+| **Loop** | [`spec-purposes`](openspec/changes/spec-purposes/proposal.md) en `apply` (una PR, lista para el merge). Tres expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md), [`sdk-version`](openspec/changes/sdk-version/proposal.md) y [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -46,7 +46,7 @@
 | Check | Estado |
 |---|---|
 | `fixture/verify.sh` | ✅ verde — 20 casos del Centinela + 16 de la Esclusa + 17 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR. El banco de instalación necesita jq |
-| `openspec validate --all --strict` | ✅ verde (6 specs vivas + los 3 expedientes activos) |
+| `openspec validate --all --strict` | ✅ verde (6 specs vivas + los 4 expedientes activos) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
 | KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log`: 15 excepciones, del 2026-10-17 al 2026-10-20. Catorce son llaves que una persona concedió para que el agente escribiera los ficheros protegidos de las rondas 3 a 8 de `git-gates`; una la gastó un agente revisor con un comando de solo lectura (va a `sentinel-paths`) |
 | Enforcement real | **Centinela y Esclusa activos en este repo**. El Centinela (`.claude/settings.json`) impide al agente commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests o desarmar el propio guard. La Esclusa (`core.hooksPath` → `sentinel/githooks`, desde el 2026-10-16) revisa cada commit y cada push. La Aduana llega en la fase 3 |
@@ -73,9 +73,6 @@
   `openspec archive` que aún no está commiteado (pasó en `pr-format`, lo deshizo una persona) e
   incluso escribir un texto que *menciona* esas rutas en un comando. Va en un expediente propio
   del Centinela, junto al falso positivo.
-- Las specs vivas `sentinel-guard`, `framework-semantics`, `git-gates` y `sdk-setup` tienen el
-  `Purpose` en «TBD» (lo deja `openspec archive`); están protegidas como ficheros gestionados,
-  así que lo rellena una persona.
 - Renombrar el job de CI `verify` (colisión asumida en docs/05 §10).
 - **Convivencia de la Esclusa con otros gestores de git hooks** (husky, lefthook, pre-commit,
   git-lfs): sacada de `git-gates` tras su segunda revisión; expediente propio,

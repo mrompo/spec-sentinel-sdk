@@ -1,7 +1,13 @@
 # git-gates Specification
 
 ## Purpose
-TBD - created by archiving change git-gates. Update Purpose after archive.
+
+La Esclusa: los git hooks (`commit-msg`, `pre-commit`, `pre-push`) que impiden commitear o
+publicar lo que no cumple el contrato del proyecto. Al commitear exigen mensajes en Conventional
+Commits, ningún secreto y formato; al publicar, tests, rama no protegida y specs válidas.
+Degradan con aviso si falta una herramienta opcional, fallan si falta una obligatoria y admiten
+una excepción auditada con la misma llave que el Centinela.
+
 ## Requirements
 ### Requirement: Mensajes de commit conformes
 

@@ -1,7 +1,11 @@
 # sentinel-guard Specification
 
 ## Purpose
-TBD - created by archiving change sentinel-guard. Update Purpose after archive.
+
+El Centinela: el hook PreToolUse que evalúa cada acción del agente contra la política del SDK y
+la del proyecto. Según la regla más estricta que coincida, la bloquea, pide confirmación humana
+o avisa. Protege el propio enforcement y admite una excepción auditada de un solo uso.
+
 ## Requirements
 ### Requirement: Evaluación de la política
 

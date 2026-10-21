@@ -1,7 +1,11 @@
 # pr-format Specification
 
 ## Purpose
-TBD - created by archiving change pr-format. Update Purpose after archive.
+
+El formato de toda pull request: título en Conventional Commits y diez secciones fijas. Esas
+secciones enlazan el expediente OpenSpec, trazan cada escenario a su test y declaran excepciones
+y procedencia, para que una persona pueda revisar sin haber seguido el trabajo.
+
 ## Requirements
 ### Requirement: Título conforme
 
