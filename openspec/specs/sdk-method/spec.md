@@ -5,7 +5,6 @@
 El SDK se construye con su propio método: todo cambio del framework pasa por un cambio
 OpenSpec, las specs archivadas son su contrato vigente y la estructura del repo es portable entre
 copilotos, con una única fuente de instrucciones.
-
 ## Requirements
 ### Requirement: Dogfooding del método
 
@@ -39,4 +38,15 @@ apunten a una fuente única de instrucciones.
 
 - **WHEN** un symlink multi-copilot queda colgante
 - **THEN** `doctor` (fase 4) lo reporta como error; hasta entonces, el fixture lo verifica
+
+### Requirement: Toda spec viva declara su propósito
+
+Cada spec viva de `openspec/specs/` SHALL tener en su sección `Purpose` un texto que diga para
+qué sirve la capability. El «TBD» que deja `openspec archive` al crear una spec nueva SHALL
+sustituirse en la misma PR del archivo, antes de que llegue a `main`.
+
+#### Scenario: Una spec viva sin propósito no pasa el banco (SC-sdk-method-05)
+
+- **WHEN** una spec viva tiene el `Purpose` vacío o empieza por «TBD»
+- **THEN** `fixture/verify.sh` falla y nombra la spec
 
