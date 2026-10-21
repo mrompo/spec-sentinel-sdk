@@ -1,7 +1,11 @@
 # sdk-method Specification
 
 ## Purpose
-TBD - created by archiving change bootstrap-method. Update Purpose after archive.
+
+El SDK se construye con su propio método: todo cambio del framework pasa por un cambio
+OpenSpec, las specs archivadas son su contrato vigente y la estructura del repo es portable entre
+copilotos, con una única fuente de instrucciones.
+
 ## Requirements
 ### Requirement: Dogfooding del método
 

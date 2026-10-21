@@ -16,7 +16,7 @@
 
 - [x] 1. La delta de `sdk-method` y el check de `fixture/verify.sh`, en rojo (seis specs en
        «TBD»)
-- [ ] 2. 👤 El `Purpose` de las seis specs vivas: parche `spec-purposes.patch` que aplica una
+- [x] 2. 👤 El `Purpose` de las seis specs vivas: parche `spec-purposes.patch` que aplica una
        persona con `git apply --index` (ficheros gestionados)
 - [ ] 3. El banco en verde y `openspec validate --all --strict`
 - [ ] 4. `STATUS.md`: la deuda del `Purpose` sale y entra la regla

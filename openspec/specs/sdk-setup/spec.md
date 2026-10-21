@@ -1,7 +1,11 @@
 # sdk-setup Specification
 
 ## Purpose
-TBD - created by archiving change git-gates. Update Purpose after archive.
+
+La instalación del nivel Guardia (Centinela y Esclusa) en un repo con un solo comando, `setup`.
+Es idempotente, no pisa la configuración del consumidor, comprueba que lo instalado sea efectivo
+y avisa de lo que no puede resolver por sí sola; nunca sirve para desactivar los gates.
+
 ## Requirements
 ### Requirement: Instalación de un comando
 

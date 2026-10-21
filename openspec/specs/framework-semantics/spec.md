@@ -1,7 +1,12 @@
 # framework-semantics Specification
 
 ## Purpose
-TBD - created by archiving change framework-semantics. Update Purpose after archive.
+
+El vocabulario del framework: un único documento (`docs/05-semantica.md`) que nombra los
+puestos, los niveles, los artefactos y el modelo del Loop (stages, steps y gates), para que los
+documentos y las superficies de usuario hablen igual. Nombrar es solo documentación: no cambia
+ningún comportamiento.
+
 ## Requirements
 ### Requirement: Vocabulario de fuente única
 
