@@ -47,6 +47,16 @@ else
   ok "todos los Scenarios llevan id SC-*"
 fi
 
+# Toda spec viva declara su propósito: el «TBD» que deja openspec archive se rellena en la misma
+# PR del archivo (SC-sdk-method-05)
+tbd=""
+for s in openspec/specs/*/spec.md; do
+  purpose="$(sed -n '/^## Purpose/,/^## /p' "$s" | sed '1d;$d' | tr -d '[:space:]')"
+  case "$purpose" in ""|TBD*) tbd="$tbd $(basename "$(dirname "$s")")" ;; esac
+done
+[ -z "$tbd" ] && ok "todas las specs vivas declaran su propósito" \
+  || err "specs vivas sin propósito (Purpose vacío o en TBD):$tbd"
+
 # Semántica: el vocabulario está definido y las superficies lo usan (SC-framework-semantics-01/03)
 SEM=docs/05-semantica.md
 if [ -f "$SEM" ]; then
