@@ -15,7 +15,11 @@
 #     - id:            único y obligatorio en las dos políticas (lo referencia overrides.log)
 #       tool:          regex sobre tool_name (Bash, Edit|Write, …)
 #       command_re:    regex sobre el comando (solo tool Bash)
-#       path_re:       regex sobre file_path (tools de fichero)
+#       path_re:       regex sobre file_path (tools de fichero) y el comando, también sobre la
+#                      ruta física de lo que tocan (enlaces resueltos; la configuración de git
+#                      real se nombra .git/…, la de Claude Code de la persona .claude/…)
+#       dir_re:        regex sobre la ruta física de cada ruta del comando, relativa al repo
+#                      y nombrada como en path_re, una por línea (se ancla con ^…$)
 #       content_re:    regex sobre el contenido escrito
 #       branch_re:     regex sobre la rama git actual
 #       only_if_no_active_change: true → solo aplica si NO hay cambio OpenSpec activo
@@ -54,6 +58,18 @@ rules:
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
 
+  # Las carpetas del enforcement, enteras: moverlas, copiar encima, enlazarlas, cambiarles los
+  # permisos o borrarlas deja el Centinela o la Esclusa sin efecto (sin el script el hook sale
+  # con 127, que no bloquea). Se decide por la ruta física de cada ruta del comando, así que
+  # vale cualquier grafía (./sentinel/, "sentinel", la ruta absoluta) y sus subcarpetas libres
+  # siguen libres (SC-sentinel-paths-01).
+  - id: protect-enforcement-dirs
+    tool: Bash
+    command_re: (^|[;&|(`[:space:]])(mv|cp|rsync|ln|rm|rmdir|unlink|chmod|chown|chflags|git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(rm|mv))[[:space:]]
+    dir_re: ^(sentinel|sentinel/hooks|sentinel/githooks|\.claude|\.git/hooks)$
+    mode: block
+    reason: No se mueve, enlaza ni borra una carpeta del enforcement (sentinel, sus hooks, la Esclusa, .claude, .git/hooks) — hazlo en un cambio OpenSpec revisado por un humano
+
   # El instalador es lo que ejecuta la aprobación humana de instalar: con las herramientas de
   # edición no se toca (SC-sentinel-guard-13). Por sus dos rutas: la copia del SDK a la que
   # apunta el consumidor (…/ai-specs/skills/setup/) y el enlace de la skill que propone la guía
@@ -69,7 +85,10 @@ rules:
     tool: Bash
     # Cualquier SENTINEL_* (override, políticas, binarios de prueba, el jq del instalador…):
     # una lista cerrada se queda corta en cuanto aparece una variable nueva (SC-sentinel-guard-13)
-    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_[A-Z_]+=)
+    # sentinel-paths (SC-sentinel-paths-03): también las formas de cambiar core.hooksPath sin
+    # nombrarlo — borrar o renombrar la sección core, un include.path o includeIf.*.path (en
+    # git config o con git -c) y abrir la configuración en un editor
+    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_[A-Z_]+=|--(remove|rename)-section[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[[:space:]"'])[Ii]nclude([Ii]f\.[^[:space:]=]*)?\.path|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$))
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 
