@@ -11,7 +11,7 @@
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0, 1 y **2** ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · siguiente: fase 3 (`ci-gate`) |
-| **Loop** | Ningún cambio en `apply`. Tres expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md), [`sdk-version`](openspec/changes/sdk-version/proposal.md) y [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
+| **Loop** | [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md): Intención ✅ (2026-10-26), `tune` y `breakdown` escritos; esperan los gates **Claridad** y **Plan** 👤 (tres PRs). Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
