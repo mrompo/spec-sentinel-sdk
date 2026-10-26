@@ -10,18 +10,17 @@ lectura de `STATUS.md`.
 que toca el enforcement es un fichero protegido: lo entrega el agente como parche en la raíz del
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
-**Posición en el Loop**: `tune` y `breakdown` escritos el 2026-10-26; esperan los gates
-Claridad y Plan.
+**Posición en el Loop**: gates Claridad y Plan aprobados el 2026-10-26; PR 1/3 en `apply`.
 
 ## Engine · antes de teclear
 
 - [x] 0. `propose`: expediente abierto el 2026-10-18 desde la disposición de la revisión
 - [x] 0a. Gate **Intención** 👤 — aprobado el 2026-10-26 (proposal §Decisiones)
-- [ ] 0b. `tune` → gate **Claridad** ⚙️👤: delta de `sentinel-guard` (SC-sentinel-paths-01..09 y
+- [x] 0b. `tune` → gate **Claridad** ⚙️👤: delta de `sentinel-guard` (SC-sentinel-paths-01..09 y
        el break-glass modificado) y de `git-gates` (SC-git-gates-11 con la llave atada);
        `openspec validate --strict` en verde. Las dos preguntas abiertas se cerraron con las
-       decisiones 1 y 2. Falta el visto bueno de la persona
-- [ ] 0c. `breakdown` → gate **Plan** 👤: las tres PRs de abajo
+       decisiones 1 y 2. Aprobado por la persona el 2026-10-26
+- [x] 0c. `breakdown` → gate **Plan** 👤: las tres PRs de abajo, aprobadas el 2026-10-26
 
 ## Checklist (`apply` ↺ `verify`, por slice)
 
