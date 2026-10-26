@@ -10,7 +10,8 @@ lectura de `STATUS.md`.
 que toca el enforcement es un fichero protegido: lo entrega el agente como parche en la raíz del
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
-**Posición en el Loop**: gates Claridad y Plan aprobados el 2026-10-26; PR 1/3 en `apply`.
+**Posición en el Loop**: gates Claridad y Plan aprobados el 2026-10-26; PR 1/3 en `apply`, a la
+espera de que una persona aplique `sentinel-paths-1.patch`.
 
 ## Engine · antes de teclear
 
@@ -31,7 +32,7 @@ lectura sobre una protección ya basada en la ruta física.
 
 ### PR 1/3 · Lo que se toca (SC-sentinel-paths-01, 02, 03, 07)
 
-- [ ] 1. Casos en rojo en `fixture/hooks/cases/`: carpetas enteras (`mv`, `rm -r`, `git rm -r`,
+- [x] 1. Casos en rojo en `fixture/hooks/cases/` (`sc-21` a `sc-24`, `7cb181a`): carpetas enteras (`mv`, `rm -r`, `git rm -r`,
        `ln`, `chmod -R` sobre `sentinel`, `sentinel/hooks`, `sentinel/githooks`, `.claude`,
        `.git/hooks`, y sus subcarpetas libres); enlaces de fichero y de carpeta hacia
        `sentinel/`, `.claude/` y la configuración de git; un repo bare con worktree
@@ -41,7 +42,13 @@ lectura sobre una protección ya basada en la ruta física.
 - [ ] 2. 👤 Parche `sentinel-paths-1.patch`: en la política, la regla de carpetas y
        `no-hook-disabling` ampliada; en el guard, la ruta física (la carpeta padre que exista
        y los enlaces del fichero) entra en la superficie de rutas, junto a la configuración de
-       git real (`git rev-parse --git-common-dir` y `--git-dir`) y `$CLAUDE_CONFIG_DIR`
+       git real (`git rev-parse --git-common-dir`; la de cada worktree y submódulo vive
+       dentro) y `$CLAUDE_CONFIG_DIR`.
+       Parche listo el 2026-10-26: la regla `protect-enforcement-dirs` con la clave nueva
+       `dir_re` (la ruta física de cada ruta del comando, anclada). Con él, en un clon limpio,
+       el banco entero sale en verde (hooks 24/24, githooks 16/16, install 17/17) y los nueve
+       mutantes (un mecanismo saboteado cada vez) rompen algún caso. Sube el coste del guard de
+       unos 0,44 s a unos 0,53 s por llamada con un comando de 15 rutas
 - [ ] 3. Banco en verde y `openspec validate --all --strict`; `sentinel/README.md` («regex
        evadibles» suma `cd` dentro de la carpeta) y `STATUS.md`. `merge` (una persona)
 
