@@ -11,7 +11,7 @@ TOKEN="$WS/sentinel/.override"
 
 # Un directorio en lugar del fichero: no se puede escribir, sea quien sea el usuario
 mkdir -p "$WS/sentinel/overrides.log"
-printf 'hotfix INC-9\n' >"$TOKEN"
+printf 'hotfix INC-9\npara: esclusa:commit-msg\n' >"$TOKEN"
 gh_commit "arreglado el bug"
 assert_exit 1 || fail_case "sin bitácora escribible el commit no debería entrar"
 assert_err_contains "sin registro no hay excepción" || fail_case "no explica por qué se deniega"
