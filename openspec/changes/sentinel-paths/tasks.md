@@ -50,6 +50,13 @@ lectura sobre una protección ya basada en la ruta física.
        unos 0,44 s a unos 0,53 s por llamada con un comando de 15 rutas
 - [x] 3. Banco en verde y `openspec validate --all --strict`; `sentinel/README.md` («regex
        evadibles» suma `cd` dentro de la carpeta) y `STATUS.md`
+- [ ] 3a. 👤 Revisión de la PR #9 (CodeRabbit, dos hallazgos de seguridad, los dos reales).
+       Primero, con 64 rutas de relleno delante el guard dejaba de mirar, y `rm -rf … sentinel`
+       pasaba. Segundo, una ruta entre comillas con espacios (`"a b/../sentinel"`) se partía en
+       dos. Hay caso en rojo (`sc-21`, `d8de6cb`) y parche `sentinel-paths-1b.patch`: las
+       palabras del comando se leen como las vería la shell (comillas y escapes, con un awk) y,
+       si hay más de 128 rutas, el comando se deniega en vez de dejar de mirar. Las tres
+       variantes pasaban con el guard aplicado y la 1b las bloquea
 - [ ] 3b. `merge` de la PR 1/3 (una persona)
 
 ### PR 2/3 · Sin falsos positivos y la llave (SC-sentinel-paths-04, 05, 08; SC-sentinel-guard-08, 09; SC-git-gates-11)
