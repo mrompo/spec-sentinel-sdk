@@ -74,6 +74,39 @@ done
 RH_CWD="$WS" run_hook "$GUARD_HOOK" '{"tool_name":"Bash","tool_input":{"command":"mv docs/x docs/y && echo \"resumen\nsentinel\""}}' \
   -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
 assert_exit 0 || { echo "    un texto de varias líneas debería permitirse" >&2; exit 1; }
+# Segunda ronda de la #10 (CodeRabbit): los escapes se deshacen como el JSON y la shell. Un
+# tabulador, un retorno de carro o un \u00XX no se convierten en otra cosa, y dentro de "…" una
+# barra seguida de salto de línea desaparece entera. Nombres nuevos: "a b" y "a⏎b" ya existen y
+# también llevarían a sentinel
+mkdir -p "$WS/c"$'\t'"d" "$WS/e"$'\r'"f" "$WS/g"$'\x01'"h"
+for payload in \
+  '{"tool_name":"Bash","tool_input":{"command":"mv \"sen\\\ntinel\" /tmp/x"}}' \
+  '{"tool_name":"Bash","tool_input":{"command":"mv \"c\td/../sentinel\" /tmp/x"}}' \
+  '{"tool_name":"Bash","tool_input":{"command":"mv \"e\rf/../sentinel\" /tmp/x"}}' \
+  '{"tool_name":"Bash","tool_input":{"command":"mv \"g\u0001h/../sentinel\" /tmp/x"}}' \
+  '{"tool_name":"Bash","tool_input":{"command":"mv sentinel /tmp/x"}}'; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$payload" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: $payload" >&2; exit 1; }
+done
+# Dentro de "…" la barra solo escapa $ ` " \ y el salto de línea: "sentine\l" es la ruta
+# sentine\l, no sentinel
+RH_CWD="$WS" run_hook "$GUARD_HOOK" '{"tool_name":"Bash","tool_input":{"command":"mv \"sentine\\l\" /tmp/x"}}' \
+  -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+assert_exit 0 || { echo "    \"sentine\\l\" no es sentinel y debería permitirse" >&2; exit 1; }
+
+# Un comodín sin comillas se expande contra el disco, como haría la shell, y cada coincidencia
+# cuenta. Entre comillas o escapado es literal
+mkdir -p "$WS/.claude" "$WS/docs" && : > "$WS/docs/f1.md"
+for cmd in "mv sentin* /tmp/x" "rm -rf .cla*" "rm -r sentinel/hoo?s" "mv [s]entinel /tmp/x" \
+  "rm -rf *" "mv \"a b\"/../sentin* /tmp/x"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done
+for cmd in "mv \"sentin*\" /tmp/x" "mv \"s*\"* /tmp/x" "mv 'sentin*' /tmp/x" "mv sentin\\* /tmp/x" "mv nada* /tmp/x" \
+  "mv docs/f* docs/archivo"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done
 
 # Una ruta con espacios que no es protegida sigue libre
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv \"a b\" c")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
