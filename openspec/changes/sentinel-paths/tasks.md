@@ -50,7 +50,7 @@ lectura sobre una protección ya basada en la ruta física.
        unos 0,44 s a unos 0,53 s por llamada con un comando de 15 rutas
 - [x] 3. Banco en verde y `openspec validate --all --strict`; `sentinel/README.md` («regex
        evadibles» suma `cd` dentro de la carpeta) y `STATUS.md`
-- [ ] 3a. 👤 Revisión de la PR #9 (CodeRabbit, dos hallazgos de seguridad, los dos reales).
+- [x] 3a. 👤 Revisión de la PR #9 (CodeRabbit, dos hallazgos de seguridad, los dos reales).
        Primero, con 64 rutas de relleno delante el guard dejaba de mirar, y `rm -rf … sentinel`
        pasaba. Segundo, una ruta entre comillas con espacios (`"a b/../sentinel"`) se partía en
        dos. Hay caso en rojo (`sc-21`, `d8de6cb`) y parche `sentinel-paths-1b.patch`: las
@@ -64,7 +64,9 @@ lectura sobre una protección ya basada en la ruta física.
        2026-10-27 (comodines sí; llaves, `$'…'` y sustituciones, límite documentado). Nueve
        mutantes mueren contra `sc-21`. La #10 se mergeó con la 1d (`897e421`, 2026-10-27). La
        tercera ronda llegó después: una palabra que empieza por '-' no contaba como ruta
-       (`mv -- -a/../sentinel`, un enlace `-s` a `sentinel`). Va en su propia PR, la 1e
+       (`mv -- -a/../sentinel`, un enlace `-s` a `sentinel`). Va en su propia PR, la 1e: la #11,
+       mergeada el 2026-10-27 (`22b631a`), con un caso que aísla las opciones (una política que
+       protege `-f`). Con ella la revisión de la 1/3 queda cerrada
 - [x] 3b. `merge` de la PR 1/3 (una persona, PR #9, `e95d401`, 2026-10-27). Entró sin la 1b,
        que llegó después del último push: va en su propia PR, desde `main`
 
@@ -82,9 +84,12 @@ lectura sobre una protección ya basada en la ruta física.
        y `skip_read_only: true` en `self-protection` y `managed-files`; en el guard, la lista
        cerrada de solo lectura, la llave con `para:` y el aviso con la llave lista para copiar;
        en `sentinel/githooks/lib/breakglass.sh`, la llave con `para: esclusa:<hook>`.
-       El parche está listo el 2026-10-27, sobre la 1/3 con la 1b. En un clon con el parche, el
-       banco entero sale en verde (hooks 27/27, githooks 16/16, install 17/17) y los catorce
-       mutantes (un mecanismo saboteado cada vez) rompen algún caso
+       El parche se rehízo el 2026-10-27 sobre `main` con la 1/3 cerrada (la 1b a la 1e), con
+       un arreglo más: la solo lectura mira el texto del JSON sin decodificar, así que un
+       comando con un escape de barra y `u` no cuenta como lectura (un separador o una
+       redirección escritos así no se verían; caso en rojo en `sc-26`). En un clon limpio con el
+       parche, el banco entero sale en verde (hooks 27/27, githooks 16/16, install 17/17) y los
+       quince mutantes (un mecanismo saboteado cada vez) rompen algún caso
 - [ ] 6. Banco en verde; `docs/guia-uso.md` (cómo se escribe la llave, para el Centinela y la
        Esclusa) y `sentinel/README.md`; la deuda del falso positivo sale de `STATUS.md`. `merge`
 
