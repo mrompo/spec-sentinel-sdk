@@ -49,7 +49,15 @@ cat sentinel/policy.yaml && sed -i.b s/a/b/ sentinel/policy.yaml
 cat .env.production
 grep -n x openspec/specs/a/spec.md > openspec/specs/a/spec.md
 cp -r sentinel /tmp/copia
+git diff '--output=sentinel/hooks/sentinel-guard.sh'
+git diff "--output=sentinel/policy.yaml"
+git log -1 --out""put=sentinel/policy.yaml
+git show \--output sentinel/policy.yaml
 EOF
+
+# Unas comillas en un comando que solo lee no lo convierten en escritura (revisión de la #12)
+guard 'grep -n "skip_read_only" sentinel/policy.default.yaml'
+assert_exit 0 || { echo "    un grep con comillas de la política debería permitirse" >&2; exit 1; }
 
 # Un separador o una redirección escritos en el JSON como \u00XX (> ; & y el salto de línea)
 # son los mismos para la shell: el comando no cuenta como solo lectura. La barra se construye
