@@ -50,4 +50,15 @@ cat .env.production
 grep -n x openspec/specs/a/spec.md > openspec/specs/a/spec.md
 cp -r sentinel /tmp/copia
 EOF
+
+# Un separador o una redirección escritos en el JSON como \u00XX (> ; & y el salto de línea)
+# son los mismos para la shell: el comando no cuenta como solo lectura. La barra se construye
+# aquí para que el fichero lleve el escape tal cual
+U='\'u
+for cmd in "cat x ${U}003e sentinel/policy.yaml" "cat x${U}003b rm sentinel/policy.yaml" \
+  "cat x ${U}0026${U}0026 rm sentinel/policy.yaml" "cat x${U}000arm sentinel/policy.yaml"; do
+  run_hook "$GUARD_HOOK" "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}" \
+    SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done
 exit 0
