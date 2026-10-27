@@ -146,10 +146,13 @@ $ph"
 [ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
 # cmd_words → una palabra del comando por línea, como la vería la shell: deshace los escapes
 # JSON, respeta '…' y "…" (una ruta con espacios es una sola palabra) y el escape con '\', y
-# parte por espacios, separadores (; | & < > ( ) `) y '=' (--file=x, include.path=x)
+# parte por espacios, separadores (; | & < > ( ) `) y '=' (--file=x, include.path=x). Un salto
+# de línea dentro de una palabra sale como \001, que un JSON válido no puede traer, para que la
+# palabra siga en una sola línea; quien la lee lo devuelve a salto de línea
 cmd_words() {
   printf '%s' "$COMMAND" | awk '
     function flush() { if (has) print w; w = ""; has = 0 }
+    BEGIN { nl = sprintf("%c", 1) }
     {
       s = $0; t = ""; n = length(s)
       for (i = 1; i <= n; i++) {
@@ -162,13 +165,16 @@ cmd_words() {
       n = length(t); q = ""; w = ""; has = 0
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
+        if (c == "\n" && q != "") { w = w nl; continue }
         if (q == "\047") { if (c == q) q = ""; else w = w c; continue }
         if (q == "\"") {
-          if (c == "\"") q = ""; else if (c == "\\" && i < n) w = w substr(t, ++i, 1); else w = w c
+          if (c == "\"") q = ""
+          else if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d == "\n") w = w nl; else w = w d }
+          else w = w c
           continue
         }
         if (c == "\047" || c == "\"") { q = c; has = 1; continue }
-        if (c == "\\" && i < n) { w = w substr(t, ++i, 1); has = 1; continue }
+        if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { w = w d; has = 1 }; continue }
         if (index(" \t\n;|&<>()`=", c)) { flush(); continue }
         w = w c; has = 1
       }
@@ -181,6 +187,7 @@ if [ -n "$COMMAND" ]; then
   # guard comprueba se deniega: dejar de mirar a partir de la N dejaría pasar la N+1
   _n=0
   while IFS= read -r w; do
+    w="${w//$'\001'/$'\n'}"
     case "$w" in ""|-*) continue ;; esac
     case "$w" in
       "~"|"~/"*) w="${HOME:-}${w#"~"}" ;;
