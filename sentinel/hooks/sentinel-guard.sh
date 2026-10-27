@@ -242,12 +242,13 @@ glob_matches() (
   IFS=
   for f in $1; do printf '%s\0' "$f"; done
 )
-# add_word → cuenta como ruta la palabra que lleva '/' o existe. Un comando con más rutas de
+# add_word → cuenta como ruta la palabra que lleva '/' o existe, también si empieza por '-' (tras
+# '--' es una ruta, y una opción como -rf no existe ni lleva '/'). Un comando con más rutas de
 # las que el guard comprueba se deniega: dejar de mirar a partir de la N dejaría pasar la N+1
 _n=0
 add_word() {
   local w
-  case "$1" in ""|-*) return ;; esac
+  [ -n "$1" ] || return
   tilde "$1"; w="$_w"
   case "$w" in */*) ;; *) { [ -e "$w" ] || [ -L "$w" ]; } || return ;; esac
   case "$w" in /*) ;; *) w="$PWD/$w" ;; esac
