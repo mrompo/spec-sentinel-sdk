@@ -119,6 +119,18 @@ for cmd in "rm -rf docs/x" "mv -f docs/f1.md docs/f2.md" "chmod -R u+w docs"; do
   RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
   assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
 done
+# Una opción no es una ruta, y se ve con una política que protege justo '-f' (revisión de la #11):
+# si existe un fichero '-f', la palabra cuenta y se bloquea; si no existe, -f es la opción y pasa
+POL_F="$WS/politica-f.yaml"
+printf '%s\n' 'version: 1' 'rules:' '  - id: protege-f' '    tool: Bash' \
+  '    command_re: (^|[[:space:]])mv[[:space:]]' '    dir_re: ^-f$' '    mode: block' \
+  '    reason: prueba' > "$POL_F"
+: > "$WS/-f"
+RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv -f docs/f1.md docs/f2.md")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$POL_F"
+assert_exit 2 || { echo "    con un fichero '-f', la palabra -f debería contar como ruta" >&2; exit 1; }
+rm -f -- "$WS/-f"
+RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv -f docs/f1.md docs/f2.md")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$POL_F"
+assert_exit 0 || { echo "    sin un fichero '-f', la opción -f no debería contar como ruta" >&2; exit 1; }
 
 # Una ruta con espacios que no es protegida sigue libre
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv \"a b\" c")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
