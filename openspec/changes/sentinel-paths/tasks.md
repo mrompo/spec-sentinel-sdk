@@ -62,7 +62,9 @@ lectura sobre una protección ya basada en la ruta física.
        salto, `\u00XX` sin decodificar, la barra con salto de línea dentro de "…") y un comodín
        sin comillas (`rm -rf sentin*`) no se expandía: la 1d, decisión de la persona del
        2026-10-27 (comodines sí; llaves, `$'…'` y sustituciones, límite documentado). Nueve
-       mutantes mueren contra `sc-21`
+       mutantes mueren contra `sc-21`. La #10 se mergeó con la 1d (`897e421`, 2026-10-27). La
+       tercera ronda llegó después: una palabra que empieza por '-' no contaba como ruta
+       (`mv -- -a/../sentinel`, un enlace `-s` a `sentinel`). Va en su propia PR, la 1e
 - [x] 3b. `merge` de la PR 1/3 (una persona, PR #9, `e95d401`, 2026-10-27). Entró sin la 1b,
        que llegó después del último push: va en su propia PR, desde `main`
 
