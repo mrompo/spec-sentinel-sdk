@@ -56,7 +56,13 @@ lectura sobre una protección ya basada en la ruta física.
        dos. Hay caso en rojo (`sc-21`, `d8de6cb`) y parche `sentinel-paths-1b.patch`: las
        palabras del comando se leen como las vería la shell (comillas y escapes, con un awk) y,
        si hay más de 128 rutas, el comando se deniega en vez de dejar de mirar. Las tres
-       variantes pasaban con el guard aplicado y la 1b las bloquea
+       variantes pasaban con el guard aplicado y la 1b las bloquea. La 1b va en la PR #10, y su
+       revisión encontró dos rondas más. Primera, una ruta con un salto de línea se partía:
+       la 1c (`f098606`). Segunda, los escapes se deshacían mal (`\t` como espacio, `\r` como
+       salto, `\u00XX` sin decodificar, la barra con salto de línea dentro de "…") y un comodín
+       sin comillas (`rm -rf sentin*`) no se expandía: la 1d, decisión de la persona del
+       2026-10-27 (comodines sí; llaves, `$'…'` y sustituciones, límite documentado). Nueve
+       mutantes mueren contra `sc-21`
 - [x] 3b. `merge` de la PR 1/3 (una persona, PR #9, `e95d401`, 2026-10-27). Entró sin la 1b,
        que llegó después del último push: va en su propia PR, desde `main`
 
