@@ -85,10 +85,95 @@ if [ -n "$FILE_PATH" ]; then
 else
   REL_PATH=""
 fi
-# Superficie de rutas: relativa al repo + absoluta + comando (un shell toca ficheros sin file_path)
+
+# ── Lo que se toca, no cómo se escribe (sentinel-paths, SC-sentinel-paths-01..03, 07) ────
+# Cada ruta de la acción (el file_path, y las palabras del comando que son rutas) se resuelve a
+# su ruta física y se nombra como la nombra la política: la configuración de git real del repo
+# es «.git/…» aunque viva en .bare/, la de Claude Code de la persona es «.claude/…» aunque
+# CLAUDE_CONFIG_DIR la ponga en otra carpeta, y lo del repo va relativo a su raíz. Las reglas
+# de ruta ven la ruta escrita y la física; las de carpeta (dir_re), la física de cada palabra.
+phys_dir() { (cd -P "$1" 2>/dev/null && pwd -P); }
+
+# phys_path <ruta absoluta> → la ruta física: resuelve los enlaces de sus carpetas (desde la
+# carpeta padre que exista) y los del propio fichero, aunque el fichero aún no exista
+phys_path() {
+  local p="$1" d b rest t n=0
+  while [ "$n" -lt 40 ]; do
+    if [ -d "$p" ]; then phys_dir "$p" || printf '%s' "$p"; return; fi
+    d="${p%/*}"; b="${p##*/}"; [ -n "$d" ] || d=/
+    rest=""
+    while [ ! -d "$d" ]; do rest="/${d##*/}$rest"; d="${d%/*}"; [ -n "$d" ] || d=/; done
+    d="$(phys_dir "$d")" || { printf '%s' "$p"; return; }
+    p="${d%/}$rest/$b"
+    { [ -z "$rest" ] && [ -L "$p" ]; } || break
+    t="$(readlink "$p")"
+    case "$t" in /*) p="$t" ;; *) p="${d%/}/$t" ;; esac
+    n=$((n+1))
+  done
+  printf '%s' "$p"
+}
+
+REPO_PHYS="$(phys_dir "$REPO_ROOT_DIR")"; [ -n "$REPO_PHYS" ] || REPO_PHYS="$REPO_ROOT_DIR"
+GIT_COMMON_PHYS=""
+_gcd="$(git rev-parse --git-common-dir 2>/dev/null)" && GIT_COMMON_PHYS="$(phys_dir "$_gcd")"
+CLAUDE_CFG="${CLAUDE_CONFIG_DIR:-${HOME:-/nonexistent}/.claude}"
+CLAUDE_CFG_PHYS="$(phys_dir "$CLAUDE_CFG")"
+
+canon() { # $1=ruta física → cómo la nombra la política
+  local p="$1"
+  if [ -n "$GIT_COMMON_PHYS" ]; then
+    case "$p" in "$GIT_COMMON_PHYS"|"$GIT_COMMON_PHYS"/*) printf '.git%s' "${p#"$GIT_COMMON_PHYS"}"; return ;; esac
+  fi
+  if [ -n "$CLAUDE_CFG_PHYS" ]; then
+    case "$p" in "$CLAUDE_CFG_PHYS"|"$CLAUDE_CFG_PHYS"/*) printf '.claude%s' "${p#"$CLAUDE_CFG_PHYS"}"; return ;; esac
+  fi
+  case "$p" in
+    "$REPO_PHYS") printf '.' ;;
+    "$REPO_PHYS"/*) printf '%s' "${p#"$REPO_PHYS"/}" ;;
+    *) printf '%s' "$p" ;;
+  esac
+}
+
+TOUCHED=""   # ruta física de cada cosa que toca la acción, tal como la nombra la política
+PHYS_ALL=""  # y su ruta física absoluta
+add_target() { # $1=ruta absoluta
+  local ph; ph="$(phys_path "$1")"
+  TOUCHED="$TOUCHED
+$(canon "$ph")"
+  PHYS_ALL="$PHYS_ALL
+$ph"
+}
+[ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
+if [ -n "$COMMAND" ]; then
+  # Palabras del comando: sin comillas, separadores ni escapes JSON; '=' también separa
+  # (--file=x, include.path=x). Cuenta como ruta la que lleva '/' o existe.
+  _words="$(printf '%s' "$COMMAND" | sed -e 's/\\[nt"]/ /g' -e "s/[\"'\`;|&<>()=]/ /g")"
+  set -f; _n=0
+  for w in $_words; do
+    case "$w" in -*) continue ;; esac
+    case "$w" in
+      "~"|"~/"*) w="${HOME:-}${w#"~"}" ;;
+      '$HOME'|'$HOME/'*) w="${HOME:-}${w#'$HOME'}" ;;
+      '${HOME}'|'${HOME}/'*) w="${HOME:-}${w#'${HOME}'}" ;;
+      '$CLAUDE_CONFIG_DIR'|'$CLAUDE_CONFIG_DIR/'*) w="$CLAUDE_CFG${w#'$CLAUDE_CONFIG_DIR'}" ;;
+      '${CLAUDE_CONFIG_DIR}'|'${CLAUDE_CONFIG_DIR}/'*) w="$CLAUDE_CFG${w#'${CLAUDE_CONFIG_DIR}'}" ;;
+    esac
+    case "$w" in */*) ;; *) { [ -e "$w" ] || [ -L "$w" ]; } || continue ;; esac
+    case "$w" in /*) ;; *) w="$PWD/$w" ;; esac
+    while :; do
+      case "$w" in /) break ;; */) w="${w%/}" ;; */.) w="${w%/.}" ;; *) break ;; esac
+    done
+    add_target "$w"
+    _n=$((_n+1)); [ "$_n" -lt 64 ] || break
+  done
+  set +f
+fi
+
+# Superficie de rutas: relativa al repo + absoluta + comando (un shell toca ficheros sin
+# file_path) + la ruta física de lo que se toca, nombrada como la política y absoluta
 PATH_SURFACE="$REL_PATH
 $FILE_PATH
-$COMMAND"
+$COMMAND$TOUCHED$PHYS_ALL"
 
 ACTIVE_CHANGE=""
 if [ -d "$REPO_ROOT_DIR/openspec/changes" ]; then
@@ -153,7 +238,7 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
 }
 
 # ── Evaluación de reglas ─────────────────────────────────────────────────────────────────
-reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; }
+reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_dir_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; }
 
 # rank <modo> → cuánto restringe, para quedarse con la decisión más estricta
 rank() { case "$1" in block) echo 3 ;; confirm) echo 2 ;; warn) echo 1 ;; *) echo 0 ;; esac; }
@@ -182,6 +267,10 @@ apply_rule() {
   fi
   if [ -n "$r_path_re" ]; then
     match "$PATH_SURFACE" "$r_path_re" -i || return 1
+  fi
+  if [ -n "$r_dir_re" ]; then
+    # una línea por cosa tocada: la regex se ancla a la ruta entera (^…$)
+    match "$TOUCHED" "$r_dir_re" || return 1
   fi
   if [ -n "$r_content_re" ]; then
     # solo contra lo que se escribe (+ comando en Bash), nunca contra old_string
@@ -230,6 +319,7 @@ eval_policy() {
         if   kv "$line" "tool";                     then r_tool="$(val "$line")"
         elif kv "$line" "command_re";               then r_command_re="$(val "$line")"
         elif kv "$line" "path_re";                  then r_path_re="$(val "$line")"
+        elif kv "$line" "dir_re";                   then r_dir_re="$(val "$line")"
         elif kv "$line" "content_re";               then r_content_re="$(val "$line")"
         elif kv "$line" "branch_re";                then r_branch_re="$(val "$line")"
         elif kv "$line" "only_if_no_active_change"; then r_no_active="$(val "$line")"
