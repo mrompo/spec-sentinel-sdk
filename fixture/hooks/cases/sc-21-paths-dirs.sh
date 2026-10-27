@@ -48,4 +48,18 @@ mv docs/sentinel-notas.md docs/notas.md
 rm -r fixture/.tmp/ws-1/sentinel
 ls sentinel
 EOF
+
+# Revisión de la PR 1/3 (CodeRabbit): ni un comando con muchas rutas ni una ruta entre comillas
+# con espacios dejan una carpeta protegida sin mirar
+trap cleanup_workspace EXIT
+mk_workspace
+mkdir -p "$WS/sentinel/hooks" "$WS/a b"
+relleno=""; for i in $(seq 1 80); do relleno="$relleno docs/f$i.md"; done
+for cmd in "rm -rf$relleno sentinel" "mv \"a b/../sentinel\" /tmp/x" "rm -r 'a b/../sentinel/hooks'"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: ${cmd:0:80}…" >&2; exit 1; }
+done
+# Una ruta con espacios que no es protegida sigue libre
+RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv \"a b\" c")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+assert_exit 0 || { echo "    debería permitirse: mv \"a b\" c" >&2; exit 1; }
 exit 0
