@@ -108,6 +108,18 @@ for cmd in "mv \"sentin*\" /tmp/x" "mv \"s*\"* /tmp/x" "mv 'sentin*' /tmp/x" "mv
   assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
 done
 
+# Tercera ronda de la #10 (CodeRabbit): una palabra que empieza por '-' también es una ruta si
+# lleva '/' o existe (tras '--', o porque el comando la toma como tal)
+mkdir -p "$WS/-a" && ln -s sentinel "$WS/-s"
+for cmd in "mv -- -a/../sentinel /tmp/x" "chmod -R 000 -- -s" "rm -rf -- -s/"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done
+for cmd in "rm -rf docs/x" "mv -f docs/f1.md docs/f2.md" "chmod -R u+w docs"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done
+
 # Una ruta con espacios que no es protegida sigue libre
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv \"a b\" c")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
 assert_exit 0 || { echo "    debería permitirse: mv \"a b\" c" >&2; exit 1; }
