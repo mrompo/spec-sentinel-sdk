@@ -10,7 +10,7 @@ lectura de `STATUS.md`.
 que toca el enforcement es un fichero protegido: lo entrega el agente como parche en la raíz del
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
-**Posición en el Loop**: gates Claridad y Plan aprobados el 2026-10-26; PR 1/3 en la Aduana.
+**Posición en el Loop**: PR 1/3 en `main` (#9); la 1b en su PR; la 2/3 con el parche listo.
 
 ## Engine · antes de teclear
 
@@ -50,7 +50,21 @@ lectura sobre una protección ya basada en la ruta física.
        unos 0,44 s a unos 0,53 s por llamada con un comando de 15 rutas
 - [x] 3. Banco en verde y `openspec validate --all --strict`; `sentinel/README.md` («regex
        evadibles» suma `cd` dentro de la carpeta) y `STATUS.md`
-- [ ] 3b. `merge` de la PR 1/3 (una persona)
+- [ ] 3a. 👤 Revisión de la PR #9 (CodeRabbit, dos hallazgos de seguridad, los dos reales).
+       Primero, con 64 rutas de relleno delante el guard dejaba de mirar, y `rm -rf … sentinel`
+       pasaba. Segundo, una ruta entre comillas con espacios (`"a b/../sentinel"`) se partía en
+       dos. Hay caso en rojo (`sc-21`, `d8de6cb`) y parche `sentinel-paths-1b.patch`: las
+       palabras del comando se leen como las vería la shell (comillas y escapes, con un awk) y,
+       si hay más de 128 rutas, el comando se deniega en vez de dejar de mirar. Las tres
+       variantes pasaban con el guard aplicado y la 1b las bloquea. La 1b va en la PR #10, y su
+       revisión encontró dos rondas más. Primera, una ruta con un salto de línea se partía:
+       la 1c (`f098606`). Segunda, los escapes se deshacían mal (`\t` como espacio, `\r` como
+       salto, `\u00XX` sin decodificar, la barra con salto de línea dentro de "…") y un comodín
+       sin comillas (`rm -rf sentin*`) no se expandía: la 1d, decisión de la persona del
+       2026-10-27 (comodines sí; llaves, `$'…'` y sustituciones, límite documentado). Nueve
+       mutantes mueren contra `sc-21`
+- [x] 3b. `merge` de la PR 1/3 (una persona, PR #9, `e95d401`, 2026-10-27). Entró sin la 1b,
+       que llegó después del último push: va en su propia PR, desde `main`
 
 ### PR 2/3 · Sin falsos positivos y la llave (SC-sentinel-paths-04, 05, 08; SC-sentinel-guard-08, 09; SC-git-gates-11)
 

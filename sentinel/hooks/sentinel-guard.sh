@@ -144,29 +144,137 @@ $(canon "$ph")"
 $ph"
 }
 [ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
-if [ -n "$COMMAND" ]; then
-  # Palabras del comando: sin comillas, separadores ni escapes JSON; '=' también separa
-  # (--file=x, include.path=x). Cuenta como ruta la que lleva '/' o existe.
-  _words="$(printf '%s' "$COMMAND" | sed -e 's/\\[nt"]/ /g' -e "s/[\"'\`;|&<>()=]/ /g")"
-  set -f; _n=0
-  for w in $_words; do
-    case "$w" in -*) continue ;; esac
-    case "$w" in
-      "~"|"~/"*) w="${HOME:-}${w#"~"}" ;;
-      '$HOME'|'$HOME/'*) w="${HOME:-}${w#'$HOME'}" ;;
-      '${HOME}'|'${HOME}/'*) w="${HOME:-}${w#'${HOME}'}" ;;
-      '$CLAUDE_CONFIG_DIR'|'$CLAUDE_CONFIG_DIR/'*) w="$CLAUDE_CFG${w#'$CLAUDE_CONFIG_DIR'}" ;;
-      '${CLAUDE_CONFIG_DIR}'|'${CLAUDE_CONFIG_DIR}/'*) w="$CLAUDE_CFG${w#'${CLAUDE_CONFIG_DIR}'}" ;;
-    esac
-    case "$w" in */*) ;; *) { [ -e "$w" ] || [ -L "$w" ]; } || continue ;; esac
-    case "$w" in /*) ;; *) w="$PWD/$w" ;; esac
-    while :; do
-      case "$w" in /) break ;; */) w="${w%/}" ;; */.) w="${w%/.}" ;; *) break ;; esac
-    done
-    add_target "$w"
-    _n=$((_n+1)); [ "$_n" -lt 64 ] || break
+# cmd_words → una palabra del comando por línea, como la vería la shell: deshace los escapes
+# del JSON tal cual (\t es un tabulador, \u00XX su carácter), respeta '…' y "…" (una ruta con
+# espacios es una sola palabra; dentro de "…" la barra solo escapa $ ` " \ y el salto de línea)
+# y el escape con '\', y parte por espacios, separadores (; | & < > ( ) `) y '=' (--file=x,
+# include.path=x). Cada palabra sale con '\' y el salto de línea escapados (\\ y \n), para que
+# una palabra con saltos siga en una sola línea; quien la lee la deshace con printf %b. Sale
+# como 'l<palabra>', precedida de 'g<patrón>' si lleva un comodín sin comillas (* ? [): en el
+# patrón, lo que iba entre comillas o escapado se escapa con '\', como lo vería la shell
+cmd_words() {
+  printf '%s' "$COMMAND" | LC_ALL=C awk '
+    function esc(x,   r, k, ch) {
+      r = ""
+      for (k = 1; k <= length(x); k++) {
+        ch = substr(x, k, 1)
+        if (ch == "\\") r = r "\\\\"; else if (ch == "\n") r = r "\\n"; else r = r ch
+      }
+      return r
+    }
+    function flush() { if (has) { if (g) print "g" esc(pw); print "l" esc(w) }; w = ""; pw = ""; has = 0; g = 0 }
+    function lit(ch) { w = w ch; pw = pw (index("*?[]\\", ch) ? "\\" ch : ch) }
+    function hex(h,   k, x, v) {
+      if (length(h) < 4) return -1
+      v = 0
+      for (k = 1; k <= 4; k++) {
+        x = index("0123456789abcdef", tolower(substr(h, k, 1)))
+        if (!x) return -1
+        v = v * 16 + x - 1
+      }
+      return v
+    }
+    function utf8(v) {
+      if (v == 0) return ""
+      if (v < 128) return sprintf("%c", v)
+      if (v < 2048) return sprintf("%c%c", 192 + int(v / 64), 128 + v % 64)
+      if (v < 65536) return sprintf("%c%c%c", 224 + int(v / 4096), 128 + int(v / 64) % 64, 128 + v % 64)
+      return sprintf("%c%c%c%c", 240 + int(v / 262144), 128 + int(v / 4096) % 64, 128 + int(v / 64) % 64, 128 + v % 64)
+    }
+    {
+      s = $0; t = ""; n = length(s)
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (c == "\\" && i < n) {
+          d = substr(s, ++i, 1)
+          if (d == "n") t = t "\n"; else if (d == "r") t = t "\r"; else if (d == "t") t = t "\t"
+          else if (d == "b") t = t "\b"; else if (d == "f") t = t "\f"
+          else if (d == "u" && (v = hex(substr(s, i + 1, 4))) >= 0) {
+            i += 4
+            if (v >= 55296 && v < 56320 && substr(s, i + 1, 2) == "\\u" \
+                && (lo = hex(substr(s, i + 3, 4))) >= 56320 && lo < 57344) {
+              i += 6; v = 65536 + (v - 55296) * 1024 + (lo - 56320)
+            }
+            t = t utf8(v)
+          }
+          else t = t d
+        } else t = t c
+      }
+      n = length(t); q = ""; w = ""; pw = ""; has = 0; g = 0
+      for (i = 1; i <= n; i++) {
+        c = substr(t, i, 1)
+        if (q == "\047") { if (c == q) q = ""; else lit(c); continue }
+        if (q == "\"") {
+          if (c == "\"") q = ""
+          else if (c == "\\" && i < n) {
+            d = substr(t, ++i, 1)
+            if (d != "\n") { if (index("$`\"\\", d)) lit(d); else { lit(c); lit(d) } }
+          }
+          else lit(c)
+          continue
+        }
+        if (c == "\047" || c == "\"") { q = c; has = 1; continue }
+        if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { lit(d); has = 1 }; continue }
+        if (index(" \t\n;|&<>()`=", c)) { flush(); continue }
+        w = w c; pw = pw c; has = 1; if (index("*?[", c)) g = 1
+      }
+      flush()
+    }'
+}
+
+# tilde → $_w: la palabra con ~, $HOME y $CLAUDE_CONFIG_DIR delante ya sustituidos
+tilde() {
+  _w="$1"
+  case "$_w" in
+    "~"|"~/"*) _w="${HOME:-}${_w#"~"}" ;;
+    '$HOME'|'$HOME/'*) _w="${HOME:-}${_w#'$HOME'}" ;;
+    '${HOME}'|'${HOME}/'*) _w="${HOME:-}${_w#'${HOME}'}" ;;
+    '$CLAUDE_CONFIG_DIR'|'$CLAUDE_CONFIG_DIR/'*) _w="$CLAUDE_CFG${_w#'$CLAUDE_CONFIG_DIR'}" ;;
+    '${CLAUDE_CONFIG_DIR}'|'${CLAUDE_CONFIG_DIR}/'*) _w="$CLAUDE_CFG${_w#'${CLAUDE_CONFIG_DIR}'}" ;;
+  esac
+}
+# glob_matches → las coincidencias de un patrón en el disco, separadas por NUL, con las opciones
+# por defecto de la shell (sin ficheros ocultos salvo que el patrón empiece por '.')
+glob_matches() (
+  unset GLOBIGNORE
+  shopt -u dotglob nocaseglob failglob extglob globstar 2>/dev/null
+  shopt -s nullglob
+  IFS=
+  for f in $1; do printf '%s\0' "$f"; done
+)
+# add_word → cuenta como ruta la palabra que lleva '/' o existe. Un comando con más rutas de
+# las que el guard comprueba se deniega: dejar de mirar a partir de la N dejaría pasar la N+1
+_n=0
+add_word() {
+  local w
+  case "$1" in ""|-*) return ;; esac
+  tilde "$1"; w="$_w"
+  case "$w" in */*) ;; *) { [ -e "$w" ] || [ -L "$w" ]; } || return ;; esac
+  case "$w" in /*) ;; *) w="$PWD/$w" ;; esac
+  while :; do
+    case "$w" in /) break ;; */) w="${w%/}" ;; */.) w="${w%/.}" ;; *) break ;; esac
   done
-  set +f
+  _n=$((_n+1))
+  [ "$_n" -le 128 ] \
+    || deny "el comando nombra más de 128 rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+  add_target "$w"
+}
+
+if [ -n "$COMMAND" ]; then
+  # Un patrón con coincidencias cuenta por ellas; sin coincidencias, la shell deja la palabra tal cual
+  _globbed=0
+  while IFS= read -r w; do
+    _k="${w:0:1}"; printf -v w '%b' "${w:1}"
+    if [ "$_k" = g ]; then
+      tilde "$w"; _globbed=0
+      while IFS= read -r -d '' f; do _globbed=1; add_word "$f"; done < <(glob_matches "$_w")
+      continue
+    fi
+    [ "$_globbed" = 1 ] && { _globbed=0; continue; }
+    add_word "$w"
+  done <<EOF
+$(cmd_words)
+EOF
 fi
 
 # Superficie de rutas: relativa al repo + absoluta + comando (un shell toca ficheros sin
