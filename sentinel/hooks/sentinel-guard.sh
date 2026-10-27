@@ -144,13 +144,44 @@ $(canon "$ph")"
 $ph"
 }
 [ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
+# cmd_words → una palabra del comando por línea, como la vería la shell: deshace los escapes
+# JSON, respeta '…' y "…" (una ruta con espacios es una sola palabra) y el escape con '\', y
+# parte por espacios, separadores (; | & < > ( ) `) y '=' (--file=x, include.path=x)
+cmd_words() {
+  printf '%s' "$COMMAND" | awk '
+    function flush() { if (has) print w; w = ""; has = 0 }
+    {
+      s = $0; t = ""; n = length(s)
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (c == "\\" && i < n) {
+          d = substr(s, ++i, 1)
+          if (d == "n" || d == "r") t = t "\n"; else if (d == "t") t = t " "; else t = t d
+        } else t = t c
+      }
+      n = length(t); q = ""; w = ""; has = 0
+      for (i = 1; i <= n; i++) {
+        c = substr(t, i, 1)
+        if (q == "\047") { if (c == q) q = ""; else w = w c; continue }
+        if (q == "\"") {
+          if (c == "\"") q = ""; else if (c == "\\" && i < n) w = w substr(t, ++i, 1); else w = w c
+          continue
+        }
+        if (c == "\047" || c == "\"") { q = c; has = 1; continue }
+        if (c == "\\" && i < n) { w = w substr(t, ++i, 1); has = 1; continue }
+        if (index(" \t\n;|&<>()`=", c)) { flush(); continue }
+        w = w c; has = 1
+      }
+      flush()
+    }'
+}
+
 if [ -n "$COMMAND" ]; then
-  # Palabras del comando: sin comillas, separadores ni escapes JSON; '=' también separa
-  # (--file=x, include.path=x). Cuenta como ruta la que lleva '/' o existe.
-  _words="$(printf '%s' "$COMMAND" | sed -e 's/\\[nt"]/ /g' -e "s/[\"'\`;|&<>()=]/ /g")"
-  set -f; _n=0
-  for w in $_words; do
-    case "$w" in -*) continue ;; esac
+  # Cuenta como ruta la palabra que lleva '/' o existe. Un comando con más rutas de las que el
+  # guard comprueba se deniega: dejar de mirar a partir de la N dejaría pasar la N+1
+  _n=0
+  while IFS= read -r w; do
+    case "$w" in ""|-*) continue ;; esac
     case "$w" in
       "~"|"~/"*) w="${HOME:-}${w#"~"}" ;;
       '$HOME'|'$HOME/'*) w="${HOME:-}${w#'$HOME'}" ;;
@@ -163,10 +194,13 @@ if [ -n "$COMMAND" ]; then
     while :; do
       case "$w" in /) break ;; */) w="${w%/}" ;; */.) w="${w%/.}" ;; *) break ;; esac
     done
+    _n=$((_n+1))
+    [ "$_n" -le 128 ] \
+      || deny "el comando nombra más de 128 rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
     add_target "$w"
-    _n=$((_n+1)); [ "$_n" -lt 64 ] || break
-  done
-  set +f
+  done <<EOF
+$(cmd_words)
+EOF
 fi
 
 # Superficie de rutas: relativa al repo + absoluta + comando (un shell toca ficheros sin
