@@ -59,6 +59,22 @@ for cmd in "rm -rf$relleno sentinel" "mv \"a b/../sentinel\" /tmp/x" "rm -r 'a b
   RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
   assert_exit 2 || { echo "    debería bloquearse: ${cmd:0:80}…" >&2; exit 1; }
 done
+# Revisión de la PR #10 (CodeRabbit): una ruta entre comillas con un salto de línea sigue
+# siendo una sola palabra (en el JSON del tool call, el salto llega como \n)
+mkdir -p "$WS/a
+b"
+for payload in \
+  '{"tool_name":"Bash","tool_input":{"command":"mv \"a\nb/../sentinel\" /tmp/x"}}' \
+  '{"tool_name":"Bash","tool_input":{"command":"rm -r '"'"'a\nb/../sentinel/hooks'"'"'"}}'; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$payload" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: $payload" >&2; exit 1; }
+done
+# Un texto de varias líneas entre comillas (p. ej. un mensaje) no es una ruta: sus trozos no
+# cuentan como palabras sueltas, aunque uno se llame como una carpeta protegida
+RH_CWD="$WS" run_hook "$GUARD_HOOK" '{"tool_name":"Bash","tool_input":{"command":"mv docs/x docs/y && echo \"resumen\nsentinel\""}}' \
+  -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+assert_exit 0 || { echo "    un texto de varias líneas debería permitirse" >&2; exit 1; }
+
 # Una ruta con espacios que no es protegida sigue libre
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv \"a b\" c")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
 assert_exit 0 || { echo "    debería permitirse: mv \"a b\" c" >&2; exit 1; }
