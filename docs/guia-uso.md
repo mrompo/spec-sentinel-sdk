@@ -202,8 +202,8 @@ configuración de usuario.
   `*.log`; hay repos que ignoran `.claude/`) → te dice qué fichero, qué regla lo ignora y la
   excepción que hay que añadir, y dónde: si la regla está en el `.gitignore` de una subcarpeta,
   la excepción va en ese.
-- **Hay una llave sin usar** (`sentinel/.override`) → el Centinela dejaría pasar la primera
-  acción que bloquee. Si no la pusiste tú para algo concreto, bórrala.
+- **Hay una llave sin usar** (`sentinel/.override`) → el Centinela o la Esclusa dejarían pasar
+  la acción de su `para:`. Si no la pusiste tú para algo concreto, bórrala.
 - **El Centinela lo deniega todo** → tu `sentinel/policy.yaml` tiene un error; `setup` te
   muestra el motivo.
 - **Tu repo tiene `core.fileMode=false`** (habitual en Git for Windows y en WSL sobre `/mnt/c`)
@@ -300,20 +300,31 @@ la escriba (SC-git-gates-14).
 
 
 ```bash
-echo "hotfix INC-123 aprobado por tech lead" > sentinel/.override
+cat > sentinel/.override <<'LLAVE'
+hotfix INC-123 aprobado por tech lead
+para: Write:sentinel/policy.yaml
+LLAVE
 ```
 
-El siguiente bloqueo se permite, se consume el token (**un solo uso**) y queda la línea en
-`sentinel/overrides.log` con fecha, regla, acción y motivo. Si el registro no se puede
+La llave lleva el **motivo** y **para qué acción** es (`para:`). No hace falta escribirla a
+mano: el aviso de bloqueo la da lista para copiar, con el `para:` de esa acción
+(`<herramienta>:<ruta>` o `Bash:<comando>`), y solo falta el motivo. Solo la gasta la acción
+cuyo `para:` coincide **exactamente**. Si antes llega otra acción bloqueada, también de un
+subagente, sigue bloqueada y la llave se conserva. Una llave sin `para:` o sin motivo no
+autoriza nada.
+
+Cuando la acción autorizada llega, se permite, se consume el token (**un solo uso**) y queda la
+línea en `sentinel/overrides.log` con fecha, regla, acción y motivo. Si el registro no se puede
 escribir, la excepción **se deniega**: sin auditoría no hay excepción.
 
 Para toda una sesión (úsalo con cuidado, afecta a todas las reglas):
 `SENTINEL_OVERRIDE="motivo" claude` al arrancar.
 
-**La misma llave vale para la Esclusa** (los git hooks): si un commit o un push se rechaza,
-la llave permite **ese** rechazo y lo registra en la bitácora como `esclusa:<hook>`. Si el
-mismo commit lo rechazan dos hooks (p. ej. `pre-commit` y luego `commit-msg`), hacen falta dos
-llaves: cada una cubre un solo rechazo. **No uses `git commit --no-verify`**: salta la Esclusa
+**La misma llave vale para la Esclusa** (los git hooks), con `para: esclusa:<hook>`
+(`esclusa:commit-msg`, `esclusa:pre-commit` o `esclusa:pre-push`): permite el rechazo de **ese**
+hook y lo registra en la bitácora como `esclusa:<hook>`. El mensaje de rechazo da la llave lista
+para copiar. Si el mismo commit lo rechazan dos hooks (p. ej. `pre-commit` y luego
+`commit-msg`), hacen falta dos llaves: cada una cubre un solo rechazo. **No uses `git commit --no-verify`**: salta la Esclusa
 sin dejar rastro, y la Aduana (fase 3) lo detectará igual.
 
 Los modos `confirm` no necesitan override: el propio Claude Code te pide la aprobación de
