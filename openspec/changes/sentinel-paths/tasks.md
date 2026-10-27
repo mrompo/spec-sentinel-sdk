@@ -80,7 +80,7 @@ lectura sobre una protección ya basada en la ruta física.
        Los casos actuales de la llave, en el Centinela (`sc-08-09`) y en la Esclusa
        (`fixture/githooks/cases/`), pasan al formato con `para:`. `sc-08-09` no cambia: usa
        `SENTINEL_OVERRIDE`, que no se ata
-- [ ] 5. 👤 Parche `sentinel-paths-2.patch`: anclajes de la configuración de git en la política
+- [x] 5. 👤 Parche `sentinel-paths-2.patch` (aplicado por la persona, `1120f94`): anclajes de la configuración de git en la política
        y `skip_read_only: true` en `self-protection` y `managed-files`; en el guard, la lista
        cerrada de solo lectura, la llave con `para:` y el aviso con la llave lista para copiar;
        en `sentinel/githooks/lib/breakglass.sh`, la llave con `para: esclusa:<hook>`.
@@ -91,7 +91,9 @@ lectura sobre una protección ya basada en la ruta física.
        parche, el banco entero sale en verde (hooks 27/27, githooks 16/16, install 17/17) y los
        quince mutantes (un mecanismo saboteado cada vez) rompen algún caso
 - [ ] 6. Banco en verde; `docs/guia-uso.md` (cómo se escribe la llave, para el Centinela y la
-       Esclusa) y `sentinel/README.md`; la deuda del falso positivo sale de `STATUS.md`. `merge`
+       Esclusa) y `sentinel/README.md`; la deuda del falso positivo sale de `STATUS.md`. `merge`.
+       Hecho todo salvo el `merge`: la guía en `bab1eed`, y el README y `STATUS.md` en el commit
+       de documentación de esta PR
 
 ### PR 3/3 · Cableado (SC-sentinel-paths-06, 09)
 
