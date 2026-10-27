@@ -330,7 +330,10 @@ is_read_only() {
       git) case "${2:-}" in diff|log|show|status|blame|ls-files|rev-parse|cat-file) ;; *) return 1 ;; esac ;;
       *) return 1 ;;
     esac
-    case " $seg " in *[[:space:]]--output[[:space:]=]*) return 1 ;; esac
+    # --output escribe un fichero. Se busca sin comillas ni barras, como lo recibe el programa
+    # ('--output=x', --out""put, \--output); quitarlas solo puede hacer que más comandos
+    # dejen de contar como lectura
+    case " $(printf '%s' "$seg" | tr -d "\"'\\\\") " in *[[:space:]]--output[[:space:]=]*) return 1 ;; esac
   done <<EOF
 $(printf '%s' "$c" | sed -e 's/||/;/g' -e 's/&&/;/g' | tr ';|&' '\n\n\n')
 EOF
