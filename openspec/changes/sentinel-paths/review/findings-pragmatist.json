@@ -1,0 +1,86 @@
+{
+ "lens": "pragmatist",
+ "findings": [
+  {
+   "id": "P1",
+   "severity": "blocker",
+   "file": ".claude/settings.json",
+   "line": 9,
+   "title": "El PATH fijo del cableado no encuentra el git de usuario (Git Bash en /mingw64/bin, NixOS con home-manager, linuxbrew) y el cableado bloquea todas las llamadas, Read incluido, mientras setup dice que la instalación está bien",
+   "evidence": "Simulado en Debian 12 con git solo en /opt/git/bin, que hace de /mingw64/bin de Git for Windows (allí /usr/bin trae bash, sed y awk, pero no git), de /etc/profiles/per-user/<u>/bin o ~/.nix-profile/bin en NixOS (el /run/current-system/sw/bin solo lleva git si está en systemPackages) o de linuxbrew. La sesión ve la rama (feature/x), pero un Read de README.md a través del cableado sale con 2: «git no responde en el proyecto con el PATH del cableado (/usr/bin:/bin:/usr/sbin:/sbin:/run/current-system/sw/bin) … Instala git en el sistema». El script es review/pragmatist/git-outside-path.sh (se lanza con docker-run.sh) y la salida está en git-outside-path-debian.txt. Con el guard viejo, que usaba el PATH de la sesión, esto funcionaba. sentinel/README.md:57 y docs/guia-uso.md:146 dicen que el SDK funciona con Git Bash. El paso 8 de setup (setup.sh:741-755, la prueba de humo) ejecuta el guard con el bash de su propio PATH y no a través del cableado, así que termina en «✓ Nivel Guardia instalado» y el bloqueo total aparece en la primera sesión. Git Bash no lo he ejecutado: me baso en la disposición de Git for Windows.",
+   "fix": "Que el cableado busque git, aparte de en el PATH fijo, en una lista de rutas de sistema por plataforma (/mingw64/bin y /cmd en MSYS, /etc/profiles/per-user/$USER/bin y /nix/var/nix/profiles/default/bin en Nix), o que setup resuelva el git absoluto (fuera del repo) y lo deje fijado en el cableado. Además, que la prueba de humo de setup ejecute el comando del cableado tal como queda en settings.json, con env -i, como hace sc-28. Caso en el banco: sc-28 con git solo fuera del PATH fijo y setup que lo detecta como pendiente."
+  },
+  {
+   "id": "P2",
+   "severity": "major",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 124,
+   "title": "Con un repo bare que contiene sus worktrees (git clone --bare url proj; git worktree add proj/feature-x), canon() nombra todo el worktree «.git/feature-x/…» y las carpetas del enforcement se mueven o se borran sin bloqueo (SC-sentinel-paths-01)",
+   "evidence": "macOS, review/pragmatist/bare-nested.sh y guard-cmds.sh (salidas en bare-nested-macos.txt y bare-nested-detail.txt). En proj/feature-x, git-common-dir es proj, que contiene el worktree. «mv .claude /tmp/c», «chmod -R 000 sentinel/hooks» y «mv sentinel/githooks /tmp/g» salen con 0 sin aviso, y «rm -r sentinel» solo pide confirmación (destructive). La misma prueba con .bare al lado (la disposición de sc-23) bloquea. El motivo es que canon() mira GIT_COMMON_PHYS antes que REPO_PHYS y gana el prefijo menos específico. Pasa lo mismo con un proyecto dentro de CLAUDE_CONFIG_DIR o de ~/.claude.",
+   "fix": "En canon(), que gane el prefijo más largo, o mirar REPO_PHYS primero cuando la ruta cae dentro del worktree (salvo su .git). Caso en sc-21 o sc-23: un worktree dentro del repo bare, donde mv .claude y rm -r sentinel tienen que bloquearse."
+  },
+  {
+   "id": "P3",
+   "severity": "major",
+   "file": ".claude/settings.json",
+   "line": 9,
+   "title": "Tras cambiar a una rama o un commit sin el SDK (adopción, git bisect), el cableado bloquea todo y su mensaje manda restaurar con «git checkout -- sentinel/hooks», que falla: el agente no puede volver y la persona no sabe cómo",
+   "evidence": "macOS, review/pragmatist/branch-without-sdk.sh (salida en branch-without-sdk-macos.txt). El SDK está instalado en la rama chore/instalar-sdk y main aún no lo tiene. «git checkout main» solo pide confirmación; una rama feature anterior a la instalación ni eso. Claude Code mantiene los hooks cargados al arrancar, así que el siguiente Read sale con 2: «no se puede leer el Centinela … Restáuralo con: git checkout -- sentinel/hooks». Esa orden falla con «pathspec 'sentinel/hooks' did not match». Durante la adopción, cualquier rama creada antes de instalar el SDK deja la sesión bloqueada sin salida desde el agente.",
+   "fix": "Que el mensaje distinga los dos casos con git cat-file -e HEAD:sentinel/hooks/sentinel-guard.sh: si HEAD no tiene el Centinela, «esta rama no tiene el SDK: vuelve a la rama anterior (git checkout -) o integra main»; si lo tiene, la orden de restaurar actual. Otra opción es que branch-switch avise de que la rama destino no tiene el SDK. Caso en sc-28: el mensaje sin script en un HEAD sin el SDK."
+  },
+  {
+   "id": "P4",
+   "severity": "major",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 374,
+   "title": "La llave «lista para copiar» no se puede pegar tal cual: el terminador del heredoc va sangrado (y en la Esclusa es «LLAVE  )»), así que bash y zsh se quedan esperando y no se escribe ninguna llave",
+   "evidence": "macOS, review/pragmatist/key-paste-pty.py (salida en key-paste-macos.txt). Se toma el bloque del aviso de Edit sentinel/policy.yaml, se rellena <motivo> y se pega en una terminal interactiva. Tanto bash 3.2 como zsh se quedan en el prompt de continuación (PS2), porque «    LLAVE» con espacios no cierra un heredoc de <<. Al salir con Ctrl-C, sentinel/.override no existe. breakglass.sh:56-59 hace lo mismo con 7 espacios de sangría y un terminador «       LLAVE  )», que tampoco sirve quitando la sangría. Esto incumple SC-sentinel-paths-05 y SC-git-gates-11 («lista para copiar»). En una acción Bash, además, el para: es el comando con los escapes JSON (\\\" y \\n) en una sola línea de miles de caracteres; lo he visto en mis propios bloqueos.",
+   "fix": "Imprimir el bloque sin sangría y con el terminador solo en su línea, o una sola línea robusta como printf '%s\\n' '<motivo>' 'para: …' > sentinel/.override (con las comillas simples del para: escapadas). Caso en sc-27 y sc-11 del banco: extraer el bloque del aviso, ejecutarlo con sh y comprobar que la acción pasa."
+  },
+  {
+   "id": "P5",
+   "severity": "major",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 275,
+   "title": "El tope de 128 rutas cuenta cualquier palabra con «/», también el cuerpo de un heredoc (divisiones, URLs, comentarios), y deniega antes del break-glass: es más ancho de lo documentado y no hay excepción que lo salve",
+   "evidence": "macOS, review/pragmatist/heredoc-128.sh (salida en heredoc-128-macos.txt). «cat > src/util.py <<'EOF'» con 64 líneas «ratio = total/count  # ver docs/api.md» sale con 2: «el comando nombra más de 128 rutas … pártelo en comandos más cortos». Lo mismo pasa con python3 - <<'EOF', con scripts inline o con cualquier comando de más de 128 palabras con /, aunque no toque nada protegido. sentinel/README.md:50 solo documenta «un comodín que da más de 128 rutas deniega el comando». Como el deny está en add_word, antes de evaluar las reglas, ni la llave ni SENTINEL_OVERRIDE sirven, y «pártelo» no tiene sentido para un heredoc.",
+   "fix": "Contar solo las palabras que existen o cuyo padre existe y que salen de un comodín (o de los argumentos de los verbos de command_re), o saltar el cuerpo de los heredocs y no denegar cuando ninguna regla con dir_re o path_re aplicaría. Como mínimo, documentarlo en la fila «Regex evadibles». Caso en sc-21: un heredoc de 130 líneas con a/b a un fichero libre tiene que pasar."
+  },
+  {
+   "id": "P6",
+   "severity": "minor",
+   "file": ".claude/settings.json",
+   "line": 9,
+   "title": "Con un repo de otro dueño (safe.directory, «dubious ownership» en contenedores), el cableado bloquea todo, Read, Grep y Glob incluidos, con el mensaje «Instala git en el sistema», que es falso",
+   "evidence": "Debian 12, usuario v sobre un repo de u: review/pragmatist/git-outside-path.sh, caso 2 (salida en git-outside-path-debian.txt). git status falla en la sesión con «detected dubious ownership», y el Read de README.md a través del cableado sale con 2 diciendo «Instala git en el sistema», cuando git sí está instalado. La rama solo importa a las reglas de Bash, pero el cableado también bloquea las lecturas.",
+   "fix": "Que el mensaje incluya la primera línea de stderr de git rev-parse (dirá «dubious ownership… git config --global --add safe.directory …»), y que sin git solo se bloquee Bash (o lo que tenga branch_re) y Read, Grep y Glob pasen. Caso en sc-28: un repo sin safe.directory, donde el motivo tiene que contener lo que dice git."
+  },
+  {
+   "id": "P7",
+   "severity": "minor",
+   "file": "sentinel/policy.default.yaml",
+   "line": 76,
+   "title": "protect-enforcement-dirs decide sobre el comando entero: nombrar .claude o sentinel en un tramo y tener un rm o cp en cualquier otro (o copiar la carpeta hacia fuera) se bloquea",
+   "evidence": "macOS, review/pragmatist/readonly-fp.sh y matrix.sh (salidas en readonly-fp.txt y matrix-macos.txt). Bloquean «ls -la .claude && rm -f tmp.txt», «cp -r .claude /tmp/bk» (copiar hacia fuera, que no es el «copia encima» de SC-01) y «rsync -a --exclude .claude ./ /tmp/bk2/». También me ha bloqueado a mí en esta revisión un comando cuyo único rm iba dentro de una cadena entre comillas mientras otra palabra resolvía a sentinel/. El motivo («No se mueve, enlaza ni borra una carpeta…») no ayuda a entender qué ha pasado.",
+   "fix": "Evaluar dir_re por tramo (tras partir por ; && || |) y solo sobre las palabras que siguen al verbo de command_re en ese tramo, excluyendo el origen de cp o rsync cuando el destino está fuera. Casos en sc-21: ls .claude && rm -f x tiene que pasar, cp -r .claude /tmp/bk tiene que pasar y cp -r x .claude se tiene que bloquear."
+  },
+  {
+   "id": "P8",
+   "severity": "minor",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 338,
+   "title": "is_read_only parte por «|» también dentro de comillas: grep -E 'a|b' o git diff … | grep -E '^(a|b)' sobre un fichero protegido o gestionado no cuentan como lectura y se bloquean",
+   "evidence": "macOS, review/pragmatist/readonly-fp.sh (salida en readonly-fp.txt). «grep -n hooks sentinel/policy.yaml» pasa, pero «grep -nE 'hooks|rules' sentinel/policy.yaml» y «git diff -- sentinel/policy.yaml | grep -E '^(add|del)'» se bloquean con self-protection. Me ha pasado también en la sesión real con un grep -E de alternativas y un \\| entre comillas. La alternancia en grep -E es de las búsquedas más habituales de un agente, y en la spec el separador «|» es el de la shell, no el de una regex. «git --no-pager diff» también se bloquea, porque la spec excluye las opciones globales; es la forma que usan muchos agentes.",
+   "fix": "Partir los tramos con el mismo lexer de cmd_words, que respeta las comillas (o enmascarar el contenido entre comillas antes del split), sin dejar de ser fail-closed con $( y las redirecciones. Valorar admitir git --no-pager. Casos en sc-26: grep -E 'a|b' sentinel/policy.yaml tiene que pasar y grep x 'a' | tee sentinel/.override se tiene que bloquear."
+  },
+  {
+   "id": "P9",
+   "severity": "nit",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 149,
+   "title": "El coste por llamada crece con cada palabra con «/» (unos 8-10 ms cada una, por los subshells de phys_path y canon): un heredoc de 60 líneas pasa de 0,36 s a 1 s en cada tool call",
+   "evidence": "macOS (bash 3.2), review/pragmatist/perf.sh (salida en perf-macos.txt, 10 repeticiones). Read: 421 ms con el guard viejo y 454 ms con el cableado nuevo. git status: 341 frente a 429. git add con 40 rutas: 375 frente a 867. Heredoc de 60 líneas: 362 frente a 1038. En el uso normal la subida es pequeña (+30-90 ms); se nota en los comandos largos. El banco completo pasa en macOS (bash 3.2 y awk 20200816), en Debian 12 (mawk) y en Alpine 3.20 (busybox): linux-fixture.sh, out-debian.txt y out-alpine.txt.",
+   "fix": "Resolver phys_path solo para las palabras que pueden importar (las que existen o cuyo padre existe, y las que siguen a un verbo), cachear phys_dir por carpeta y hacer el bucle PERSONAL una sola vez con case. Opcional: un caso de rendimiento con un umbral holgado."
+  }
+ ]
+}

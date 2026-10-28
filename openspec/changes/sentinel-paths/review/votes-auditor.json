@@ -1,0 +1,101 @@
+{
+  "lens": "auditor",
+  "votes": [
+    {
+      "id": "V1",
+      "agree": true,
+      "severity": "blocker",
+      "note": "Reproducido (/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/v-counter.sh): con el salto de línea del JSON delante del verbo, 'echo hola' + salto + 'mv sentinel/githooks /tmp/x' → exit 0, y 'echo hola' + salto + 'rm -rf sentinel' → exit 0 (ni siquiera la confirmación de destructive, que tiene el mismo anclaje); con tabuladores, 'mv<TAB>sentinel/githooks<TAB>/tmp/x', 'git config<TAB>--remove-section<TAB>core' y 'git config<TAB>include.path<TAB>/tmp/e.cfg' → 0. La misma orden en una línea da 2. Los comandos multilínea son lo habitual en un agente, y mover sentinel/githooks deja la Esclusa sin efecto. Le subo la severidad frente a A2/A3 porque cubre todas las command_re (también protected-branches, aunque eso ya venía de antes)."
+    },
+    {
+      "id": "V2",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido (/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/v-counter.sh): '/bin/mv sentinel/githooks /tmp/x', la barra delante ('\\\\mv' en el JSON), '\"mv\"' entre comillas y '/bin/rm -rf .claude' → exit 0. 'command mv …' sí da 2. La ruta absoluta del programa es una grafía corriente, no rebuscada. Arreglo: decidir el verbo sobre las palabras ya decodificadas (basename de la primera palabra de cada tramo)."
+    },
+    {
+      "id": "V3",
+      "agree": true,
+      "severity": "major",
+      "note": "= A3 (lo reproduje en r8-git-config-case.sh: core.hookspath, CORE.HOOKSPATH y git -c core.hookspath=… → 0, y git ve /dev/null). A3 añade include.PATH y include.path tras '=' (--config-env, GIT_CONFIG_KEY_n)."
+    },
+    {
+      "id": "V4",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido (/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/v-counter.sh): con SENTINEL_OVERRIDE='sesión' y una llave 'para: Write:sentinel/policy.yaml', un 'rm sentinel/hooks/sentinel-guard.sh' pasa por la variable de sesión y la llave atada a otra acción desaparece (log_override borra el token sin mirar de dónde salió el motivo). Incumple 'la llave se conserva' de SC-sentinel-paths-05. breakglass.sh hace lo mismo por código. El impacto es acotado: la persona tiene que volver a escribir la llave."
+    },
+    {
+      "id": "V5",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido a nivel del guard (/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/v-counter.sh): un payload con cwd=sentinel y 'rm -r hooks' → 0 si el proceso del hook está en la raíz, y 2 si está en sentinel/. El guard no lee el campo cwd. Que sea un hueco depende de en qué carpeta lanza Claude Code el hook, y eso no lo he podido verificar. Es de la misma familia que A4 (git-common-dir y BRANCH salen del $PWD del hook, no del proyecto ni del cwd del payload)."
+    },
+    {
+      "id": "V6",
+      "agree": true,
+      "severity": "nit",
+      "note": "Reproducido (/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/v-counter.sh): 'printf -v PATH %s /tmp/evil; cat sentinel/policy.yaml' cuenta como solo lectura (exit 0). Incumple la letra de SC-08 («sin asignaciones»), pero el impacto es nulo: ejecutar un programa del agente ya está permitido por otras vías (bash /tmp/x.sh). Nit."
+    },
+    {
+      "id": "V7",
+      "agree": true,
+      "severity": "minor",
+      "note": "= P8 y = el lateral de A5: 'grep -E \"mode|reason\" sentinel/policy.default.yaml' → 2 en r1-readonly.sh. Falla del lado cerrado, pero la alternancia de grep es de las búsquedas más habituales de un agente; le doy minor, no nit."
+    },
+    {
+      "id": "P1",
+      "agree": true,
+      "severity": "major",
+      "note": "El defecto se deduce directamente del cableado: con PATH=/usr/bin:/bin:/usr/sbin:/sbin:/run/current-system/sw/bin, un git que solo está en /mingw64/bin, en un perfil de usuario de Nix o en linuxbrew no responde, y el cableado sale con 2 en todo, Read incluido. La simulación en Debian es coherente con eso. Además, la prueba de humo de setup no pasa por el cableado, así que no lo detecta. Major, no blocker: la persona tiene salida (instalar git en el sistema o arreglar el cableado). Mi A9 es el mismo mensaje engañoso en otro caso."
+    },
+    {
+      "id": "P2",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido (/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/v-counter.sh): con git clone --bare proj y git worktree add proj/feature-x, desde el worktree 'mv .claude /tmp/c', 'mv sentinel/githooks /tmp/g' y 'chmod -R 000 sentinel/hooks' → exit 0 (Write de sentinel/policy.default.yaml sí da 2, por el texto). canon() mira primero GIT_COMMON_PHYS, que contiene al worktree, y lo nombra '.git/feature-x/…'. Incumple SC-sentinel-paths-01 en una disposición bare+worktrees muy extendida, justo la que el cambio quería cubrir."
+    },
+    {
+      "id": "P3",
+      "agree": true,
+      "severity": "minor",
+      "note": "Real por lectura del cableado: en un HEAD sin sentinel/hooks el mensaje fijo 'git checkout -- sentinel/hooks' falla con pathspec. Bloquear es lo correcto (fail-closed, SC-09); lo que falla es la instrucción de restaurar, que SC-09 sí pide. La persona puede salir con 'git checkout -', así que minor. No lo he reproducido con script."
+    },
+    {
+      "id": "P4",
+      "agree": true,
+      "severity": "minor",
+      "note": "= A6 (r3-key-hint.sh: el terminador sangrado no cierra el heredoc, y en la Esclusa la línea es 'LLAVE  )'). Lo dejo en minor porque la salida existe (escribir LLAVE a mano o el ejemplo de la guía), aunque «lista para copiar» sea falso."
+    },
+    {
+      "id": "P5",
+      "agree": true,
+      "severity": "minor",
+      "note": "= A8 (r12-128-words.sh). P5 añade algo cierto: el deny ocurre en add_word, antes de evaluar reglas, así que ni la llave ni SENTINEL_OVERRIDE lo salvan. Hay salida (Write en vez de heredoc, partir el comando), así que minor."
+    },
+    {
+      "id": "P6",
+      "agree": true,
+      "severity": "minor",
+      "note": "≈ A9: el mensaje «Instala git» es falso cuando git está instalado y falla por otra causa (dubious ownership, no es un repo), y el bloqueo alcanza también a Read, Grep y Glob. Proponer que el motivo incluya la primera línea de stderr de git es un buen arreglo."
+    },
+    {
+      "id": "P7",
+      "agree": true,
+      "severity": "minor",
+      "note": "Real: dir_re mira todas las palabras del comando en cuanto command_re ve un verbo en cualquier tramo. 'ls -la .claude && rm -f tmp.txt' y 'cp -r .claude /tmp/bk' se bloquean, y el segundo es copiar hacia fuera, no el «copia encima» de SC-01. Ojo: sc-26 da 'cp -r sentinel /tmp/copia' como caso que debe bloquearse, así que el banco fija hoy este comportamiento. Habría que decidir en la spec si copiar hacia fuera es legítimo."
+    },
+    {
+      "id": "P8",
+      "agree": true,
+      "severity": "minor",
+      "note": "= V7 = el lateral de A5. Mismo defecto. Lo de 'git --no-pager' es conforme a la spec («sin opciones globales»): es una propuesta, no un defecto."
+    },
+    {
+      "id": "P9",
+      "agree": true,
+      "severity": "nit",
+      "note": "Coherente con mi medida (r13-timing.sh: 0 rutas ~0,7 s/llamada y 120 rutas ~1 s, contando el arranque). El sobrecoste es real pero pequeño en el uso normal. Nit."
+    }
+  ]
+}

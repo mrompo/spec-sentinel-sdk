@@ -1,0 +1,21 @@
+{"lens":"adversary","votes":[
+{"id":"A1","agree":true,"severity":"major","note":"El código lo confirma: dir_re (policy l.79) no incluye las carpetas que contienen enforcement (lib, adapters, la carpeta común de git), y path_re solo casa con nombres de fichero, que no aparecen cuando el destino es una carpeta. Misma raíz que V2: la decisión depende de que el texto nombre el fichero."},
+{"id":"A2","agree":true,"severity":"major","note":"La regex de no-hook-disabling exige el prefijo de guiones, y la sintaxis de subcomandos de git config no lo lleva. Incumple SC-sentinel-paths-03 tal como está escrito."},
+{"id":"A3","agree":true,"severity":"major","note":"= V3 (capitalización de la clave), ampliado con la frontera '=' para include.path. Lo considero dentro de SC-03, no del límite «otras grafías»."},
+{"id":"A4","agree":true,"severity":"major","note":"Relacionado con V5: l.118 calcula la carpeta común desde el cwd del hook, no desde REPO_ROOT_DIR. La misma raíz afecta a la resolución de rutas relativas."},
+{"id":"A5","agree":true,"severity":"minor","note":"Falso positivo fail-closed en la sed de l.323. No abre nada, pero contradice la promesa de SC-08."},
+{"id":"A6","agree":true,"severity":"minor","note":"= P4. El terminador sangrado no cierra el heredoc, y en la Esclusa la línea de cierre lleva un carácter de más. No debilita el guardarraíl (falla cerrado), pero rompe «lista para copiar»."},
+{"id":"A7","agree":true,"severity":"minor","note":"Incoherencia real entre la normalización textual (l.79-82) y phys_path. Si es explotable depende de cómo normalice el harness el file_path, que nadie ha comprobado."},
+{"id":"A8","agree":true,"severity":"minor","note":"= P5. El tope cuenta cualquier palabra con barra antes de evaluar las reglas. El fallo es cerrado y el README describe mal el límite."},
+{"id":"A9","agree":true,"severity":"nit","note":"Mensaje engañoso y comprobación no recogida en la spec delta. Solapa con P6."},
+{"id":"A10","agree":true,"severity":"nit","note":"Documentación desfasada, sin impacto en la seguridad."},
+{"id":"P1","agree":true,"severity":"major","note":"El PATH fijo del cableado no incluye las ubicaciones habituales de git en Git Bash o en perfiles de Nix. Falla cerrado (bloquea todo) y la prueba de humo de setup no lo detecta. Es disponibilidad, no un hueco de seguridad, así que lo bajo de blocker a major."},
+{"id":"P2","agree":true,"severity":"major","note":"canon() (l.124-134) comprueba GIT_COMMON_PHYS antes que REPO_PHYS, y con un worktree anidado gana el prefijo menos específico. Rompe SC-sentinel-paths-01 en una disposición real. Podría ser blocker si esa disposición se soporta oficialmente."},
+{"id":"P3","agree":true,"severity":"minor","note":"El mensaje de restauración es incorrecto cuando HEAD no tiene el SDK. Falla cerrado, es un problema de usabilidad."},
+{"id":"P4","agree":true,"severity":"minor","note":"= A6. Le doy minor y no major porque no abre ninguna vía; solo impide usar la excepción tal cual se ofrece."},
+{"id":"P5","agree":true,"severity":"minor","note":"= A8. La observación añadida es válida: la denegación ocurre antes del break-glass, así que ninguna excepción la salva."},
+{"id":"P6","agree":true,"severity":"minor","note":"Mensaje falso con un repo de otro dueño. Solapa con A9."},
+{"id":"P7","agree":true,"severity":"minor","note":"dir_re se evalúa sobre todas las palabras del comando: es un falso positivo fail-closed. El arreglo por tramos y por palabras tras el verbo también resolvería parte de V2."},
+{"id":"P8","agree":true,"severity":"minor","note":"= V7. Le subo la severidad a minor porque la alternancia en grep es muy habitual."},
+{"id":"P9","agree":true,"severity":"nit","note":"Coste por palabra plausible por los subshells de phys_path y canon. Sin impacto en la seguridad."}
+]}

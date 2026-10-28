@@ -1,0 +1,335 @@
+{
+  "verdict": "HOLD",
+  "counts": {
+    "blocker": {
+      "total": 1,
+      "validated": 1
+    },
+    "major": {
+      "total": 8,
+      "validated": 8
+    },
+    "minor": {
+      "total": 12,
+      "validated": 12
+    },
+    "nit": {
+      "total": 5,
+      "validated": 5
+    }
+  },
+  "findings": [
+    {
+      "id": "V1",
+      "lens": "adversary",
+      "severity": "blocker",
+      "effective": "blocker",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 78,
+      "title": "Las command_re nuevas miran el comando con los escapes del JSON sin deshacer: un salto de línea o un tabulador no cuentan como separador"
+    },
+    {
+      "id": "A1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 79,
+      "title": "Copiar o mover a la carpeta que contiene un fichero protegido (.git, sentinel/adapters, sentinel/githooks/lib) no se bloquea: se sustituye la config de git o el código que carga la Esclusa"
+    },
+    {
+      "id": "A2",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 101,
+      "title": "Los subcomandos de git config sin guiones (remove-section, rename-section, edit) borran o renombran la sección core y no se bloquean"
+    },
+    {
+      "id": "A3",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 101,
+      "title": "no-hook-disabling no reconoce core.hooksPath ni include.path en otra caja (git no distingue mayúsculas) ni include.path tras '=' (--config-env, GIT_CONFIG_KEY_n)"
+    },
+    {
+      "id": "A4",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 118,
+      "title": "La configuración de git «real del repo» se calcula desde el cwd del hook, no desde el proyecto: con el cwd fuera (o en otro repo) la de un repo bare queda sin proteger"
+    },
+    {
+      "id": "P1",
+      "lens": "pragmatist",
+      "severity": "blocker",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "El PATH fijo del cableado no encuentra el git de usuario (Git Bash en /mingw64/bin, NixOS con home-manager, linuxbrew) y el cableado bloquea todas las llamadas, Read incluido, mientras setup dice que la instalación está bien"
+    },
+    {
+      "id": "P2",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 124,
+      "title": "Con un repo bare que contiene sus worktrees (git clone --bare url proj; git worktree add proj/feature-x), canon() nombra todo el worktree «.git/feature-x/…» y las carpetas del enforcement se mueven o se borran sin bloqueo (SC-sentinel-paths-01)"
+    },
+    {
+      "id": "V2",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 78,
+      "title": "protect-enforcement-dirs reconoce el verbo por cómo se escribe, no por el programa que ejecuta"
+    },
+    {
+      "id": "V3",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 101,
+      "title": "core.hooksPath se busca distinguiendo mayúsculas, y git no las distingue en los nombres de las claves"
+    },
+    {
+      "id": "A5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 323,
+      "title": "«Solo lee» no reconoce la redirección a /dev/null pegada a un separador (2>/dev/null; |, &&) ni dos seguidas: comandos de lectura habituales siguen bloqueados"
+    },
+    {
+      "id": "A6",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 374,
+      "title": "La llave «lista para copiar» no funciona copiada: la sangría deja el heredoc sin cerrar y 'LLAVE' acaba en el motivo; en la Esclusa la línea de cierre lleva '  )' y nunca cierra"
+    },
+    {
+      "id": "A7",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 79,
+      "title": "Para las herramientas de edición, '..' se quita como texto antes de resolver enlaces: 'enlace/../x' se decide sobre una ruta que no es la física"
+    },
+    {
+      "id": "A8",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 275,
+      "title": "El tope de 128 rutas es más ancho de lo documentado: cuenta toda palabra con '/', sin comodín, y deniega un git add largo o un heredoc con URLs"
+    },
+    {
+      "id": "P3",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "Tras cambiar a una rama o un commit sin el SDK (adopción, git bisect), el cableado bloquea todo y su mensaje manda restaurar con «git checkout -- sentinel/hooks», que falla: el agente no puede volver y la persona no sabe cómo"
+    },
+    {
+      "id": "P4",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 374,
+      "title": "La llave «lista para copiar» no se puede pegar tal cual: el terminador del heredoc va sangrado (y en la Esclusa es «LLAVE  )»), así que bash y zsh se quedan esperando y no se escribe ninguna llave"
+    },
+    {
+      "id": "P5",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 275,
+      "title": "El tope de 128 rutas cuenta cualquier palabra con «/», también el cuerpo de un heredoc (divisiones, URLs, comentarios), y deniega antes del break-glass: es más ancho de lo documentado y no hay excepción que lo salve"
+    },
+    {
+      "id": "P6",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "Con un repo de otro dueño (safe.directory, «dubious ownership» en contenedores), el cableado bloquea todo, Read, Grep y Glob incluidos, con el mensaje «Instala git en el sistema», que es falso"
+    },
+    {
+      "id": "P7",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 76,
+      "title": "protect-enforcement-dirs decide sobre el comando entero: nombrar .claude o sentinel en un tramo y tener un rm o cp en cualquier otro (o copiar la carpeta hacia fuera) se bloquea"
+    },
+    {
+      "id": "P8",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 338,
+      "title": "is_read_only parte por «|» también dentro de comillas: grep -E 'a|b' o git diff … | grep -E '^(a|b)' sobre un fichero protegido o gestionado no cuentan como lectura y se bloquean"
+    },
+    {
+      "id": "V4",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 383,
+      "title": "Con SENTINEL_OVERRIDE activo se gasta también la llave atada a otra acción"
+    },
+    {
+      "id": "V5",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 270,
+      "title": "Las rutas relativas del comando se resuelven contra el $PWD del hook, no contra el cwd del payload"
+    },
+    {
+      "id": "A10",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "STATUS.md",
+      "line": 7,
+      "title": "Documentación desfasada: STATUS dice que la PR 3/3 está «en la Aduana» y sc-28 remite a un límite que el README ya no llama así"
+    },
+    {
+      "id": "A9",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "El cableado bloquea si git no responde en el proyecto, cosa que la spec no recoge, y el motivo manda instalar git aunque esté instalado"
+    },
+    {
+      "id": "P9",
+      "lens": "pragmatist",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 149,
+      "title": "El coste por llamada crece con cada palabra con «/» (unos 8-10 ms cada una, por los subshells de phys_path y canon): un heredoc de 60 líneas pasa de 0,36 s a 1 s en cada tool call"
+    },
+    {
+      "id": "V6",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 329,
+      "title": "printf está en la lista de lectores, pero con -v asigna una variable, y SC-08 excluye las asignaciones"
+    },
+    {
+      "id": "V7",
+      "lens": "adversary",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 338,
+      "title": "El partido en tramos de is_read_only no respeta comillas: un | o ; dentro de un patrón entrecomillado de grep deja de ser lectura"
+    }
+  ]
+}
