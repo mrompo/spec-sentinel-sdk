@@ -112,7 +112,8 @@ lectura sobre una protección ya basada en la ruta física.
        variables, fail-closed). `sentinel/settings.fragment.json` no se versiona: `setup` lo
        genera de ese mismo fichero. En el instalador cambia solo el aviso del `PATH`, que ya no
        es cierto. Comprobado en macOS (banco completo en un clon limpio); Linux, en la CI
-- [ ] 9. 👤 Reiniciar la sesión del agente y comprobar con `/hooks` que el cableado nuevo carga
+- [x] 9. 👤 Reiniciar la sesión del agente y comprobar con `/hooks` que el cableado nuevo carga
+       (la persona, 2026-10-28)
 - [x] 10. Banco en verde; en `sentinel/README.md` salen los límites «hook ausente» y «PATH de la
         sesión»; `STATUS.md`. `merge` (PR #13, `cacbe86`, 2026-10-28). Banco en verde (hooks
         28/28, githooks 16/16, install 17/17), y en el README los dos límites dejan su sitio a
@@ -133,7 +134,7 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
 
 **PR 4 · Lo que ejecuta bash** (temas 1 y 2 de la revisión)
 
-- [ ] R1. Casos en rojo: un salto de línea o un tabulador escritos como escape del JSON delante
+- [x] R1. Casos en rojo (`sc-29` nuevo, y `sc-23` y `sc-26`): un salto de línea o un tabulador escritos como escape del JSON delante
        del verbo (V1); el verbo por su ruta, con barra o entre comillas (V2); `git config
        remove-section`/`rename-section`/`edit` sin guiones (A2); `core.hookspath` en otra caja,
        `include.PATH`, `--config-env` y `GIT_CONFIG_KEY_n` (A3 = V3); y en solo lectura, un `\|`

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # SC-sentinel-paths-03: la configuración de git protegida es la real del repo (también en un
 #   repo bare con worktrees, donde no se llama .git), y core.hooksPath no se cambia desde un
-#   comando sin nombrarlo.
+#   comando sin nombrarlo: tampoco con los subcomandos sin guiones de git 2.46 ni con las
+#   claves en otra caja (git no distingue mayúsculas en sección y clave) o tras un '='
+#   (revisión de sentinel-paths, A2 y A3).
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 trap 'cleanup_workspace; [ -n "${B:-}" ] && rm -rf "$B"' EXIT
@@ -56,6 +58,16 @@ git config --add includeIf.gitdir:~/.path /tmp/x
 git -c include.path=/tmp/x commit -m x
 git config --edit
 git config -e
+git config remove-section core
+git config --local rename-section core viejo
+git config edit
+git config core.hookspath /dev/null
+git -c CORE.HOOKSPATH=/dev/null commit -m x
+git config include.PATH /tmp/x
+git config INCLUDE.path /tmp/x
+git --config-env=include.path=EVIL commit -m x
+git '--config-env=include.path=EVIL' commit -m x
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=/tmp/x git commit -m x
 EOF
 
 while IFS= read -r cmd; do
@@ -66,6 +78,8 @@ done <<'EOF'
 git config user.name fixture
 git config --get core.editor
 git config --remove-section alias
+git config remove-section alias
+git config core.editor edit
 git log --oneline -3
 EOF
 exit 0
