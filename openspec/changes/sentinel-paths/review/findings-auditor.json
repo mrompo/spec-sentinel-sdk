@@ -1,0 +1,95 @@
+{
+  "lens": "auditor",
+  "findings": [
+    {
+      "id": "A1",
+      "severity": "major",
+      "file": "sentinel/policy.default.yaml",
+      "line": 79,
+      "title": "Copiar o mover a la carpeta que contiene un fichero protegido (.git, sentinel/adapters, sentinel/githooks/lib) no se bloquea: se sustituye la config de git o el código que carga la Esclusa",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r5-copy-into-dir.sh y /private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r4-subdirs.sh. Con el destino como carpeta, la shell nombra el fichero por el basename del origen: ni el texto ni la ruta física llevan 'config' o 'stack.sh', y esas carpetas no están en dir_re. Salidas: 'cp $T/evil/config .git' exit 0 (y luego git config core.hooksPath = /dev/null), 'mv $T/evil/config ./.git' exit 0, 'rsync $T/evil/config .git' exit 0, 'cp $T/evil/stack.sh sentinel/adapters' exit 0, 'cp $T/evil/breakglass.sh sentinel/githooks/lib' exit 0; y la subcarpeta entera: 'mv sentinel/githooks/lib /tmp/x' exit 0, 'mv docs sentinel/githooks/lib' exit 0, 'mv sentinel/adapters /tmp/x' exit 0, mientras 'rm sentinel/githooks/lib/breakglass.sh' y 'mv sentinel/adapters/stack.sh /tmp/x' sí dan 2. Es V5-1 una carpeta más abajo: incumple el requisito «decide sobre lo que se toca» de SC-sentinel-paths-01/03 y SC-git-gates-15 (la librería y el lector del adaptador no se pueden borrar ni editar). pre-commit hace 'source' de ../adapters/stack.sh y lib/breakglass.sh, así que un fichero del agente ahí desarma la Esclusa.",
+      "fix": "Añadir a dir_re de protect-enforcement-dirs las carpetas que contienen enforcement: sentinel/githooks/lib, sentinel/adapters, .git (la canónica: GIT_COMMON) y .husky. Como alternativa más fina, para cp/mv/rsync/install/ln con destino carpeta, añadir a TOUCHED <destino>/<basename de cada origen>. Casos en sc-21: 'cp /tmp/e/config .git', 'cp /tmp/e/stack.sh sentinel/adapters', 'mv sentinel/githooks/lib /tmp/x' → 2."
+    },
+    {
+      "id": "A2",
+      "severity": "major",
+      "file": "sentinel/policy.default.yaml",
+      "line": 101,
+      "title": "Los subcomandos de git config sin guiones (remove-section, rename-section, edit) borran o renombran la sección core y no se bloquean",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r7-git-config-subcommands.sh con git 2.54 (el de esta máquina). 'git config --remove-section core' → exit 2, pero 'git config remove-section core' → exit 0, 'git config rename-section core viejo' → 0, 'git config --local rename-section core viejo' → 0, 'git config edit' → 0. Efecto real: tras 'git config remove-section core' el core.hooksPath local (sentinel/githooks) desaparece y la Esclusa queda sin efecto. Desde git 2.46 los subcomandos son la sintaxis principal de git config. Incumple SC-sentinel-paths-03 («borrando o renombrando la sección core... o abriendo la configuración en un editor»).",
+      "fix": "En command_re de no-hook-disabling aceptar el subcomando además de la opción: '(--|[[:space:]])(remove|rename)-section[[:space:]]+[\"']?[Cc][Oo][Rr][Ee]...' y 'config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit|edit)([[:space:];&|]|$)'. Añadir en sc-23 'git config remove-section core', 'git config rename-section core x' y 'git config edit' a los que deben bloquearse."
+    },
+    {
+      "id": "A3",
+      "severity": "major",
+      "file": "sentinel/policy.default.yaml",
+      "line": 101,
+      "title": "no-hook-disabling no reconoce core.hooksPath ni include.path en otra caja (git no distingue mayúsculas) ni include.path tras '=' (--config-env, GIT_CONFIG_KEY_n)",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r8-git-config-case.sh y /private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r11-include-after-equals.sh. Salen con 0: 'git config core.hookspath /dev/null', 'git config CORE.HOOKSPATH /dev/null', 'git -c core.hookspath=/dev/null commit -m x', 'git config include.PATH <fichero>', 'git config Include.Path <fichero>', 'P=<fichero> git --config-env=include.path=P commit -m x', 'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=<fichero> git commit -m x'. Efecto real comprobado: git ve core.hooksPath=/dev/null en todos. La regex solo hace insensible la 'I' de include y la sección core de --remove-section; core.hooksPath va literal y include.path exige inicio, espacio o comilla delante. Incumple SC-sentinel-paths-03 («con un include.path o un includeIf.<condición>.path»).",
+      "fix": "Comparar estas claves sin distinguir mayúsculas (p. ej. una regla aparte con la regex en minúsculas sobre el comando pasado por tr A-Z a-z, o clases [Hh][Oo]... en core.hooksPath, include y path) y admitir '=' como frontera: '(^|[^[:alnum:]_.-])include(if\\.[^[:space:]=]*)?\\.path'. Casos en sc-23: core.hookspath, include.PATH, --config-env=include.path=P y GIT_CONFIG_KEY_0=include.path → 2."
+    },
+    {
+      "id": "A4",
+      "severity": "major",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 118,
+      "title": "La configuración de git «real del repo» se calcula desde el cwd del hook, no desde el proyecto: con el cwd fuera (o en otro repo) la de un repo bare queda sin proteger",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r2-cwd-gitdir.sh: repo bare + worktree, CLAUDE_PROJECT_DIR=<wt>. Write de <bare>/.bare/config → exit 2 con cwd en el worktree, pero exit 0 con cwd en una carpeta sin git y exit 0 con cwd en otro repo; también Write de .bare/hooks/pre-commit y 'printf x >> <bare>/.bare/config' desde Bash → 0. Claude Code lanza el hook en el cwd de la sesión, que sigue a los 'cd' del agente (aquí /tmp es carpeta de trabajo adicional). '_gcd=$(git rev-parse --git-common-dir)' no usa REPO_ROOT_DIR, aunque el cableado sí comprueba 'git -C \"$CLAUDE_PROJECT_DIR\"'. Incumple SC-sentinel-paths-03 («la configuración de git es la real del repo»). El banco solo lo prueba con cwd en el worktree (sc-23, RH_CWD=$WT).",
+      "fix": "Calcular la carpeta común desde el proyecto: 'git -C \"$REPO_ROOT_DIR\" rev-parse --path-format=absolute --git-common-dir' (o resolverla relativa a REPO_ROOT_DIR), y si el cwd está en otro repo, canonizar también la de ese. Caso en sc-23: el mismo Write de ../.bare/config con RH_CWD fuera del worktree y CLAUDE_PROJECT_DIR=$WT → 2."
+    },
+    {
+      "id": "A5",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 323,
+      "title": "«Solo lee» no reconoce la redirección a /dev/null pegada a un separador (2>/dev/null; |, &&) ni dos seguidas: comandos de lectura habituales siguen bloqueados",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r1-readonly.sh: 'cat sentinel/policy.yaml 2>/dev/null' → 0, pero 'cat sentinel/policy.yaml 2>/dev/null; echo fin' → 2, '… 2>/dev/null|head -3' → 2, '… 2>/dev/null&&echo fin' → 2, 'tail -3 sentinel/overrides.log 2>&1|head -1' → 2, 'cat sentinel/policy.yaml >/dev/null 2>/dev/null' → 2. La sed exige espacio o fin de línea tras /dev/null y '2>&1', y como consume el espacio de delante y de detrás, la segunda redirección seguida ya no tiene espacio delante. Este mismo panel lo sufrió con 'ls sentinel; cat … 2>/dev/null; grep …'. SC-sentinel-paths-08 admite «redirecciones … a /dev/null y 2>&1» y parte por ';', '|' y '&&'. Fallo del lado cerrado (no abre nada), pero es justo el falso positivo que el cambio quería quitar. Lateral: un ';' o '|' dentro de comillas (grep -E 'a|b' fichero) también parte el tramo y bloquea; la spec lo admite como «ante la duda».",
+      "fix": "Aceptar como final de la redirección también [;&|] sin consumirlo, y no consumir el espacio de delante: p. ej. 's#(^|[[:space:]])(&|[0-9])?>>?[[:space:]]*/dev/null([[:space:];&|]|$)#\\1\\3#g' (y lo mismo para [0-9]?>&[0-9]), o aplicar la sed en bucle. Casos en sc-26 (permitidos): 'cat sentinel/policy.yaml 2>/dev/null; echo x', 'tail -3 sentinel/overrides.log 2>&1|head -1', 'cat sentinel/policy.yaml >/dev/null 2>/dev/null'."
+    },
+    {
+      "id": "A6",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 374,
+      "title": "La llave «lista para copiar» no funciona copiada: la sangría deja el heredoc sin cerrar y 'LLAVE' acaba en el motivo; en la Esclusa la línea de cierre lleva '  )' y nunca cierra",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r3-key-hint.sh: se toma el bloque del aviso tal cual (cada línea con 4 espacios delante, también '    LLAVE') y se pega en bash. El terminador sangrado no cierra un '<<'LLAVE'': en una terminal interactiva la shell se queda esperando; con fin de entrada, la llave queda con '    LLAVE' como línea y la bitácora registra el motivo 'arreglo aprobado     LLAVE' (salida: 'permitido y auditado — arreglo aprobado     LLAVE'). En sentinel/githooks/lib/breakglass.sh:59 la línea es '       LLAVE  )', que no cierra ni sin sangría: la llave resultante es 'motivo|para: esclusa:pre-commit|       LLAVE  )|'. SC-sentinel-paths-05 y SC-git-gates-11 piden la llave «lista para copiar»; la guía dice «No hace falta escribirla a mano».",
+      "fix": "Imprimir el bloque sin sangría (o con '<<-' y tabuladores) y con el terminador solo en su línea; en breakglass.sh quitar el '  )' de la línea de cierre. Caso en sc-27 y en sc-11: extraer el bloque del stderr, ejecutarlo con 'bash' en el workspace y comprobar que la llave tiene exactamente el motivo y el para: y que la acción pasa."
+    },
+    {
+      "id": "A7",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 79,
+      "title": "Para las herramientas de edición, '..' se quita como texto antes de resolver enlaces: 'enlace/../x' se decide sobre una ruta que no es la física",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r9-dotdot-link.sh: con h -> sentinel/hooks, Write de <repo>/h/../policy.yaml → exit 0, mientras 'cp /tmp/x h/../policy.yaml' por Bash → 2 (allí phys_path usa cd -P). Para el sistema, h/../policy.yaml es sentinel/policy.yaml: node fs.writeFileSync sobre esa ruta escribió en sentinel/policy.yaml. Si el harness escribe el file_path sin normalizarlo antes, es un hueco de SC-sentinel-paths-02 («cuya ruta física es un fichero protegido»); si lo normaliza como texto, no hay daño, pero el guard es incoherente entre Bash y Write. No he podido comprobar qué hace Claude Code.",
+      "fix": "Calcular la ruta física con phys_path sobre la ruta sin normalizar (que es lo que hace el kernel) y usar la normalizada como texto solo para REL_PATH/ACTION_DESC; o añadir las dos a TOUCHED. Caso en sc-22: enlace h -> sentinel/hooks y Write de h/../policy.yaml → 2."
+    },
+    {
+      "id": "A8",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 275,
+      "title": "El tope de 128 rutas es más ancho de lo documentado: cuenta toda palabra con '/', sin comodín, y deniega un git add largo o un heredoc con URLs",
+      "evidence": "/private/tmp/claude-519608938/-Users-mromero-orca-workspaces-spec-sentinel-sdk-close-step/dfe0be7b-e704-44fc-b285-42c035af3c67/scratchpad/review/auditor/r12-128-words.sh: 'git add src/f1.js … src/f130.js' → exit 2 «el comando nombra más de 128 rutas»; un 'cat > docs/notas.md <<'EOF'' con 130 URLs → exit 2. El README (tabla de límites, fila «Regex evadibles») dice «un comodín que da más de 128 rutas deniega el comando»; la cuenta ocurre antes de evaluar reglas, para cualquier comando Bash, aunque ninguna regla de carpeta aplique (no hay mv/cp/rm…). Rompe trabajo legítimo; la salida existe (partir el comando), pero el límite real no es el documentado.",
+      "fix": "Recoger rutas solo cuando alguna regla las vaya a mirar (p. ej. si el comando casa el command_re de protect-enforcement-dirs, o si hay reglas path_re), o no contar las que no existen y no tocan carpetas protegidas; y corregir el README: «más de 128 palabras con '/' o que existen». Caso en sc-21: 'git add' de 130 ficheros → 0."
+    },
+    {
+      "id": "A9",
+      "severity": "nit",
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "El cableado bloquea si git no responde en el proyecto, cosa que la spec no recoge, y el motivo manda instalar git aunque esté instalado",
+      "evidence": "fixture/hooks/cases/sc-28-paths-wiring.sh:79-82 lo muestra: con git instalado y un proyecto que no es repo, el cableado sale con 2 y dice «Instala git en el sistema». Pasa también con un repo «dubious ownership» o un .git movido; y bloquea también Read, Grep y Glob. SC-sentinel-paths-06/09 no mencionan esta comprobación (sí el README).",
+      "fix": "Distinguir 'command -v git' (no instalado) de 'no es un repo / git falla' en el mensaje, y añadir el caso a SC-sentinel-paths-09 en la spec delta para que spec, README y cableado digan lo mismo."
+    },
+    {
+      "id": "A10",
+      "severity": "nit",
+      "file": "STATUS.md",
+      "line": 7,
+      "title": "Documentación desfasada: STATUS dice que la PR 3/3 está «en la Aduana» y sc-28 remite a un límite que el README ya no llama así",
+      "evidence": "En cacbe86 la PR #13 (3/3) ya está mergeada, pero STATUS.md:7 y :14 dicen «PR 3/3 (cableado) en la Aduana». fixture/hooks/cases/sc-28-paths-wiring.sh:54 dice que SHELLOPTS=noexec «es el límite «Entorno de la sesión» de sentinel/README.md», pero el README lo pone en la fila «La shell que lanza el cableado».",
+      "fix": "Actualizar STATUS (tres PRs en main, pendiente review/archive) y el comentario de sc-28."
+    }
+  ]
+}

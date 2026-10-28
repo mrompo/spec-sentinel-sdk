@@ -1,0 +1,107 @@
+{
+ "lens": "pragmatist",
+ "votes": [
+  {
+   "id": "A1",
+   "agree": true,
+   "severity": "major",
+   "note": "He vuelto a ejecutar auditor/r5-copy-into-dir.sh: 'cp evil/config .git', 'cp evil/stack.sh sentinel/adapters' y 'cp evil/breakglass.sh sentinel/githooks/lib' salen con 0, y después git ve core.hooksPath=/dev/null. Es el mismo defecto que V5-1, una carpeta más abajo. Agente y persona solo lo encuentran por accidente, pero deja sin efecto la Esclusa."
+  },
+  {
+   "id": "A2",
+   "agree": true,
+   "severity": "major",
+   "note": "Reproducido con git 2.54 (auditor/r7 y mi pragmatist/a2-effect.sh): 'git config remove-section core' y 'rename-section core viejo' salen con 0 y quitan el valor local. Desde git 2.46 los subcomandos sin guiones son la sintaxis que documenta git, así que un agente los escribirá sin mala intención."
+  },
+  {
+   "id": "A3",
+   "agree": true,
+   "severity": "major",
+   "note": "= V3. Reproducido en pragmatist/repro-adversary.sh: 'git config core.hookspath /dev/null' y 'git -c CORE.HOOKSPATH=/dev/null commit' salen con 0. Lo de include.path detrás de '=' viene de auditor/r11, que no he vuelto a ejecutar."
+  },
+  {
+   "id": "A4",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido con auditor/r2-cwd-gitdir.sh: con el cwd fuera del proyecto, el Write de .bare/config sale con 0. Hace falta a la vez un repo bare con worktrees y una sesión cuyo cwd salga del proyecto, así que en el uso real el impacto es acotado. Lo bajo a minor. Se arregla igual que mi P2: calcular las rutas desde el proyecto."
+  },
+  {
+   "id": "A5",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido con auditor/r1-readonly.sh: '2>/dev/null; echo', '2>&1|head' y '>/dev/null 2>/dev/null' bloquean. Son formas de leer muy comunes en un agente. Se solapa con P8, que es la parte de las comillas."
+  },
+  {
+   "id": "A6",
+   "agree": true,
+   "severity": "major",
+   "note": "= P4. Lo reproduje en una pty interactiva: bash y zsh se quedan en PS2 y no se escribe ninguna llave. Lo subo a major porque la spec promete la llave «lista para copiar» y es el único camino de la persona para conceder una excepción."
+  },
+  {
+   "id": "A7",
+   "agree": true,
+   "severity": "nit",
+   "note": "Reproducido con auditor/r9: el Write de h/../policy.yaml sale con 0 y por Bash sale con 2. Pero Claude Code resuelve el file_path con una normalización de texto (path.resolve), y entonces escribe en <repo>/policy.yaml, no en sentinel/policy.yaml. Lo que queda es una incoherencia, no un hueco práctico. Si el harness no normalizara, sería minor."
+  },
+  {
+   "id": "A8",
+   "agree": true,
+   "severity": "major",
+   "note": "= P5. Además de lo del Auditor, el deny ocurre antes de mirar la excepción: ni la llave ni SENTINEL_OVERRIDE lo salvan. Un heredoc de 64 líneas a un fichero libre se deniega (pragmatist/heredoc-128.sh)."
+  },
+  {
+   "id": "A9",
+   "agree": true,
+   "severity": "minor",
+   "note": "= P6. Lo reproduje en Debian con un repo de otro dueño: el mensaje dice «Instala git» y bloquea también Read. Le doy minor y no nit porque deja la sesión inutilizable sin una pista correcta."
+  },
+  {
+   "id": "A10",
+   "agree": true,
+   "severity": "nit",
+   "note": "STATUS.md:7 sigue hablando de las PR en curso, aunque las tres están en main. Documentación desfasada."
+  },
+  {
+   "id": "V1",
+   "agree": true,
+   "severity": "major",
+   "note": "Reproducido en pragmatist/repro-adversary.sh: 'true<LF>mv sentinel/githooks /tmp/g', 'mv<TAB>sentinel/githooks /tmp/g', 'git config<TAB>include.path /tmp/x' y 'git config --remove-section<TAB>core' salen con 0, y los controles en una línea con 2. Un comando multilínea es habitual en un agente, así que incumple SC-01 y SC-03 sin grafía rebuscada. No lo pongo en blocker porque no deja el SDK sin efecto en el uso normal y la Esclusa sigue actuando en cada commit."
+  },
+  {
+   "id": "V2",
+   "agree": true,
+   "severity": "major",
+   "note": "Reproducido en pragmatist/repro-adversary.sh: '/bin/mv sentinel/githooks /tmp/g', '\\mv …', \"'mv' …\" y '/bin/rm -r sentinel' salen con 0, el último sin pedir siquiera la confirmación de destructive. La ruta absoluta del programa no es una grafía rebuscada."
+  },
+  {
+   "id": "V3",
+   "agree": true,
+   "severity": "major",
+   "note": "= A3. Reproducido: core.hookspath y CORE.HOOKSPATH (en git config y en git -c) salen con 0."
+  },
+  {
+   "id": "V4",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido en pragmatist/repro-adversary.sh: con SENTINEL_OVERRIDE=sesion, 'mv .claude /tmp/x' pasa auditado y la llave 'para: Edit:sentinel/policy.yaml' desaparece. Incumple SC-sentinel-paths-05 («la llave se conserva»). El impacto es acotado: la persona tiene que volver a escribirla."
+  },
+  {
+   "id": "V5",
+   "agree": false,
+   "severity": "minor",
+   "note": "No reproducido en condiciones reales. Es verdad que el guard ignora el campo cwd del payload: con cwd=sentinel y el hook en la raíz, 'chmod -R 000 hooks' sale con 0, y con el hook en sentinel/ sale con 2. Pero en esta sesión el hook corrió en el cwd de la sesión (el Centinela real resolvió mis palabras contra ese directorio), así que no he visto un hook cuyo PWD sea distinto del cwd del payload. Sin eso, es el límite «cd previo» documentado."
+  },
+  {
+   "id": "V6",
+   "agree": true,
+   "severity": "nit",
+   "note": "Reproducido: 'printf -v PATH %s /tmp/e; cat sentinel/policy.yaml' sale con 0 (como lectura) y el control 'cp x sentinel/policy.yaml' con 2. No cumple la definición de lista cerrada de SC-08, pero ejecutar un script del repo ya es un límite aceptado, y el impacto práctico es nulo."
+  },
+  {
+   "id": "V7",
+   "agree": true,
+   "severity": "minor",
+   "note": "= P8. Reproducido: 'grep -nE \\'hooks|rules\\' sentinel/policy.yaml' bloquea, y el Centinela real me bloqueó a mí dos veces en esta revisión con grep -E de alternativas. Es una búsqueda muy frecuente, por eso minor y no nit."
+  }
+ ]
+}

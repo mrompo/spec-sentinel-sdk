@@ -10,8 +10,7 @@ lectura de `STATUS.md`.
 que toca el enforcement es un fichero protegido: lo entrega el agente como parche en la raíz del
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
-**Posición en el Loop**: PR 1/3 en `main` (#9, #10, #11); PR 2/3 en `main` (#12); la 3/3 en
-la Aduana.
+**Posición en el Loop**: las tres PRs en `main` (#9 a #13); en el Tribunal (`review`).
 
 ## Engine · antes de teclear
 
@@ -114,14 +113,58 @@ lectura sobre una protección ya basada en la ruta física.
        genera de ese mismo fichero. En el instalador cambia solo el aviso del `PATH`, que ya no
        es cierto. Comprobado en macOS (banco completo en un clon limpio); Linux, en la CI
 - [ ] 9. 👤 Reiniciar la sesión del agente y comprobar con `/hooks` que el cableado nuevo carga
-- [ ] 10. Banco en verde; en `sentinel/README.md` salen los límites «hook ausente» y «PATH de la
-        sesión»; `STATUS.md`. `merge`. Hecho todo salvo el `merge`: banco en verde (hooks
+- [x] 10. Banco en verde; en `sentinel/README.md` salen los límites «hook ausente» y «PATH de la
+        sesión»; `STATUS.md`. `merge` (PR #13, `cacbe86`, 2026-10-28). Banco en verde (hooks
         28/28, githooks 16/16, install 17/17), y en el README los dos límites dejan su sitio a
-        «La shell que lanza el cableado»
+        «La shell que lanza el cableado». Su revisión pidió que el cableado bloquee sin git y
+        que el hook lleve `"onFailure": "block"` (`9bd20df`)
 
 ### Cierre
 
 - [ ] 11. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las tres PRs →
-        `disposition` 👤 de los hallazgos
+        `disposition` 👤 de los hallazgos. Primer panel el 2026-10-28
+        ([`review/`](review/README.md)): `HOLD` por V1, con 8 graves y los 26 hallazgos
+        validados. Disposición de la persona el mismo día: se arregla en este cambio (ronda 2,
+        abajo) salvo P7 y P9, que van a deuda, y después un panel de confirmación
+
+### Ronda 2 · arreglos de la revisión (disposición del 2026-10-28)
+
+Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada una mergeable sola.
+
+**PR 4 · Lo que ejecuta bash** (temas 1 y 2 de la revisión)
+
+- [ ] R1. Casos en rojo: un salto de línea o un tabulador escritos como escape del JSON delante
+       del verbo (V1); el verbo por su ruta, con barra o entre comillas (V2); `git config
+       remove-section`/`rename-section`/`edit` sin guiones (A2); `core.hookspath` en otra caja,
+       `include.PATH`, `--config-env` y `GIT_CONFIG_KEY_n` (A3 = V3); y en solo lectura, un `\|`
+       entre comillas (P8 = V7), `2>/dev/null` junto a un separador (A5) y `printf -v` (V6)
+- [ ] R2. 👤 Parche: las reglas del comando deciden sobre el comando decodificado y el verbo de
+       cada tramo sin comillas ni escapes y reducido a su nombre; los tramos de solo lectura se
+       parten respetando las comillas; claves de git sin distinguir mayúsculas. Banco en verde y
+       `merge`
+
+**PR 5 · Carpetas y ruta física** (tema 3 y el tope de 128 rutas)
+
+- [ ] R3. Casos en rojo: copiar o mover a `.git`, `sentinel/adapters` o `sentinel/githooks/lib`
+       (A1); worktrees dentro del repo bare (P2); la carpeta común de git con el `cwd` fuera del
+       proyecto (A4) y el `cwd` del payload (V5); `enlace/../x` en Write/Edit (A7); un heredoc o
+       un `git add` con más de 128 palabras con `/` que no tocan nada protegido (P5 = A8)
+- [ ] R4. 👤 Parche, banco en verde, README («Regex evadibles» con el tope real) y `merge`
+
+**PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
+
+- [ ] R5. Delta de SC-sentinel-paths-09 (sin git que responda en el proyecto, el cableado bloquea
+       y dice por qué) y casos en rojo: `git` solo fuera del `PATH` fijo, y `setup` lo detecta
+       (P1); rama sin el SDK (P3); *dubious ownership* (P6 = A9); la llave copiada del aviso, tal
+       cual, en el Centinela y en la Esclusa (P4 = A6); `SENTINEL_OVERRIDE` con una llave para
+       otra acción (V4)
+- [ ] R6. 👤 Parche (cableado, `setup`, guard y `breakglass.sh`), banco en verde, `STATUS.md` y
+       `sc-28` al día (A10), deuda P7 y P9 registrada, y `merge`
+
+**Tribunal**
+
+- [ ] R7. Panel de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 4 a 6 →
+       `disposition` 👤
+- [ ] R8. Lo que decida la persona; después, el 11 queda cerrado
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
