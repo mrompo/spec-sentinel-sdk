@@ -65,9 +65,22 @@ PROJ="$WS" BLOCKED_JSON='{"tool_name":"Bash","tool_input":{"command":"git commit
   GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null
 
 # ── 09: el Centinela que no decide, bloquea ────────────────────────────────────────────────
+# Claude Code bloquea también si el cableado no puede arrancar o tarda demasiado
+# (onFailure: block, revisión de la #13)
+grep -A3 'sentinel/hooks/sentinel-guard.sh' "$REPO_ROOT/.claude/settings.json" | grep -q '"onFailure": "block"' \
+  || { echo "    el hook del Centinela no lleva onFailure: block" >&2; exit 1; }
+
 P="$TMPD/proyecto"; G="$P/sentinel/hooks/sentinel-guard.sh"
 mkdir -p "$P/sentinel/hooks"
 fake() { printf '#!/usr/bin/env bash\ncat >/dev/null\n%s\n' "$1" > "$G"; }
+
+# Sin un git que responda en el proyecto (git fuera del PATH fijo, o no es un repo), el Centinela
+# no sabría la rama y las reglas de rama no se aplicarían: 2 y por qué (revisión de la #13)
+fake 'exit 0'
+wire "$P" "$INNOCUOUS"
+assert_exit 2 || { echo "    sin un git que responda, el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
+assert_err_contains "git" || { echo "    el bloqueo no dice que falta git: $RH_ERR" >&2; exit 1; }
+git -C "$P" init -q
 
 # Sin el script: 2 y cómo restaurarlo
 rm -f "$G"
