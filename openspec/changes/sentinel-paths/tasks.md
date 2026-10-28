@@ -139,10 +139,11 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        remove-section`/`rename-section`/`edit` sin guiones (A2); `core.hookspath` en otra caja,
        `include.PATH`, `--config-env` y `GIT_CONFIG_KEY_n` (A3 = V3); y en solo lectura, un `\|`
        entre comillas (P8 = V7), `2>/dev/null` junto a un separador (A5) y `printf -v` (V6)
-- [ ] R2. 👤 Parche: las reglas del comando deciden sobre el comando decodificado y el verbo de
+- [x] R2. 👤 Parche `sentinel-paths-4.patch` (aplicado por la persona, `c37d293`): las reglas del comando deciden sobre el comando decodificado y el verbo de
        cada tramo sin comillas ni escapes y reducido a su nombre; los tramos de solo lectura se
-       parten respetando las comillas; claves de git sin distinguir mayúsculas. Banco en verde y
-       `merge`
+       parten respetando las comillas; claves de git sin distinguir mayúsculas. En un clon
+       limpio con el parche, el banco entero en verde (hooks 29/29, githooks 16/16, install
+       17/17) y los trece mutantes rompen algún caso. Falta el `merge`
 
 **PR 5 · Carpetas y ruta física** (tema 3 y el tope de 128 rutas)
 
