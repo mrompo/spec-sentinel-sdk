@@ -60,6 +60,11 @@ git config --edit
 git config -e
 git config remove-section core
 git config --local rename-section core viejo
+git config remove-section --local core
+git config rename-section --local core viejo
+git config --remove-section --local core
+git config remove-section --file .git/config core
+git config remove-section --file /tmp/x.cfg --local core
 git config edit
 git config core.hookspath /dev/null
 git -c CORE.HOOKSPATH=/dev/null commit -m x
