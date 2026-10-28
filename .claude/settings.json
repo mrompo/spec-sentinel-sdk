@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/sentinel/hooks/sentinel-guard.sh\""
+            "command": "/usr/bin/env -i HOME=\"$HOME\" CLAUDE_PROJECT_DIR=\"$CLAUDE_PROJECT_DIR\" CLAUDE_CONFIG_DIR=\"$CLAUDE_CONFIG_DIR\" SENTINEL_OVERRIDE=\"$SENTINEL_OVERRIDE\" PATH=/usr/bin:/bin:/usr/sbin:/sbin:/run/current-system/sw/bin bash -c 'g=\"$CLAUDE_PROJECT_DIR/sentinel/hooks/sentinel-guard.sh\"; if [ ! -f \"$g\" ] || [ ! -r \"$g\" ]; then echo \"sentinel: no se puede leer el Centinela ($g) y la acción se bloquea. Restáuralo con: git checkout -- sentinel/hooks\" >&2; exit 2; fi; if ! git -C \"$CLAUDE_PROJECT_DIR\" rev-parse --git-dir >/dev/null 2>&1; then echo \"sentinel: git no responde en el proyecto con el PATH del cableado ($PATH) y la acción se bloquea: sin git, el Centinela no sabe en qué rama está. Instala git en el sistema\" >&2; exit 2; fi; bash \"$g\"; r=$?; if [ \"$r\" -ne 0 ] && [ \"$r\" -ne 2 ]; then echo \"sentinel: el Centinela terminó con $r, que no es una decisión, y la acción se bloquea\" >&2; exit 2; fi; exit \"$r\"'",
+            "onFailure": "block"
           }
         ]
       }

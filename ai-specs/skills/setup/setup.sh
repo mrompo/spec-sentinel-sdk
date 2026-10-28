@@ -121,8 +121,7 @@ SELF=0; [ "$TARGET" = "$SDK_ROOT" ] && SELF=1
 echo "Instalando el nivel Guardia en $TARGET"
 [ -z "$PATH_DROPPED" ] || note "se quitan del PATH de setup las entradas vacías, relativas o que
     están dentro del repo destino (también a través de un enlace):$PATH_DROPPED. setup no ejecuta
-    nada que venga del repo. Ojo: si abres Claude Code con ese PATH, el Centinela ejecutaría un
-    bash del repo (límite «PATH de la sesión»)"
+    nada que venga del repo, y el cableado del Centinela tampoco: no usa el PATH de la sesión"
 
 # Además del PATH limpio, los programas que se eligen por variable (SENTINEL_SETUP_JQ,
 # SENTINEL_OPENSPEC_BIN) tampoco pueden venir del repo, se llegue a ellos como se llegue: ni la

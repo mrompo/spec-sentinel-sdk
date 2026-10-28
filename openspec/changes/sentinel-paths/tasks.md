@@ -10,7 +10,8 @@ lectura de `STATUS.md`.
 que toca el enforcement es un fichero protegido: lo entrega el agente como parche en la raíz del
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
-**Posición en el Loop**: PR 1/3 en `main` (#9); la 1b en su PR; la 2/3 con el parche listo.
+**Posición en el Loop**: PR 1/3 en `main` (#9, #10, #11); PR 2/3 en `main` (#12); la 3/3 en
+la Aduana.
 
 ## Engine · antes de teclear
 
@@ -90,25 +91,33 @@ lectura sobre una protección ya basada en la ruta física.
        redirección escritos así no se verían; caso en rojo en `sc-26`). En un clon limpio con el
        parche, el banco entero sale en verde (hooks 27/27, githooks 16/16, install 17/17) y los
        quince mutantes (un mecanismo saboteado cada vez) rompen algún caso
-- [ ] 6. Banco en verde; `docs/guia-uso.md` (cómo se escribe la llave, para el Centinela y la
-       Esclusa) y `sentinel/README.md`; la deuda del falso positivo sale de `STATUS.md`. `merge`.
-       Hecho todo salvo el `merge`: la guía en `bab1eed`, y el README y `STATUS.md` en el commit
-       de documentación de esta PR
+- [x] 6. Banco en verde; `docs/guia-uso.md` (cómo se escribe la llave, para el Centinela y la
+       Esclusa) y `sentinel/README.md`; la deuda del falso positivo sale de `STATUS.md`. `merge`
+       (PR #12, `a19d685`, 2026-10-28). Su revisión encontró un `--output` entre comillas que
+       pasaba por lectura (`eaec491`), y al rehacer el parche sobre `main` salió el de los
+       escapes del JSON
 
 ### PR 3/3 · Cableado (SC-sentinel-paths-06, 09)
 
-- [ ] 7. Casos en rojo: el comando del cableado, tal como queda en `.claude/settings.json`,
-       ejecutado con un `bash` y un `grep` trampa del repo en el `PATH`, con `BASH_ENV` y con
-       una función exportada; con el script del Centinela ausente, ilegible o terminando con
-       un código que no es 0 ni 2. Los casos de `fixture/install/` que comprueban el
-       cableado (SC-sdk-setup-09, 10, 14) pasan al comando nuevo, que se sigue reconociendo
-       por la ruta del script
-- [ ] 8. 👤 Parche `sentinel-paths-3.patch`: el comando nuevo en `.claude/settings.json` y en
-       `sentinel/settings.fragment.json`, y en el instalador el cableado que escribe y
-       reconoce. Comprobado en macOS y en la matriz Linux de CI
+- [x] 7. Casos en rojo (`sc-28`, `456b252`): el comando del cableado, tal como queda en
+       `.claude/settings.json`, ejecutado con `/bin/sh` y con un `bash`, `grep`, `sed`, `git` y
+       `awk` trampa en el `PATH`, con `BASH_ENV`, `SHELLOPTS=noglob`, una función exportada y
+       un `GIT_DIR` de otro repo; con el script del Centinela ausente, ilegible o terminando
+       con un código que no es 0 ni 2. Con el cableado de `main`, cada amenaza rompe alguna
+       comprobación. Los casos de `fixture/install/` no cambian: el instalador copia el
+       cableado del SDK y lo reconoce por la ruta del script, y `sc-09` ejecuta el instalado.
+       `SHELLOPTS=noexec` actúa sobre la shell que lanza el hook, antes del cableado: queda
+       como límite en `sentinel/README.md`
+- [x] 8. 👤 Parche `sentinel-paths-3.patch` (aplicado por la persona, `31020b5`): el comando
+       nuevo en `.claude/settings.json` (`/usr/bin/env -i`, `PATH` fijo con NixOS, cuatro
+       variables, fail-closed). `sentinel/settings.fragment.json` no se versiona: `setup` lo
+       genera de ese mismo fichero. En el instalador cambia solo el aviso del `PATH`, que ya no
+       es cierto. Comprobado en macOS (banco completo en un clon limpio); Linux, en la CI
 - [ ] 9. 👤 Reiniciar la sesión del agente y comprobar con `/hooks` que el cableado nuevo carga
 - [ ] 10. Banco en verde; en `sentinel/README.md` salen los límites «hook ausente» y «PATH de la
-        sesión»; `STATUS.md`. `merge`
+        sesión»; `STATUS.md`. `merge`. Hecho todo salvo el `merge`: banco en verde (hooks
+        28/28, githooks 16/16, install 17/17), y en el README los dos límites dejan su sitio a
+        «La shell que lanza el cableado»
 
 ### Cierre
 
