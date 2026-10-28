@@ -26,7 +26,14 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
   hace, vale el del SDK (`false`).
 - **Break-glass auditado** (obligatorio desde fase 1): `SENTINEL_OVERRIDE=<motivo>` permite
   saltar una regla dejando rastro (quién/cuándo/por qué) en un log versionado; `doctor` lo
-  reporta y exige revisión a posteriori. Un gate sin escape auditado acaba desinstalado.
+  reporta y exige revisión a posteriori. Un gate sin escape auditado acaba desinstalado. La
+  vía recomendada es la llave de un solo uso `sentinel/.override`: el motivo y una línea
+  `para: <acción>`, que es la que da el aviso de bloqueo. Solo la gasta la acción que nombra,
+  con coincidencia exacta; en la Esclusa, `para: esclusa:<hook>` (`sentinel-paths`).
+- **Leer no se bloquea**: las reglas con `skip_read_only: true` (`self-protection`,
+  `managed-files`) no aplican a un comando que solo lee. La lista de lectores es cerrada, y el
+  comando no puede llevar redirecciones, sustituciones, opciones que escriben ni escapes `\u`
+  del JSON. Ante la duda, la regla aplica.
 - **Skip-vs-fail** (Esclusa): "aún no instalado" = skip con aviso; "mal configurado" = fallo
   duro con la instrucción exacta de arreglo. Nunca dejar pasar sin checks por silencio.
 - **El veredicto de un gate lo calcula código determinista; el LLM solo genera hallazgos.**

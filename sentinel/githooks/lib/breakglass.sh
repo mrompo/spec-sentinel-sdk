@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # breakglass.sh — la excepción auditada de la Esclusa. Se usa con `source` desde los hooks.
 # Mismo contrato que el Centinela (sentinel/hooks/sentinel-guard.sh):
-#   1) sentinel/.override con un motivo → llave de UN SOLO USO, se consume al aplicarse
+#   1) sentinel/.override con un motivo y `para: esclusa:<hook>` → llave de UN SOLO USO, que
+#      solo gasta el rechazo de ese hook; se consume al aplicarse (sentinel-paths)
 #   2) SENTINEL_OVERRIDE con un motivo en el entorno → vale para toda la sesión
 # Cada uso deja una línea en sentinel/overrides.log (fecha | esclusa:<hook> | qué | motivo). Si
 # la bitácora no se puede escribir, no hay excepción y la llave se conserva.
@@ -9,19 +10,22 @@
 
 _bg_root() { git rev-parse --show-toplevel 2>/dev/null || pwd; }
 
-# _bg_reason → el motivo de la excepción, o exit 1 si no hay ninguna válida (vacío o solo
-# espacios no vale)
+# La llave: el motivo (las líneas que no son para:) y la acción que autoriza (para:)
+_bg_para()   { sed -nE 's/^[[:space:]]*para:[[:space:]]*//p' "$1" 2>/dev/null | head -1 | sed -E 's/[[:space:]]+$//'; }
+_bg_motivo() { grep -vE '^[[:space:]]*para:' "$1" 2>/dev/null | tr '\n' ' ' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'; }
+
+# _bg_reason <hook> → el motivo de la excepción, o exit 1 si no hay ninguna válida para ese hook
+# (vacío o solo espacios no vale; una llave sin para: o atada a otra acción tampoco)
 _bg_reason() {
-  local v
+  local v token
   if [ -n "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ]; then
     printf '%s' "$SENTINEL_OVERRIDE"; return 0
   fi
-  local token; token="$(_bg_root)/sentinel/.override"
-  if [ -f "$token" ]; then
-    v="$(tr '\n' ' ' <"$token")"
-    [ -n "$(printf '%s' "$v" | tr -d '[:space:]')" ] && { printf '%s' "$v"; return 0; }
-  fi
-  return 1
+  token="$(_bg_root)/sentinel/.override"
+  [ -f "$token" ] || return 1
+  v="$(_bg_motivo "$token")"
+  [ -n "$v" ] && [ "$(_bg_para "$token")" = "esclusa:$1" ] || return 1
+  printf '%s' "$v"
 }
 
 # esclusa_reject <hook> <qué se rechaza> → NO retorna. Con excepción válida: la registra, avisa y
@@ -31,7 +35,7 @@ esclusa_reject() {
   root="$(_bg_root)"; log="$root/sentinel/overrides.log"; token="$root/sentinel/.override"
   case "$hook" in pre-push) verb="El push no se ha hecho" ;; *) verb="El commit no se ha creado" ;; esac
 
-  if reason="$(_bg_reason)"; then
+  if reason="$(_bg_reason "$hook")"; then
     line="$(printf '%s | esclusa:%s | %s | %s' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hook" \
       "$(printf '%s' "$what" | tr '\n' ' ')" "$(printf '%s' "$reason" | sed -e 's/[[:space:]]*$//')")"
     if mkdir -p "$(dirname "$log")" 2>/dev/null && printf '%s\n' "$line" >>"$log" 2>/dev/null; then
@@ -45,6 +49,13 @@ esclusa_reject() {
   fi
 
   echo "$verb. Corrige lo anterior y vuelve a intentarlo." >&2
-  echo "    (Excepción auditada: una persona escribe el motivo en sentinel/.override — un solo uso, queda en la bitácora.)" >&2
+  if [ -s "$token" ]; then
+    echo "    (La llave de sentinel/.override no vale para este rechazo — le falta el motivo o el para:, o es para otra acción ($(_bg_para "$token")) — y se conserva.)" >&2
+  fi
+  echo "    (Excepción auditada: una persona, desde su terminal, escribe la llave de este hook — un solo uso, queda en la bitácora:" >&2
+  echo "       cat > sentinel/.override <<'LLAVE'" >&2
+  echo "       <motivo>" >&2
+  echo "       para: esclusa:$hook" >&2
+  echo "       LLAVE  )" >&2
   exit 1
 }

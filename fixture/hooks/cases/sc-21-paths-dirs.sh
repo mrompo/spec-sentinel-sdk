@@ -78,13 +78,14 @@ assert_exit 0 || { echo "    un texto de varias líneas debería permitirse" >&2
 # tabulador, un retorno de carro o un \u00XX no se convierten en otra cosa, y dentro de "…" una
 # barra seguida de salto de línea desaparece entera. Nombres nuevos: "a b" y "a⏎b" ya existen y
 # también llevarían a sentinel
+U='\'u  # la barra de un \u00XX, construida aquí para que el fichero lleve el escape tal cual
 mkdir -p "$WS/c"$'\t'"d" "$WS/e"$'\r'"f" "$WS/g"$'\x01'"h"
 for payload in \
   '{"tool_name":"Bash","tool_input":{"command":"mv \"sen\\\ntinel\" /tmp/x"}}' \
   '{"tool_name":"Bash","tool_input":{"command":"mv \"c\td/../sentinel\" /tmp/x"}}' \
   '{"tool_name":"Bash","tool_input":{"command":"mv \"e\rf/../sentinel\" /tmp/x"}}' \
   '{"tool_name":"Bash","tool_input":{"command":"mv \"g\u0001h/../sentinel\" /tmp/x"}}' \
-  '{"tool_name":"Bash","tool_input":{"command":"mv sentinel /tmp/x"}}'; do
+  "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"mv ${U}0073entinel /tmp/x\"}}"; do
   RH_CWD="$WS" run_hook "$GUARD_HOOK" "$payload" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
   assert_exit 2 || { echo "    debería bloquearse: $payload" >&2; exit 1; }
 done

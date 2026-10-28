@@ -23,8 +23,20 @@ assert_exit 1 || fail_case "un motivo vacío no debería valer"
 [ ! -e "$LOG" ] || fail_case "un motivo vacío no debería registrarse"
 rm -f "$TOKEN"
 
+# sentinel-paths: la llave se ata a un hook. Una llave sin para:, atada a otro hook o a una
+# acción del Centinela no salta el rechazo, se conserva, y el mensaje da la de este hook
+for llave in 'hotfix INC-9\n' 'hotfix INC-9\npara: esclusa:pre-commit\n' 'hotfix INC-9\npara: Write:sentinel/policy.yaml\n'; do
+  printf "$llave" >"$TOKEN"
+  gh_commit "arreglado el bug"
+  assert_exit 1 || fail_case "una llave que no es de commit-msg no debería valer: $llave"
+  [ -s "$TOKEN" ] || fail_case "una llave que no es de commit-msg no debería gastarse: $llave"
+  assert_err_contains "para: esclusa:commit-msg" || fail_case "el rechazo no da la llave de este hook"
+  [ ! -e "$LOG" ] || fail_case "una llave que no vale no debería registrarse"
+done
+rm -f "$TOKEN"
+
 # Con llave: el commit entra, queda registrado y la llave desaparece
-printf 'hotfix INC-9 aprobado por tech lead\n' >"$TOKEN"
+printf 'hotfix INC-9 aprobado por tech lead\npara: esclusa:commit-msg\n' >"$TOKEN"
 gh_commit "arreglado el bug"
 assert_exit 0 || fail_case "con llave el commit debería entrar"
 assert_err_contains "auditado" || fail_case "no avisa de que la excepción queda auditada"
@@ -38,7 +50,7 @@ gh_commit "otro sin formato"
 assert_exit 1 || fail_case "la llave debería ser de un solo uso"
 
 # También vale para pre-push (rama protegida), con su propio registro
-printf 'hotfix INC-10 directo a main\n' >"$TOKEN"
+printf 'hotfix INC-10 directo a main\npara: esclusa:pre-push\n' >"$TOKEN"
 gh_push HEAD:main
 assert_exit 0 || fail_case "con llave el push a main debería entrar"
 grep -q "esclusa:pre-push" "$LOG" 2>/dev/null || fail_case "la bitácora no registra el pre-push"

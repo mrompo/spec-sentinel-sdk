@@ -134,14 +134,30 @@ canon() { # $1=ruta física → cómo la nombra la política
   esac
 }
 
+# La configuración de la persona que vive fuera del repo, por su ruta física: un fichero del
+# repo que es esa configuración (~/.gitconfig enlaza a dotfiles/.gitconfig) se nombra «~/…»
+# (SC-sentinel-paths-04)
+PERSONAL=""
+for _f in .gitconfig .config/git/config .jq; do
+  [ -n "${HOME:-}" ] || break
+  PERSONAL="$PERSONAL
+$(phys_path "$HOME/$_f")	~/$_f"
+done
+
 TOUCHED=""   # ruta física de cada cosa que toca la acción, tal como la nombra la política
 PHYS_ALL=""  # y su ruta física absoluta
 add_target() { # $1=ruta absoluta
-  local ph; ph="$(phys_path "$1")"
+  local ph line; ph="$(phys_path "$1")"
   TOUCHED="$TOUCHED
 $(canon "$ph")"
   PHYS_ALL="$PHYS_ALL
 $ph"
+  while IFS= read -r line; do
+    [ "${line%%	*}" = "$ph" ] && TOUCHED="$TOUCHED
+${line#*	}"
+  done <<EOF
+$PERSONAL
+EOF
 }
 [ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
 # cmd_words → una palabra del comando por línea, como la vería la shell: deshace los escapes
@@ -291,18 +307,71 @@ fi
 
 ACTION_DESC="${TOOL_NAME}:${COMMAND:-${REL_PATH:-$FILE_PATH}}"
 
+# ── Solo lee (SC-sentinel-paths-08) ──────────────────────────────────────────────────────
+# Lista cerrada, sin parser de shell: el comando solo lee si cada tramo (separado por ; && ||
+# | & o un salto de línea) empieza por un lector conocido, sin redirecciones (salvo a
+# /dev/null y 2>&1), sustituciones, asignaciones ni opciones que escriben. Ante la duda, no
+# solo lee y se evalúa como siempre. Lo aplican las reglas con skip_read_only: true.
+is_read_only() {
+  local c seg
+  [ "$TOOL_NAME" = Bash ] && [ -n "$COMMAND" ] || return 1
+  # Un \u00XX del JSON puede ser un separador o una redirección (\u003b, \u003e):
+  # esta lectura no los decodifica, así que ante uno el comando no cuenta como solo lectura
+  case "$COMMAND" in *'\u'*) return 1 ;; esac
+  c="$(printf '%s' "$COMMAND" | sed -e 's/\\n/;/g' -e 's/\\t/ /g')"
+  case "$c" in *'$('*|*'`'*|*'<('*|*'>('*|*'<>'*) return 1 ;; esac
+  c="$(printf '%s' "$c" | sed -E -e 's#(^|[[:space:]])(&|[0-9])?>>?[[:space:]]*/dev/null([[:space:]]|$)# #g' -e 's#(^|[[:space:]])[0-9]?>&[0-9]([[:space:]]|$)# #g')"
+  case "$c" in *'>'*|*'<'*) return 1 ;; esac
+  while IFS= read -r seg; do
+    set -f; set -- $seg; set +f
+    [ "$#" -gt 0 ] || continue
+    case "$1" in
+      cat|head|tail|wc|grep|ls|stat|diff|cmp|cut|tr|nl|echo|printf|true|cd) ;;
+      git) case "${2:-}" in diff|log|show|status|blame|ls-files|rev-parse|cat-file) ;; *) return 1 ;; esac ;;
+      *) return 1 ;;
+    esac
+    # --output escribe un fichero. Se busca sin comillas ni barras, como lo recibe el programa
+    # ('--output=x', --out""put, \--output); quitarlas solo puede hacer que más comandos
+    # dejen de contar como lectura
+    case " $(printf '%s' "$seg" | tr -d "\"'\\\\") " in *[[:space:]]--output[[:space:]=]*) return 1 ;; esac
+  done <<EOF
+$(printf '%s' "$c" | sed -e 's/||/;/g' -e 's/&&/;/g' | tr ';|&' '\n\n\n')
+EOF
+  return 0
+}
+READ_ONLY=false
+is_read_only && READ_ONLY=true
+
 # ── Break-glass auditado ─────────────────────────────────────────────────────────────────
 # Dos vías, ambas fuera del alcance del agente (la política protege sentinel/**):
 #   1) SENTINEL_OVERRIDE exportado en el entorno de la sesión (afecta a la sesión entera)
-#   2) sentinel/.override con el motivo → token de UN SOLO USO, se consume al aplicarse
+#   2) sentinel/.override con el motivo y `para: <acción>` → token de UN SOLO USO, que solo
+#      gasta la acción cuya descripción es exactamente la de su para: (SC-sentinel-paths-05)
+token_para()   { sed -nE 's/^[[:space:]]*para:[[:space:]]*//p' "$OVERRIDE_TOKEN" 2>/dev/null | head -1 | sed -E 's/[[:space:]]+$//'; }
+token_motivo() { grep -vE '^[[:space:]]*para:' "$OVERRIDE_TOKEN" 2>/dev/null | tr '\n' ' ' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'; }
 override_reason() {
+  local motivo
   if [ -n "${SENTINEL_OVERRIDE:-}" ] && [ -n "$(printf '%s' "$SENTINEL_OVERRIDE" | tr -d '[:space:]')" ]; then
     printf '%s' "$SENTINEL_OVERRIDE"; return 0
   fi
+  [ -s "$OVERRIDE_TOKEN" ] || return 1
+  motivo="$(token_motivo)"
+  [ -n "$motivo" ] && [ "$(token_para)" = "$ACTION_DESC" ] || return 1
+  printf '%s' "$motivo"
+}
+
+# key_hint → la llave de ESTA acción, lista para copiar, y por qué no vale la que hay
+key_hint() {
+  local why=""
   if [ -s "$OVERRIDE_TOKEN" ]; then
-    tr -d '\n' < "$OVERRIDE_TOKEN"; return 0
+    if [ -z "$(token_para)" ]; then why="la llave de sentinel/.override no dice para qué acción es (falta 'para:'): no autoriza nada y se conserva"
+    elif [ -z "$(token_motivo)" ]; then why="la llave de sentinel/.override no tiene motivo: no vale y se conserva"
+    else why="la llave de sentinel/.override es para otra acción ($(token_para)): se conserva"
+    fi
+    why="
+  Ojo: $why."
   fi
-  return 1
+  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave\n    cat > sentinel/.override <<'"'"'LLAVE'"'"'\n    <motivo>\n    para: %s\n    LLAVE' "$why" "$ACTION_DESC"
 }
 
 log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se puede escribir, se deniega)
@@ -338,7 +407,7 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
           "$(json_escape "$id")" "$(json_escape "$reason")"
         exit 0
       fi
-      deny "[$id] $reason (excepción auditada: pide a un humano 'echo \"motivo\" > sentinel/.override')"
+      deny "[$id] $reason$(key_hint)"
       ;;
     *)
       deny "[$id] modo desconocido '$mode' en la política — corrige $CUR_POLICY"
@@ -347,7 +416,7 @@ rule_matched() { # $1=id $2=mode $3=reason — no retorna
 }
 
 # ── Evaluación de reglas ─────────────────────────────────────────────────────────────────
-reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_dir_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; }
+reset_rule() { r_id=""; r_tool=""; r_command_re=""; r_path_re=""; r_dir_re=""; r_content_re=""; r_branch_re=""; r_mode=""; r_reason=""; r_requires_sdd=""; r_no_active=""; r_skip_ro=""; }
 
 # rank <modo> → cuánto restringe, para quedarse con la decisión más estricta
 rank() { case "$1" in block) echo 3 ;; confirm) echo 2 ;; warn) echo 1 ;; *) echo 0 ;; esac; }
@@ -360,6 +429,7 @@ apply_rule() {
   [ -n "$r_mode" ] || deny "[${r_id}] regla sin 'mode:' en la política — corrige $CUR_POLICY"
   if [ "$r_requires_sdd" = "true" ] && [ "$POLICY_SDD" != "true" ]; then return 1; fi
   if [ "$r_no_active" = "true" ] && [ -n "$ACTIVE_CHANGE" ]; then return 1; fi
+  if [ "$r_skip_ro" = "true" ] && [ "$READ_ONLY" = true ]; then return 1; fi
   # match: 0 = matchea · 1 = no matchea · 2+ = regex inválida → error de política (fail-closed),
   # nunca "regla que no aplica" en silencio.
   match() { # $1=texto $2=regex [$3=-i]
@@ -433,6 +503,7 @@ eval_policy() {
         elif kv "$line" "branch_re";                then r_branch_re="$(val "$line")"
         elif kv "$line" "only_if_no_active_change"; then r_no_active="$(val "$line")"
         elif kv "$line" "requires_sdd";             then r_requires_sdd="$(val "$line")"
+        elif kv "$line" "skip_read_only";           then r_skip_ro="$(val "$line")"
         elif kv "$line" "mode";                     then r_mode="$(val "$line")"
         elif kv "$line" "reason";                   then r_reason="$(val "$line")"
         fi ;;

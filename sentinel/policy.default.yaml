@@ -24,13 +24,17 @@
 #       branch_re:     regex sobre la rama git actual
 #       only_if_no_active_change: true → solo aplica si NO hay cambio OpenSpec activo
 #       requires_sdd:  true → solo aplica con sdd: true
+#       skip_read_only: true → no aplica a un comando que solo lee (lista cerrada de lectores,
+#                      sin redirecciones ni sustituciones; ante la duda, aplica)
 #       mode:          block | confirm | warn
 #       reason:        motivo mostrado al denegar/avisar
 #
 # Modos: block → exit 2 con motivo · confirm → pide aprobación humana para esa acción (el
 # permiso del harness) · warn → pasa dejando aviso.
-# Break-glass (block/confirm): SENTINEL_OVERRIDE="<motivo>" permite la acción y la registra
-# en sentinel/overrides.log (fichero versionado; doctor lo reporta — KPI de overrides).
+# Break-glass (block/confirm): la llave sentinel/.override (el motivo y `para: <acción>`, la
+# que da el aviso de bloqueo) permite esa acción una vez; SENTINEL_OVERRIDE="<motivo>" en el
+# entorno, toda la sesión. Cada uso queda en sentinel/overrides.log (fichero versionado; doctor
+# lo reporta — KPI de overrides).
 
 version: 1
 # Nivel Guardia por defecto: el nivel Método lo activa cada proyecto en su policy.yaml
@@ -52,9 +56,15 @@ rules:
     # Quinta revisión: la configuración de jq de la persona (~/.jq), que jq carga en cada
     # programa; setup ya la aísla, y así tampoco la escribe el agente. Solo la de la carpeta
     # personal (~, $HOME, /Users/<persona>, /home/<persona>, /root): un .jq de un proyecto, no.
+    # sentinel-paths (SC-sentinel-paths-04): la configuración de git se ancla al final del
+    # nombre (.git/config.bak o docs/.gitconfig.example no lo son) y la de la persona (.gitconfig,
+    # .config/git/config) es solo la de su carpeta personal, como ~/.jq; un .gitconfig del repo
+    # que es esa configuración lo nombra el guard como ~/.gitconfig por su ruta física. Leer
+    # desde la shell no se bloquea (skip_read_only).
     # El instalador tiene sus propias reglas (protect-installer, install-needs-human).
     # AGENTS.md no va aquí: en un consumidor es suyo; el SDK lo protege en su propia policy.yaml.
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|\.git/(worktrees/[^/]+/|modules/.+/)?config|\.gitconfig|\.config/git/config|(~|\$HOME|\$\{HOME\}|(^|[[:space:]"'=])(/(Users|home)/[^/[:space:]]+|/root))/\.jq([^[:alnum:]._-]|$)|\.claude/settings)
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|(^|[^[:alnum:]._-])\.git/(worktrees/[^/]+/|modules/.+/)?config(\.worktree)?([^[:alnum:]._-]|$)|(~|\$HOME|\$\{HOME\}|(^|[[:space:]"'=])(/(Users|home)/[^/[:space:]]+|/root))/(\.jq|\.gitconfig|\.config/git/config)([^[:alnum:]._-]|$)|\.claude/settings)
+    skip_read_only: true
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano
 
@@ -129,6 +139,8 @@ rules:
   - id: managed-files
     tool: Bash|Edit|Write|MultiEdit|NotebookEdit
     path_re: (CHANGELOG\.md|package-lock\.json|[^[:space:]]+\.lock|openspec/specs/)
+    # leerlos desde la shell no se bloquea (SC-sentinel-paths-08)
+    skip_read_only: true
     mode: block
     reason: Fichero gestionado por tooling (semantic-release / lockfiles / specs archivadas via openspec archive)
 
