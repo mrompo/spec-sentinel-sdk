@@ -15,6 +15,10 @@ solo por el texto de la ruta.
   `.claude`, `.git/hooks`), con `mv`, `cp`, `rsync`, `ln`, `rm`, `rmdir`, `unlink`, `chmod`,
   `chown`, `git mv` o `git rm`, se escriba como `sentinel`, `sentinel/` o `./sentinel`
 - **THEN** el hook deniega la acción, como la de uno de sus ficheros
+- **AND** lo mismo si el programa se escribe por su ruta (`/bin/mv`), con una barra delante
+  (`\mv`) o entre comillas (`'mv'`), o si el comando lo separa del anterior con un salto de
+  línea o un tabulador escritos como escape del JSON: las reglas del comando deciden sobre lo
+  que ejecuta bash
 - **AND** las subcarpetas que no son enforcement siguen libres (p. ej. `mv .claude/skills/a
   .claude/skills/b` o `rm -r sentinel/.backup`)
 - **AND** entrar antes en la carpeta (`cd sentinel && rm -r hooks`) es el límite documentado
@@ -36,9 +40,13 @@ solo por el texto de la ruta.
   `.bare/config`), con las herramientas de edición o nombrándolos en un comando
 - **THEN** el hook deniega la acción
 - **AND** lo mismo cuando cambia `core.hooksPath` desde un comando sin nombrarlo: borrando o
-  renombrando la sección `core` (`git config --remove-section core`, `--rename-section core`),
-  con un `include.path` o un `includeIf.<condición>.path`, o abriendo la configuración en un
-  editor (`git config --edit`)
+  renombrando la sección `core` (`git config --remove-section core`, `--rename-section core`,
+  y sus subcomandos sin guiones, `remove-section` y `rename-section`), con un `include.path` o
+  un `includeIf.<condición>.path` (también tras un `=`: `--config-env=include.path=…`,
+  `GIT_CONFIG_KEY_0=include.path`), o abriendo la configuración en un editor (`git config
+  --edit`, `git config edit`)
+- **AND** las claves se reconocen en cualquier caja (`core.hookspath`, `include.PATH`), como
+  las lee git
 
 #### Scenario: La configuración de Claude Code de la persona, donde esté (SC-sentinel-paths-07)
 
@@ -70,12 +78,14 @@ comando solo lee. Ante la duda, el comando SHALL evaluarse como hasta ahora (fai
   openspec/specs/a/spec.md`, `git diff main -- sentinel/policy.yaml`, `cat .git/config`)
 - **THEN** el hook deja pasar la acción
 - **AND** «solo lee» es una lista cerrada: cada tramo del comando (separado por `;`, `&&`, `||`,
-  `|`, `&` o un salto de línea) empieza por un lector conocido (`cat`, `head`, `tail`, `wc`,
+  `|`, `&` o un salto de línea fuera de comillas, como lo parte bash: `grep -E 'a|b'` es un
+  solo tramo) empieza por un lector conocido (`cat`, `head`, `tail`, `wc`,
   `grep`, `ls`, `stat`, `diff`, `cmp`, `cut`, `tr`, `nl`, `echo`, `printf`, `true`, `cd`, y
   `git` con `diff`, `log`, `show`, `status`, `blame`, `ls-files`, `rev-parse` o `cat-file`, sin
-  opciones globales), no hay redirecciones (salvo a `/dev/null` y `2>&1`), sustitución de
-  comandos (`$(`, comillas invertidas), sustitución de procesos (`<(`, `>(`), asignaciones de
-  variables ni opciones que escriben (`--output`)
+  opciones globales), no hay redirecciones (salvo a `/dev/null` y `2>&1`, también junto a un
+  separador), sustitución de comandos (`$(`, comillas invertidas), sustitución de procesos
+  (`<(`, `>(`), asignaciones de variables (tampoco `printf -v`) ni opciones que escriben
+  (`--output`)
 - **AND** un comando que escribe, aunque empiece leyendo (`cat x > sentinel/policy.yaml`,
   `tail log | tee sentinel/.override`, `cat $(…)`), sigue bloqueado
 - **AND** solo lo aplican las reglas que lo declaran (`skip_read_only: true`): leer un entorno
