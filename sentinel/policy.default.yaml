@@ -104,8 +104,9 @@ rules:
     # Revisión de sentinel-paths (A2, A3): también los subcomandos sin guiones de git 2.46
     # (remove-section, rename-section, edit); las claves en cualquier caja, porque git no
     # distingue mayúsculas en la sección ni en la clave; y include.path tras un '='
-    # (--config-env=include.path=…, GIT_CONFIG_KEY_0=include.path)
-    command_re: (--no-verify|[Cc][Oo][Rr][Ee]\.[Hh][Oo][Oo][Kk][Ss][Pp][Aa][Tt][Hh]|HUSKY=0|SENTINEL_[A-Z_]+=|(--|[[:space:]])(remove|rename)-section[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[^[:alnum:]_.-])[Ii][Nn][Cc][Ll][Uu][Dd][Ee]([Ii][Ff]\.[^[:space:]=]*)?\.[Pp][Aa][Tt][Hh]|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$)|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+(-[^[:space:]]+[[:space:]]+)*edit([[:space:];&|]|$))
+    # (--config-env=include.path=…, GIT_CONFIG_KEY_0=include.path). Entre el subcomando y la
+    # sección pueden ir opciones (remove-section --local core, revisión de la #15)
+    command_re: (--no-verify|[Cc][Oo][Rr][Ee]\.[Hh][Oo][Oo][Kk][Ss][Pp][Aa][Tt][Hh]|HUSKY=0|SENTINEL_[A-Z_]+=|(--|[[:space:]])(remove|rename)-section([[:space:]]+[^[:space:];&|]+)*[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[^[:alnum:]_.-])[Ii][Nn][Cc][Ll][Uu][Dd][Ee]([Ii][Ff]\.[^[:space:]=]*)?\.[Pp][Aa][Tt][Hh]|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$)|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+(-[^[:space:]]+[[:space:]]+)*edit([[:space:];&|]|$))
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 
