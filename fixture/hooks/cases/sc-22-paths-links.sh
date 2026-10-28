@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SC-sentinel-paths-02: a través de un enlace (del propio fichero o de una carpeta de su ruta)
 #   las herramientas de edición no tocan un fichero protegido; un enlace hacia algo libre sigue
-#   libre.
+#   libre. Un '..' detrás de un enlace sube desde donde apunta el enlace, como lo resuelve el
+#   sistema (revisión de sentinel-paths, A7).
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 trap cleanup_workspace EXIT
@@ -16,6 +17,7 @@ ln -s sentinel/policy.yaml "$WS/p.yaml"      # el propio fichero
 ln -s ../sentinel "$WS/sub/up"               # enlace relativo desde otra carpeta
 ln -s docs "$WS/d"                           # enlace libre
 ln -s README.md "$WS/leeme.md"
+ln -s sentinel/hooks "$WS/h"                 # h/.. es sentinel, no la raíz
 
 while IFS= read -r payload; do
   [ -n "$payload" ] || continue
@@ -30,6 +32,8 @@ done <<EOF
 {"tool_name":"MultiEdit","tool_input":{"file_path":"sub/up/policy.yaml","edits":[]}}
 {"tool_name":"NotebookEdit","tool_input":{"notebook_path":"c/settings.json","new_source":"x"}}
 {"tool_name":"Write","tool_input":{"file_path":"$WS/s/policy.yaml","content":"version: 1"}}
+{"tool_name":"Write","tool_input":{"file_path":"h/../policy.yaml","content":"version: 1"}}
+{"tool_name":"Edit","tool_input":{"file_path":"$WS/h/../policy.yaml","new_string":"x"}}
 EOF
 
 while IFS= read -r payload; do

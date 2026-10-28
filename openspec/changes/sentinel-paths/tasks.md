@@ -147,7 +147,7 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
 
 **PR 5 · Carpetas y ruta física** (tema 3 y el tope de 128 rutas)
 
-- [ ] R3. Casos en rojo: copiar o mover a `.git`, `sentinel/adapters` o `sentinel/githooks/lib`
+- [x] R3. Casos en rojo (`sc-30` nuevo, y `sc-22` y `sc-23`): copiar o mover a `.git`, `sentinel/adapters` o `sentinel/githooks/lib`
        (A1); worktrees dentro del repo bare (P2); la carpeta común de git con el `cwd` fuera del
        proyecto (A4) y el `cwd` del payload (V5); `enlace/../x` en Write/Edit (A7); un heredoc o
        un `git add` con más de 128 palabras con `/` que no tocan nada protegido (P5 = A8)
