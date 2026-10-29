@@ -215,7 +215,13 @@ json_text() {
 # o escapado se escapa con '\', como lo vería la shell. Cada separador sale como 's', y cada
 # tramo, como 'n<tramo>': sus palabras separadas por un espacio, cada una por su nombre (lo
 # que sigue a su última '/') y con sus espacios cambiados por '_', para que las reglas del
-# comando reconozcan el programa se escriba como se escriba (/bin/mv, \mv, 'mv')
+# comando reconozcan el programa se escriba como se escriba (/bin/mv, \mv, 'mv'). Lo que bash
+# no lee como palabras no abre comillas que se coman las líneas siguientes (revisión de la
+# #15): un comentario (# al principio de una palabra) se salta hasta el final de la línea; en
+# $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de un heredoc
+# (<<FIN, <<-FIN, <<'FIN') se lee línea a línea, sin comillas que pasen de una a otra ni
+# comentarios, hasta la línea que lo cierra: sus palabras siguen contando, así que un << que
+# no abre un heredoc (el de una expresión aritmética) no esconde nada
 cmd_words() {
   printf '%s' "$1" | LC_ALL=C awk '
     function esc(x,   r, k, ch) {
@@ -239,12 +245,32 @@ cmd_words() {
     }
     function sep() { flush(); if (seg != "") print "n" seg; seg = ""; print "s" }
     function lit(ch) { w = w ch; pw = pw (index("*?[]\\", ch) ? "\\" ch : ch) }
+    # hend → tras un salto de línea dentro de un heredoc: si la línea siguiente lo cierra, la
+    # salta y pasa al siguiente heredoc pendiente de la misma línea, o sale del cuerpo
+    function hend(   j, line) {
+      while (hb) {
+        j = index(substr(t, i + 1), "\n")
+        line = j ? substr(t, i + 1, j - 1) : substr(t, i + 1)
+        if (hs[hq]) sub(/^\t+/, "", line)
+        if (line != hd[hq]) return
+        i = j ? i + j : n
+        if (++hq > hn) { hb = 0; hn = 0; hq = 1 }
+      }
+    }
     { t = (NR > 1 ? t "\n" : "") $0 }
     END {
       n = length(t); q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""
+      hb = 0; hn = 0; hq = 1
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
+        if (hb && c == "\n") q = ""
         if (q == "\047") { if (c == q) q = ""; else lit(c); continue }
+        if (q == "$") {
+          if (c == "\\" && i < n) { lit(c); lit(substr(t, ++i, 1)) }
+          else if (c == "\047") q = ""
+          else lit(c)
+          continue
+        }
         if (q == "\"") {
           if (c == "\"") q = ""
           else if (c == "\\" && i < n) {
@@ -254,9 +280,33 @@ cmd_words() {
           else lit(c)
           continue
         }
+        if (c == "$" && substr(t, i + 1, 1) == "\047") { q = "$"; i++; has = 1; continue }
         if (c == "\047" || c == "\"") { q = c; has = 1; continue }
         if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { lit(d); has = 1 }; continue }
-        if (index("\n;|&()`", c)) { sep(); continue }
+        if (!hb && c == "#" && !has && (i == 1 || index(" \t\n;|&()`", substr(t, i - 1, 1)))) {
+          while (i < n && substr(t, i + 1, 1) != "\n") i++
+          continue
+        }
+        if (!hb && c == "<" && substr(t, i + 1, 1) == "<") {
+          flush(); i += 2; st = 0
+          if (substr(t, i, 1) == "-") { st = 1; i++ }
+          while (i <= n && index(" \t", substr(t, i, 1))) i++
+          dl = ""
+          while (i <= n && !index(" \t\n;|&()<>", (ch = substr(t, i, 1)))) {
+            if (ch == "\047" || ch == "\"") {
+              k = index(substr(t, i + 1), ch)
+              if (!k) { dl = dl substr(t, i + 1); i = n + 1; break }
+              dl = dl substr(t, i + 1, k - 1); i += k + 1; continue
+            }
+            if (ch == "\\" && i < n) { dl = dl substr(t, i + 1, 1); i += 2; continue }
+            dl = dl ch; i++
+          }
+          hd[++hn] = dl; hs[hn] = st
+          i--
+          continue
+        }
+        if (c == "\n") { sep(); if (hq <= hn) { hb = 1; hend() }; continue }
+        if (index(";|&()`", c)) { sep(); continue }
         if (index(" \t<>=", c)) { flush(); continue }
         w = w c; pw = pw c; has = 1; if (index("*?[", c)) g = 1
       }
