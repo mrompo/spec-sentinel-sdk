@@ -50,6 +50,60 @@ cp /tmp/e/notas.md .claude/skills
 mv /tmp/e/x.md ~
 EOF
 
+# ── Revisión de la #16 (CodeRabbit): el programa detrás de un prefijo de ejecución o de
+# asignaciones, los orígenes de un comodín, el contenido de una carpeta (rsync con '/' al final,
+# 'carpeta/.', -T) y lo que hay dentro de una carpeta copiada ───────────────────────────────
+mkdir -p "$WS/docs/e" "$WS/docs/w/worktrees/x" "$WS/docs/cfg/.config/git" "$WS/docs/c" \
+  "$WS/docs/r/sentinel/adapters"
+: >"$WS/docs/e/config"; : >"$WS/docs/e/policy.yaml"; : >"$WS/docs/w/worktrees/x/config"
+: >"$WS/docs/cfg/.config/git/config"; : >"$WS/docs/r/sentinel/adapters/notas.md"
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+command cp /tmp/e/config .git/
+sudo cp /tmp/e/config .git/
+sudo -u root cp /tmp/e/config .git/
+env cp /tmp/e/config .git/
+env -i PATH=/bin cp /tmp/e/config .git/
+X=1 cp /tmp/e/config .git/
+nohup mv /tmp/e/config .git
+cp docs/e/* .git/
+command cp docs/e/* .git/
+cp docs/e/c* .gi?
+rsync -a docs/e/ .git/
+rsync -rt docs/e/ .git/
+rsync -a docs/r/ .
+rsync -a docs/e/ sentinel
+cp -r docs/e/. .git/
+cp -r docs/e/. sentinel
+cp -rT docs/e .git
+cp -rt .git docs/e/config
+cp -t.git /tmp/e/config
+cp -r --no-target-directory docs/e .git
+cp -r docs/cfg/.config ~
+rsync -a docs/w/ .git/
+ln -s docs/w/worktrees .git/
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+sudo cp docs/a.md docs/b
+env -i PATH=/bin cp docs/e/config docs/b
+cp docs/e/* docs/c
+rsync -a docs/e/ docs/c/
+cp -r docs/e/. docs/c
+cp -r docs/w docs/c
+EOF
+# Lo que hay dentro de una carpeta copiada tiene un tope, como las rutas: pasado, se bloquea
+mkdir -p "$WS/docs/t"
+(cd "$WS/docs/t" && seq 1 10001 | sed 's/^/f/' | xargs touch)
+guard "$(bash_payload "cp -r docs/t/. docs/c")"
+assert_exit 2 || { echo "    copiar una carpeta de 10001 ficheros a otra debería bloquearse" >&2; exit 1; }
+
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────
 guard "{\"cwd\":\"$WS/sentinel\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"mv hooks /tmp/x\"}}"
 assert_exit 2 || { echo "    con el cwd en sentinel, mv hooks debería bloquearse" >&2; exit 1; }
