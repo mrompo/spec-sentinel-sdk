@@ -143,9 +143,9 @@ del repo ni de la sesión, y SHALL bloquear cuando el Centinela no puede decidir
   antes de instalar el SDK, `git bisect`), el motivo no manda restaurarlo, sino volver a la
   rama anterior (`git checkout -`) o integrar la que instala el SDK
 - **AND** sin un git que responda en el proyecto, el cableado también sale con 2, porque sin la
-  rama no se aplicarían las reglas de rama, y el motivo dice por qué: que git no está instalado
-  (y con qué `PATH` se buscó), o lo que dice git (un repo de otro dueño, *dubious ownership*,
-  dice cómo declararlo seguro)
+  rama no se aplicarían las reglas de rama, y el motivo dice por qué: con qué `PATH` buscó git y
+  lo que dice (que no lo encuentra; o, en un repo de otro dueño, *dubious ownership* y cómo
+  declararlo seguro), sin mandar instalar un git que ya está
 
 ## MODIFIED Requirements
 
