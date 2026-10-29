@@ -170,7 +170,11 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        dentro de una carpeta copiada o enlazada (tope de 10000 entradas). Banco entero en verde y
        los doce mutantes rompen algún caso. `too-many-paths` sigue en el guard, no en la
        política: dice que el guard no pudo comprobar la acción entera (como SC-09), y el esquema
-       no tiene campo para expresarla; la llave la salva. Falta el `merge`
+       no tiene campo para expresarla; la llave la salva. Revisión de la #17 (CodeRabbit), en
+       `sentinel-paths-5c.patch` (aplicado por la persona, `db69e15`): una entrada que ya está en
+       el destino como enlace toca lo que apunta, una carpeta que el guard no puede leer entera
+       se bloquea con `too-many-paths`, y cada tope da su motivo. Banco entero en verde y los
+       diecinueve mutantes (siete nuevos y los doce de la #16) rompen algún caso. Falta el `merge`
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
