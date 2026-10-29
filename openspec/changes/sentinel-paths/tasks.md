@@ -11,7 +11,7 @@ que toca el enforcement es un fichero protegido: lo entrega el agente como parch
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
 **Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
-2 de `apply` va por la PR 5 (la PR 4 en `main` por la #15).
+2 de `apply` va por la revisión de la PR 5 (las PRs 4 y 5 en `main` por la #15 y la #16).
 
 ## Engine · antes de teclear
 
@@ -163,7 +163,13 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        que existen o cuya carpeta existe; se bloquea y la llave de esa acción lo salva). README
        («Regex evadibles») con el tope real. Sobre la PR 4 con su revisión, el banco entero en
        verde (hooks 30/30, githooks 16/16, install 17/17) y los doce mutantes rompen algún caso.
-       Falta el `merge`
+       En `main` por la #16. Revisión de la #16 (CodeRabbit), en `sentinel-paths-5b.patch`
+       (aplicado por la persona, `6e12e2a`): copiar a una carpeta con el programa detrás de un
+       prefijo o de una asignación, con los orígenes de un comodín, con el contenido de una
+       carpeta (`rsync` con `/` al final, `-T`), con `-t` en un grupo de opciones y con lo que hay
+       dentro de una carpeta copiada o enlazada (tope de 10000 entradas). Banco entero en verde y
+       los doce mutantes rompen algún caso. `too-many-paths` sigue fija en el guard, no en la
+       política: así una política del consumidor no apaga el tope. Falta el `merge`
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
