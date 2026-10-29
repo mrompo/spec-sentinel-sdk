@@ -10,7 +10,8 @@ lectura de `STATUS.md`.
 que toca el enforcement es un fichero protegido: lo entrega el agente como parche en la raíz del
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
-**Posición en el Loop**: las tres PRs en `main` (#9 a #13); en el Tribunal (`review`).
+**Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
+2 de `apply` va por la PR 5 (la PR 4 en `main` por la #15).
 
 ## Engine · antes de teclear
 
@@ -143,15 +144,26 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        cada tramo sin comillas ni escapes y reducido a su nombre; los tramos de solo lectura se
        parten respetando las comillas; claves de git sin distinguir mayúsculas. En un clon
        limpio con el parche, el banco entero en verde (hooks 29/29, githooks 16/16, install
-       17/17) y los trece mutantes rompen algún caso. Falta el `merge`
+       17/17) y los trece mutantes rompen algún caso. Revisión de la #15 (CodeRabbit): las
+       opciones antes de `core` en `remove-section`/`rename-section` (`1a9837b`), y los
+       comentarios, `$'…'` y heredocs que escondían las líneas siguientes (`0b19eb6`, ocho
+       mutantes muertos); las variables (`$K.$H`) quedan como límite documentado (decisión del
+       2026-10-27). En `main` por la #15
 
 **PR 5 · Carpetas y ruta física** (tema 3 y el tope de 128 rutas)
 
-- [ ] R3. Casos en rojo: copiar o mover a `.git`, `sentinel/adapters` o `sentinel/githooks/lib`
+- [x] R3. Casos en rojo (`sc-30` nuevo, y `sc-22` y `sc-23`): copiar o mover a `.git`, `sentinel/adapters` o `sentinel/githooks/lib`
        (A1); worktrees dentro del repo bare (P2); la carpeta común de git con el `cwd` fuera del
        proyecto (A4) y el `cwd` del payload (V5); `enlace/../x` en Write/Edit (A7); un heredoc o
        un `git add` con más de 128 palabras con `/` que no tocan nada protegido (P5 = A8)
-- [ ] R4. 👤 Parche, banco en verde, README («Regex evadibles» con el tope real) y `merge`
+- [x] R4. 👤 Parche `sentinel-paths-5.patch` (aplicado por la persona, `f7323c9`): el `cwd` del
+       tool call, la ruta tal cual y la física, la carpeta común de git desde el proyecto, gana
+       el prefijo más largo, copiar o mover a una carpeta (también con `-t`), las carpetas
+       `sentinel/githooks/lib`, `sentinel/adapters` y `.husky`, y el tope de 512 rutas (solo las
+       que existen o cuya carpeta existe; se bloquea y la llave de esa acción lo salva). README
+       («Regex evadibles») con el tope real. Sobre la PR 4 con su revisión, el banco entero en
+       verde (hooks 30/30, githooks 16/16, install 17/17) y los doce mutantes rompen algún caso.
+       Falta el `merge`
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 

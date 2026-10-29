@@ -12,9 +12,14 @@ solo por el texto de la ruta.
 
 - **WHEN** el agente mueve, renombra, copia encima, enlaza, cambia los permisos o borra desde la
   shell una carpeta protegida entera (`sentinel`, `sentinel/hooks`, `sentinel/githooks`,
-  `.claude`, `.git/hooks`), con `mv`, `cp`, `rsync`, `ln`, `rm`, `rmdir`, `unlink`, `chmod`,
+  `sentinel/githooks/lib`, `sentinel/adapters`, `.claude`, `.git/hooks`, `.husky`), con `mv`, `cp`, `rsync`, `ln`, `rm`, `rmdir`, `unlink`, `chmod`,
   `chown`, `git mv` o `git rm`, se escriba como `sentinel`, `sentinel/` o `./sentinel`
 - **THEN** el hook deniega la acción, como la de uno de sus ficheros
+- **AND** copiar, mover o enlazar a una carpeta (`cp x/config .git`, `cp -t .git x/config`)
+  toca, dentro de ella, un fichero con el nombre de cada origen, y se decide como si el
+  comando lo nombrara
+- **AND** las rutas relativas se resuelven desde la carpeta de la sesión (el `cwd` del tool
+  call), no desde la del hook
 - **AND** lo mismo si el programa se escribe por su ruta (`/bin/mv`), con una barra delante
   (`\mv`) o entre comillas (`'mv'`), o si el comando lo separa del anterior con un salto de
   línea o un tabulador escritos como escape del JSON: las reglas del comando deciden sobre lo
@@ -34,6 +39,8 @@ solo por el texto de la ruta.
 - **THEN** el hook deniega la acción, como por la ruta directa
 - **AND** un enlace cuya ruta física no está protegida sigue libre, y escribir un fichero que
   aún no existe en una carpeta enlazada se decide por la ruta física de esa carpeta
+- **AND** un `..` detrás de un enlace sube desde donde apunta el enlace, como lo resuelve el
+  sistema (`h/../policy.yaml` con `h` enlazado a `sentinel/hooks` es `sentinel/policy.yaml`)
 
 #### Scenario: La configuración de git es la real del repo (SC-sentinel-paths-03)
 
@@ -41,6 +48,9 @@ solo por el texto de la ruta.
   hooks en una disposición que no los llama `.git` (p. ej. un repo bare con worktrees,
   `.bare/config`), con las herramientas de edición o nombrándolos en un comando
 - **THEN** el hook deniega la acción
+- **AND** es la configuración del proyecto aunque la sesión esté en otra carpeta, y en un repo
+  bare que contiene sus worktrees, lo de cada worktree sigue siendo del repo (sus carpetas
+  protegidas lo son) y no de la configuración de git
 - **AND** lo mismo cuando cambia `core.hooksPath` desde un comando sin nombrarlo: borrando o
   renombrando la sección `core` (`git config --remove-section core`, `--rename-section core`,
   y sus subcomandos sin guiones, `remove-section` y `rename-section`), con un `include.path` o

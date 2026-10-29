@@ -76,12 +76,15 @@ rules:
   # vale cualquier grafía (./sentinel/, "sentinel", la ruta absoluta) y sus subcarpetas libres
   # siguen libres (SC-sentinel-paths-01). El programa se reconoce por su nombre, se escriba como
   # se escriba (/bin/mv, \mv, 'mv'), porque command_re ve también el comando como lo ve bash.
+  # Revisión de sentinel-paths (A1): también las carpetas de la librería de la Esclusa, del
+  # adaptador y de husky, que contienen ficheros protegidos; copiar a una carpeta lo resuelve el
+  # guard con el nombre del origen.
   - id: protect-enforcement-dirs
     tool: Bash
     command_re: (^|[;&|(`[:space:]])(mv|cp|rsync|ln|rm|rmdir|unlink|chmod|chown|chflags|git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(rm|mv))[[:space:]]
-    dir_re: ^(sentinel|sentinel/hooks|sentinel/githooks|\.claude|\.git/hooks)$
+    dir_re: ^(sentinel|sentinel/hooks|sentinel/githooks|sentinel/githooks/lib|sentinel/adapters|\.claude|\.git/hooks|\.husky)$
     mode: block
-    reason: No se mueve, enlaza ni borra una carpeta del enforcement (sentinel, sus hooks, la Esclusa, .claude, .git/hooks) — hazlo en un cambio OpenSpec revisado por un humano
+    reason: No se mueve, enlaza ni borra una carpeta del enforcement (sentinel, sus hooks, la Esclusa y su librería, el adaptador, .claude, .git/hooks, .husky) — hazlo en un cambio OpenSpec revisado por un humano
 
   # El instalador es lo que ejecuta la aprobación humana de instalar: con las herramientas de
   # edición no se toca (SC-sentinel-guard-13). Por sus dos rutas: la copia del SDK a la que

@@ -57,6 +57,12 @@ fi
 PAYLOAD="$(cat || true)"
 [ -n "$PAYLOAD" ] || deny "sin payload: este hook espera el JSON del tool call por stdin"
 
+# La acción ocurre en la carpeta de la sesión (el cwd del tool call), que no tiene por qué ser
+# la del hook: las rutas relativas, los comodines y la rama se resuelven desde ahí. Vale el
+# primer "cwd" del payload, el del tool call (revisión de sentinel-paths, V5)
+_cwd="$(printf '%s' "$PAYLOAD" | grep -oE '"cwd"[[:space:]]*:[[:space:]]*"([^"\\]|\\.)*"' | head -1 | sed -E 's/^"cwd"[[:space:]]*:[[:space:]]*"(.*)"$/\1/')"
+[ -n "$_cwd" ] && [ -d "$_cwd" ] && cd "$_cwd" 2>/dev/null
+
 TOOL_NAME="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"tool_name"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' | head -1)"
 [ -n "$TOOL_NAME" ] \
   || deny "payload sin 'tool_name' identificable — el guard no puede evaluar la acción (fail-closed)"
@@ -73,9 +79,10 @@ POLICY_SDD=""
 [ -n "$POLICY_SDD" ] || POLICY_SDD="$(read_sdd "$DEFAULT_POLICY")"
 
 # Ruta normalizada (./ y ../) para que el matching no dependa de cómo se escriba la ruta
-NORM_PATH=""
+NORM_PATH=""; RAW_PATH=""
 if [ -n "$FILE_PATH" ]; then
   case "$FILE_PATH" in /*) NORM_PATH="$FILE_PATH" ;; *) NORM_PATH="$PWD/$FILE_PATH" ;; esac
+  RAW_PATH="$NORM_PATH"
   while printf '%s' "$NORM_PATH" | grep -q '/\./'; do NORM_PATH="$(printf '%s' "$NORM_PATH" | sed 's|/\./|/|g')"; done
   while printf '%s' "$NORM_PATH" | grep -q '/[^/][^/]*/\.\./'; do
     NORM_PATH="$(printf '%s' "$NORM_PATH" | sed 's|/[^/][^/]*/\.\./|/|')"
@@ -114,24 +121,33 @@ phys_path() {
 }
 
 REPO_PHYS="$(phys_dir "$REPO_ROOT_DIR")"; [ -n "$REPO_PHYS" ] || REPO_PHYS="$REPO_ROOT_DIR"
-GIT_COMMON_PHYS=""
-_gcd="$(git rev-parse --git-common-dir 2>/dev/null)" && GIT_COMMON_PHYS="$(phys_dir "$_gcd")"
+# git_common <carpeta> → la carpeta común de git de su repo, física
+git_common() {
+  local d; d="$(git -C "$1" rev-parse --git-common-dir 2>/dev/null)" || return 1
+  case "$d" in /*) ;; *) d="$1/$d" ;; esac
+  phys_dir "$d"
+}
+# La configuración de git real es la del proyecto, se ejecute la acción donde se ejecute
+# (revisión de sentinel-paths, A4)
+GIT_COMMON_PHYS="$(git_common "$REPO_ROOT_DIR")"
 CLAUDE_CFG="${CLAUDE_CONFIG_DIR:-${HOME:-/nonexistent}/.claude}"
 CLAUDE_CFG_PHYS="$(phys_dir "$CLAUDE_CFG")"
 
-canon() { # $1=ruta física → cómo la nombra la política
-  local p="$1"
+# canon <ruta física> → cómo la nombra la política. Si cae dentro de varias raíces, gana la más
+# cercana, la más larga: un worktree que vive dentro de su repo bare es el repo, no su
+# configuración de git (revisión de sentinel-paths, P2)
+canon() {
+  local p="$1" out="$1" best=0
   if [ -n "$GIT_COMMON_PHYS" ]; then
-    case "$p" in "$GIT_COMMON_PHYS"|"$GIT_COMMON_PHYS"/*) printf '.git%s' "${p#"$GIT_COMMON_PHYS"}"; return ;; esac
+    case "$p" in "$GIT_COMMON_PHYS"|"$GIT_COMMON_PHYS"/*) out=".git${p#"$GIT_COMMON_PHYS"}"; best=${#GIT_COMMON_PHYS} ;; esac
   fi
-  if [ -n "$CLAUDE_CFG_PHYS" ]; then
-    case "$p" in "$CLAUDE_CFG_PHYS"|"$CLAUDE_CFG_PHYS"/*) printf '.claude%s' "${p#"$CLAUDE_CFG_PHYS"}"; return ;; esac
+  if [ -n "$CLAUDE_CFG_PHYS" ] && [ "${#CLAUDE_CFG_PHYS}" -gt "$best" ]; then
+    case "$p" in "$CLAUDE_CFG_PHYS"|"$CLAUDE_CFG_PHYS"/*) out=".claude${p#"$CLAUDE_CFG_PHYS"}"; best=${#CLAUDE_CFG_PHYS} ;; esac
   fi
-  case "$p" in
-    "$REPO_PHYS") printf '.' ;;
-    "$REPO_PHYS"/*) printf '%s' "${p#"$REPO_PHYS"/}" ;;
-    *) printf '%s' "$p" ;;
-  esac
+  if [ "${#REPO_PHYS}" -gt "$best" ]; then
+    case "$p" in "$REPO_PHYS") out=. ;; "$REPO_PHYS"/*) out="${p#"$REPO_PHYS"/}" ;; esac
+  fi
+  printf '%s' "$out"
 }
 
 # La configuración de la persona que vive fuera del repo, por su ruta física: un fichero del
@@ -160,6 +176,9 @@ $PERSONAL
 EOF
 }
 [ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
+# Sin normalizar, como la resuelve el sistema: un '..' detrás de un enlace sube desde donde
+# apunta el enlace (revisión de sentinel-paths, A7)
+[ -n "$RAW_PATH" ] && [ "$RAW_PATH" != "$NORM_PATH" ] && add_target "$RAW_PATH"
 # json_text → el comando tal como lo recibe bash: los escapes del JSON deshechos (\n es un
 # salto de línea, \t un tabulador, \u00XX su carácter, con los pares sustitutos)
 json_text() {
@@ -334,23 +353,63 @@ glob_matches() (
   IFS=
   for f in $1; do printf '%s\0' "$f"; done
 )
-# add_word → cuenta como ruta la palabra que lleva '/' o existe, también si empieza por '-' (tras
-# '--' es una ruta, y una opción como -rf no existe ni lleva '/'). Un comando con más rutas de
-# las que el guard comprueba se deniega: dejar de mirar a partir de la N dejaría pasar la N+1
-_n=0
+# add_word → cuenta como ruta la palabra que existe, o que lleva '/' y cuya carpeta existe (en
+# una carpeta que no existe no se escribe: el texto de un heredoc o una URL no son rutas),
+# también si empieza por '-' (tras '--' es una ruta, y una opción como -rf no existe ni lleva
+# '/'). Si el comando nombra más rutas de las que el guard comprueba, no se puede saber qué
+# toca: lo decide la regla too-many-paths, que bloquea y que la llave de esa acción salva
+# (revisión de sentinel-paths, P5 = A8). Dejar de mirar a partir de la N dejaría pasar la N+1
+MAX_PATHS=512
+_n=0; TOO_MANY=false
 add_word() {
-  local w
+  local w o
   [ -n "$1" ] || return
-  tilde "$1"; w="$_w"
-  case "$w" in */*) ;; *) { [ -e "$w" ] || [ -L "$w" ]; } || return ;; esac
+  tilde "$1"; o="$_w"; w="$_w"
   case "$w" in /*) ;; *) w="$PWD/$w" ;; esac
   while :; do
     case "$w" in /) break ;; */) w="${w%/}" ;; */.) w="${w%/.}" ;; *) break ;; esac
   done
+  if [ ! -e "$w" ] && [ ! -L "$w" ]; then
+    case "$o" in */*) ;; *) return ;; esac
+    [ -d "${w%/*}/" ] || return
+  fi
   _n=$((_n+1))
-  [ "$_n" -le 128 ] \
-    || deny "el comando nombra más de 128 rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+  [ "$_n" -le "$MAX_PATHS" ] || { TOO_MANY=true; return; }
   add_target "$w"
+}
+
+# into_dir <palabras de un tramo> → copiar, mover o enlazar a una carpeta toca, dentro de ella,
+# un fichero con el nombre de cada origen: «cp x/config .git» escribe .git/config aunque el
+# comando no lo nombre (revisión de sentinel-paths, A1)
+into_dir() {
+  local v="${1##*/}" dest="" w t=0 opts=1 srcs=()
+  case "$v" in cp|mv|ln|install|rsync) ;; *) return 0 ;; esac
+  shift
+  for w in "$@"; do
+    if [ "$t" = 1 ]; then dest="$w"; t=0; continue; fi
+    if [ "$opts" = 1 ]; then
+      case "$w" in
+        --) opts=0; continue ;;
+        -t|--target-directory) t=1; continue ;;
+        -*) continue ;;
+      esac
+    fi
+    srcs+=("$w")
+  done
+  if [ -z "$dest" ]; then
+    [ "${#srcs[@]}" -ge 2 ] || return 0
+    dest="${srcs[${#srcs[@]}-1]}"
+    unset "srcs[${#srcs[@]}-1]"
+  fi
+  tilde "$dest"; dest="$_w"
+  case "$dest" in /*) ;; *) dest="$PWD/$dest" ;; esac
+  [ -d "$dest" ] || return 0
+  for w in ${srcs[@]+"${srcs[@]}"}; do
+    while case "$w" in ?*/) true ;; *) false ;; esac; do w="${w%/}"; done
+    w="${w##*/}"
+    case "$w" in ""|.|..) continue ;; esac
+    add_word "${dest%/}/$w"
+  done
 }
 
 # El comando como lo recibe bash, sus palabras y sus tramos (los ven las reglas del comando)
@@ -375,6 +434,16 @@ if [ -n "$COMMAND" ]; then
     fi
     [ "$_globbed" = 1 ] && { _globbed=0; continue; }
     add_word "$w"
+  done <<EOF
+$WORDS
+EOF
+  # Lo que cada tramo copia, mueve o enlaza a una carpeta
+  _seg=()
+  while IFS= read -r w; do
+    case "${w:0:1}" in
+      l) printf -v w '%b' "${w:1}"; _seg+=("$w") ;;
+      s) [ "${#_seg[@]}" -gt 0 ] && into_dir "${_seg[@]}"; _seg=() ;;
+    esac
   done <<EOF
 $WORDS
 EOF
@@ -618,6 +687,13 @@ eval_policy() {
   done < "$1"
   apply_rule || true
 }
+
+# Más rutas de las que el guard comprueba: no se sabe qué toca el comando, así que se bloquea, y
+# la llave de esa acción lo salva (revisión de sentinel-paths, P5 = A8)
+if [ "$TOO_MANY" = true ]; then
+  CUR_POLICY="$DEFAULT_POLICY"
+  rule_matched too-many-paths block "el comando nombra más de $MAX_PATHS rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+fi
 
 # De todas las reglas que matchean, en las dos políticas, gana la más estricta y, a igualdad,
 # la del SDK: el consumidor añade protección, nunca la quita (SC-17, SC-18, SC-20)
