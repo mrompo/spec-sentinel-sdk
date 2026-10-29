@@ -174,7 +174,10 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        `sentinel-paths-5c.patch` (aplicado por la persona, `db69e15`): una entrada que ya está en
        el destino como enlace toca lo que apunta, una carpeta que el guard no puede leer entera
        se bloquea con `too-many-paths`, y cada tope da su motivo. Banco entero en verde y los
-       diecinueve mutantes (siete nuevos y los doce de la #16) rompen algún caso. Falta el `merge`
+       diecinueve mutantes (siete nuevos y los doce de la #16) rompen algún caso. Segunda pasada
+       de la #17, en `sentinel-paths-5d.patch` (`0c5339e`): los enlaces del origen no se siguen,
+       como `cp` sin `-L`, así que un enlace en bucle no deja el recorrido sin fin; veinte
+       mutantes muertos. Falta el `merge`
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
