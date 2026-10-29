@@ -181,11 +181,17 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
-- [ ] R5. Delta de SC-sentinel-paths-09 (sin git que responda en el proyecto, el cableado bloquea
+- [x] R5. Delta de SC-sentinel-paths-09 (sin git que responda en el proyecto, el cableado bloquea
        y dice por qué) y casos en rojo: `git` solo fuera del `PATH` fijo, y `setup` lo detecta
        (P1); rama sin el SDK (P3); *dubious ownership* (P6 = A9); la llave copiada del aviso, tal
        cual, en el Centinela y en la Esclusa (P4 = A6); `SENTINEL_OVERRIDE` con una llave para
-       otra acción (V4)
+       otra acción (V4). Casos en `28375cf` y `e106534` (hooks `sc-27` y `sc-28`, githooks
+       `sc-11` y `sc-13`, install `sc-12` y `sc-18` nuevo); deltas de SC-05, 06 y 09 y de
+       SC-git-gates-11 y 13, README y `STATUS.md` en `d823af8` y `6d7d97b`. Del PATH, el banco
+       comprueba que lleva las carpetas de Git for Windows, Nix y linuxbrew (en él no se puede
+       quitar el git del sistema) y que `setup` detecta un cableado que no deja pasar nada; de
+       *dubious ownership*, que el motivo es lo que dice git (como no-root no se puede
+       reproducir)
 - [ ] R6. 👤 Parche (cableado, `setup`, guard y `breakglass.sh`), banco en verde, `STATUS.md` y
        `sc-28` al día (A10), deuda P7 y P9 registrada, y `merge`
 
