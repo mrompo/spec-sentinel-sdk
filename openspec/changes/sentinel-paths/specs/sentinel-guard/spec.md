@@ -125,6 +125,13 @@ del repo ni de la sesión, y SHALL bloquear cuando el Centinela no puede decidir
   (también las de NixOS, que no tiene `/bin/bash`) y sin más variables que las que necesita
   (`HOME`, `CLAUDE_PROJECT_DIR`, `CLAUDE_CONFIG_DIR`, `SENTINEL_OVERRIDE`), y el Centinela
   decide como sin ese entorno
+- **AND** detrás de las carpetas del sistema, el `PATH` fijo lleva las que usan como sistema
+  Git for Windows (`/mingw64/bin`), Nix (`/nix/var/nix/profiles/default/bin`, el perfil de la
+  persona en `/etc/profiles/per-user/<persona>/bin` y `~/.nix-profile/bin`) y linuxbrew
+  (`/home/linuxbrew/.linuxbrew/bin`), donde puede estar el único git de la máquina
+- **AND** `setup` lanza su prueba de humo a través del cableado, tal como queda en
+  `.claude/settings.json`: si en esa máquina el cableado no deja pasar una acción inocua, lo dice
+  y termina con pendientes
 
 #### Scenario: El Centinela que no decide, bloquea (SC-sentinel-paths-09)
 
@@ -132,6 +139,13 @@ del repo ni de la sesión, y SHALL bloquear cuando el Centinela no puede decidir
   borró), o el Centinela termina con un código que no es ni 0 ni 2
 - **THEN** el cableado sale con 2 y un motivo que dice cómo restaurarlo: la acción se bloquea,
   en vez del 127 que el harness deja pasar
+- **AND** si la rama o el commit en que está el proyecto no tiene el Centinela (una rama de
+  antes de instalar el SDK, `git bisect`), el motivo no manda restaurarlo, sino volver a la
+  rama anterior (`git checkout -`) o integrar la que instala el SDK
+- **AND** sin un git que responda en el proyecto, el cableado también sale con 2, porque sin la
+  rama no se aplicarían las reglas de rama, y el motivo dice por qué: que git no está instalado
+  (y con qué `PATH` se buscó), o lo que dice git (un repo de otro dueño, *dubious ownership*,
+  dice cómo declararlo seguro)
 
 ## MODIFIED Requirements
 
@@ -164,6 +178,9 @@ toda la sesión, no se ata.
   subagente) llega antes que la que la persona autorizó, o la llave no tiene `para:`
 - **THEN** esa acción sigue bloqueada y la llave se conserva
 - **AND** el aviso de bloqueo da, lista para copiar, la llave de **esa** acción (motivo por
-  rellenar y su `para:`), así que la persona sabe qué autoriza
+  rellenar y su `para:`), así que la persona sabe qué autoriza; copiada tal cual, sin sangría
+  que deje el heredoc sin cerrar, y pegada en bash, zsh o sh, escribe la llave
+- **AND** con `SENTINEL_OVERRIDE` activo, la excepción sale de la sesión y una llave atada a
+  otra acción se conserva
 - **AND** una acción que contiene la autorizada pero no es ella (`para: Bash:git diff x` frente
   a `git diff x; rm -r sentinel`) no la gasta
