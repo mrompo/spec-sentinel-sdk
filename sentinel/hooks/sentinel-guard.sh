@@ -358,9 +358,10 @@ glob_matches() (
 # también si empieza por '-' (tras '--' es una ruta, y una opción como -rf no existe ni lleva
 # '/'). Si el comando nombra más rutas de las que el guard comprueba, no se puede saber qué
 # toca: lo decide la regla too-many-paths, que bloquea y que la llave de esa acción salva
-# (revisión de sentinel-paths, P5 = A8). Dejar de mirar a partir de la N dejaría pasar la N+1
+# (revisión de sentinel-paths, P5 = A8). Dejar de mirar a partir de la N dejaría pasar la N+1.
+# TOO_MANY guarda el motivo
 MAX_PATHS=512
-_n=0; TOO_MANY=false
+_n=0; TOO_MANY=""
 add_word() {
   local w o
   [ -n "$1" ] || return
@@ -374,22 +375,38 @@ add_word() {
     [ -d "${w%/*}/" ] || return
   fi
   _n=$((_n+1))
-  [ "$_n" -le "$MAX_PATHS" ] || { TOO_MANY=true; return; }
+  [ "$_n" -le "$MAX_PATHS" ] || {
+    TOO_MANY="el comando nombra más de $MAX_PATHS rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+    return
+  }
   add_target "$w"
 }
 
 # add_tree <destino> <carpeta de origen> → lo que deja en el destino copiar, mover o enlazar
-# una carpeta: cada entrada del origen, con su ruta relativa, dentro del destino. Son nombres de
-# lo que aún no existe, así que el destino se resuelve una vez y cada entrada cuelga de él. Si
-# el origen tiene más entradas de las que el guard comprueba, lo decide too-many-paths
+# una carpeta: cada entrada del origen, con su ruta relativa, dentro del destino. El destino se
+# resuelve una vez y cada entrada cuelga de él, salvo la que ya está allí como enlace, que
+# escribe donde apunta (revisión de la #17). Si el origen tiene más entradas de las que el guard
+# comprueba, o alguna que no puede leer, no se sabe qué deja: lo decide too-many-paths
 MAX_TREE=10000
 add_tree() {
-  local s="$2" ph cn out line p
+  local s="$2" ph cn out line p r
   case "$s" in /*) ;; *) s="$PWD/$s" ;; esac
   [ -d "$s" ] || return 0
-  out="$(cd "$s" 2>/dev/null && find . -mindepth 1 2>/dev/null | head -n "$((MAX_TREE + 1))" | sed 's|^\./||')"
+  # Lo que find no puede leer sale como «find: …» (una entrada sale como «./…»); que head corte
+  # la salida no lo es
+  out="$(cd "$s" 2>/dev/null && { find . -mindepth 1 2>&1 || true; } | head -n "$((MAX_TREE + 1))")" ||
+    out="find: $s"
+  case "$out" in
+    "find: "*|*$'\n'"find: "*)
+      TOO_MANY="el comando copia o enlaza una carpeta que el Centinela no puede leer entera ($2) y no sabe qué deja en el destino"
+      return ;;
+  esac
   [ -n "$out" ] || return 0
-  [ "$(printf '%s\n' "$out" | wc -l)" -le "$MAX_TREE" ] || { TOO_MANY=true; return; }
+  [ "$(printf '%s\n' "$out" | wc -l)" -le "$MAX_TREE" ] || {
+    TOO_MANY="el comando copia o enlaza una carpeta de más de $MAX_TREE entradas ($2) y el Centinela no puede comprobarlas todas — cópiala por partes"
+    return
+  }
+  out="$(printf '%s\n' "$out" | sed 's|^\./||')"
   ph="$(phys_path "$1")"; cn="$(canon "$ph")"
   [ "$cn" = . ] && cn=""
   TOUCHED="$TOUCHED
@@ -404,6 +421,13 @@ ${line#*	}" ;;
     esac
   done <<EOF
 $PERSONAL
+EOF
+  while IFS= read -r r; do
+    [ -L "$ph/$r" ] || continue
+    add_target "$ph/$r"
+    add_tree "$ph/$r" "$s/$r"
+  done <<EOF
+$out
 EOF
 }
 
@@ -744,11 +768,12 @@ eval_policy() {
   apply_rule || true
 }
 
-# Más rutas de las que el guard comprueba: no se sabe qué toca el comando, así que se bloquea, y
-# la llave de esa acción lo salva (revisión de sentinel-paths, P5 = A8)
-if [ "$TOO_MANY" = true ]; then
+# Más rutas o entradas de las que el guard comprueba, o una carpeta que no puede leer: no se sabe
+# qué toca el comando, así que se bloquea, y la llave de esa acción lo salva (revisión de
+# sentinel-paths, P5 = A8, y de la #17)
+if [ -n "$TOO_MANY" ]; then
   CUR_POLICY="$DEFAULT_POLICY"
-  rule_matched too-many-paths block "el comando nombra más de $MAX_PATHS rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+  rule_matched too-many-paths block "$TOO_MANY"
 fi
 
 # De todas las reglas que matchean, en las dos políticas, gana la más estricta y, a igualdad,
