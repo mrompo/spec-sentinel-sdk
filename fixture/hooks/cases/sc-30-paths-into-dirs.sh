@@ -103,6 +103,27 @@ mkdir -p "$WS/docs/t"
 (cd "$WS/docs/t" && seq 1 10001 | sed 's/^/f/' | xargs touch)
 guard "$(bash_payload "cp -r docs/t/. docs/c")"
 assert_exit 2 || { echo "    copiar una carpeta de 10001 ficheros a otra debería bloquearse" >&2; exit 1; }
+assert_err_contains "más de 10000 entradas" || exit 1
+
+# ── Revisión de la #17 (CodeRabbit): lo que ya está en el destino como enlace escribe donde
+# apunta, y de lo que el Centinela no puede leer en el origen no se sabe qué deja en el destino
+mkdir -p "$WS/docs/l" "$WS/docs/s/g"
+: >"$WS/docs/s/g/config"
+ln -s ../../sentinel/policy.yaml "$WS/docs/l/config"
+ln -s ../../.git "$WS/docs/l/g"
+for cmd in "cp -r docs/e/. docs/l" "cp -r docs/s/. docs/l"; do
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done
+if [ "$(id -u)" != 0 ]; then
+  mkdir -p "$WS/docs/u/sub"; : >"$WS/docs/u/sub/x"
+  chmod 000 "$WS/docs/u/sub"; guard "$(bash_payload "cp -r docs/u docs/c")"; chmod 755 "$WS/docs/u/sub"
+  assert_exit 2 || { echo "    copiar una carpeta que no se puede leer entera debería bloquearse" >&2; exit 1; }
+  assert_err_contains "no puede leer entera" || exit 1
+  printf 'copia de prueba\npara: Bash:cp -r docs/u docs/c\n' >"$WS/sentinel/.override"
+  chmod 000 "$WS/docs/u/sub"; guard "$(bash_payload "cp -r docs/u docs/c")"; chmod 755 "$WS/docs/u/sub"
+  assert_exit 0 || { echo "    con su llave, la carpeta que no se puede leer entera debería permitirse" >&2; exit 1; }
+fi
 
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────
 guard "{\"cwd\":\"$WS/sentinel\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"mv hooks /tmp/x\"}}"
