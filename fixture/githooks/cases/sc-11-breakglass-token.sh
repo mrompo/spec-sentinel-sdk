@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SC-git-gates-11: la llave (sentinel/.override con motivo) salta UN rechazo de la Esclusa, lo
-# registra en la bitácora con hook y motivo, y se consume. Sin llave, el rechazo dice cómo pedirla.
-# Un motivo solo de espacios no vale.
+# registra en la bitácora con hook y motivo, y se consume. Sin llave, el rechazo dice cómo pedirla,
+# y pegada tal cual en una shell la escribe (revisión de sentinel-paths, P4 = A6). Un motivo solo
+# de espacios no vale.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh" || exit 1
 
 mk_git_workspace
@@ -55,4 +56,24 @@ gh_push HEAD:main
 assert_exit 0 || fail_case "con llave el push a main debería entrar"
 grep -q "esclusa:pre-push" "$LOG" 2>/dev/null || fail_case "la bitácora no registra el pre-push"
 grep -q "INC-10" "$LOG" 2>/dev/null || fail_case "la bitácora no tiene el motivo del push"
+
+# paste_key <aviso> <shell> → copia del aviso las líneas de la llave tal como salen (de la que la
+# escribe a la que la cierra), pone el motivo y las pega en esa shell, en el workspace
+paste_key() {
+  printf '%s\n' "$1" | sed -n "/cat > sentinel\/.override <<'LLAVE'/,/^[[:space:]]*LLAVE/p" \
+    | sed 's/<motivo>/arreglo aprobado/' >"$WS.pegar"
+  [ -s "$WS.pegar" ] || return 1
+  ( cd "$WS" && "$2" "$WS.pegar" </dev/null >/dev/null 2>&1 ); rm -f "$WS.pegar"
+}
+# La llave del rechazo, pegada tal cual en bash o en sh, queda con el motivo y el para: del hook,
+# y salta ese rechazo
+for sh in bash sh; do
+  gh_commit "otro sin formato"
+  assert_exit 1 || fail_case "sin llave debería rechazar"
+  paste_key "$RH_ERR" "$sh" || fail_case "el rechazo no trae la llave"
+  [ "$(cat "$TOKEN" 2>/dev/null)" = "$(printf 'arreglo aprobado\npara: esclusa:commit-msg')" ] \
+    || fail_case "la llave pegada en $sh debería quedar con el motivo y el para:: $(cat "$TOKEN" 2>/dev/null)"
+  gh_commit "otro sin formato"
+  assert_exit 0 || fail_case "con la llave pegada en $sh, el commit debería entrar"
+done
 cleanup_git_workspace

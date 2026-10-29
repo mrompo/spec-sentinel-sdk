@@ -2,7 +2,9 @@
 # SC-sentinel-paths-05: la llave autoriza la acción prevista. Lleva el motivo y `para: <acción>`
 #   y solo la gasta la acción cuya descripción coincide exactamente; cualquier otra acción
 #   bloqueada (de cualquier agente) sigue bloqueada y la llave se conserva. Sin `para:` no
-#   autoriza nada. El aviso de bloqueo da la llave de esa acción lista para copiar.
+#   autoriza nada. El aviso de bloqueo da la llave de esa acción lista para copiar: pegada tal
+#   cual en una shell, la escribe (revisión de sentinel-paths, P4 = A6). Con SENTINEL_OVERRIDE
+#   activo, la llave de otra acción se conserva (V4).
 # SC-sentinel-guard-08/09 (modificados): con su `para:` la acción pasa, se audita y la llave
 #   desaparece; una llave solo con `para:` (sin motivo) no vale.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
@@ -61,8 +63,31 @@ guard "$AUTORIZADA"
 assert_exit 2 || fail_case "una llave sin motivo no debería valer"
 [ -s "$TOKEN" ] || fail_case "una llave sin motivo no debería gastarse"
 
-# La de sesión (SENTINEL_OVERRIDE) no se ata: vale para cualquier acción
-rm -f "$TOKEN"
+# La de sesión (SENTINEL_OVERRIDE) no se ata: vale para cualquier acción, y la llave de otra acción
+# no se gasta con ella (V4)
+printf 'parche de sentinel-paths\npara: Write:sentinel/policy.yaml\n' >"$TOKEN"
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$OTRA" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$WS/sentinel/policy.default.yaml" SENTINEL_POLICY="$NO_POLICY" SENTINEL_OVERRIDE="sesión de mantenimiento"
 assert_exit 0 || fail_case "SENTINEL_OVERRIDE debería seguir valiendo para toda la sesión"
+[ -s "$TOKEN" ] || fail_case "con SENTINEL_OVERRIDE, la llave de otra acción debería conservarse"
+rm -f "$TOKEN"
+
+# paste_key <aviso> <shell> → copia del aviso las líneas de la llave tal como salen (de la que la
+# escribe a la que la cierra), pone el motivo y las pega en esa shell, en el workspace
+paste_key() {
+  printf '%s\n' "$1" | sed -n "/cat > sentinel\/.override <<'LLAVE'/,/^[[:space:]]*LLAVE/p" \
+    | sed 's/<motivo>/arreglo aprobado/' >"$WS.pegar"
+  [ -s "$WS.pegar" ] || return 1
+  ( cd "$WS" && "$2" "$WS.pegar" </dev/null >/dev/null 2>&1 ); rm -f "$WS.pegar"
+}
+# La llave del aviso, pegada tal cual en bash o en sh, queda con el motivo y el para: de la acción,
+# y la autoriza (P4 = A6)
+for sh in bash sh; do
+  guard "$AUTORIZADA"
+  assert_exit 2 || fail_case "sin llave debería bloquearse"
+  paste_key "$RH_ERR" "$sh" || fail_case "el aviso no trae la llave"
+  [ "$(cat "$TOKEN" 2>/dev/null)" = "$(printf 'arreglo aprobado\npara: Write:sentinel/policy.yaml')" ] \
+    || fail_case "la llave pegada en $sh debería quedar con el motivo y el para:: $(cat "$TOKEN" 2>/dev/null)"
+  guard "$AUTORIZADA"
+  assert_exit 0 || fail_case "con la llave pegada en $sh, la acción debería pasar"
+done
 exit 0
