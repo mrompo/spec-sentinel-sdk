@@ -168,8 +168,9 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        prefijo o de una asignación, con los orígenes de un comodín, con el contenido de una
        carpeta (`rsync` con `/` al final, `-T`), con `-t` en un grupo de opciones y con lo que hay
        dentro de una carpeta copiada o enlazada (tope de 10000 entradas). Banco entero en verde y
-       los doce mutantes rompen algún caso. `too-many-paths` sigue fija en el guard, no en la
-       política: así una política del consumidor no apaga el tope. Falta el `merge`
+       los doce mutantes rompen algún caso. `too-many-paths` sigue en el guard, no en la
+       política: dice que el guard no pudo comprobar la acción entera (como SC-09), y el esquema
+       no tiene campo para expresarla; la llave la salva. Falta el `merge`
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
