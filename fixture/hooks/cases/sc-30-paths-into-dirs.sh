@@ -98,11 +98,12 @@ rsync -a docs/e/ docs/c/
 cp -r docs/e/. docs/c
 cp -r docs/w docs/c
 EOF
-# Lo que hay dentro de una carpeta copiada tiene un tope, como las rutas: pasado, se bloquea
+# Lo que hay dentro de una carpeta copiada tiene un tope, como las rutas: pasado, se bloquea (con
+# bastantes entradas de más para que la lista se corte antes de que find termine)
 mkdir -p "$WS/docs/t"
-(cd "$WS/docs/t" && seq 1 10001 | sed 's/^/f/' | xargs touch)
+(cd "$WS/docs/t" && seq 1 20000 | sed 's/^/f/' | xargs touch)
 guard "$(bash_payload "cp -r docs/t/. docs/c")"
-assert_exit 2 || { echo "    copiar una carpeta de 10001 ficheros a otra debería bloquearse" >&2; exit 1; }
+assert_exit 2 || { echo "    copiar una carpeta de 20000 ficheros a otra debería bloquearse" >&2; exit 1; }
 assert_err_contains "más de 10000 entradas" || exit 1
 
 # ── Revisión de la #17 (CodeRabbit): lo que ya está en el destino como enlace escribe donde
