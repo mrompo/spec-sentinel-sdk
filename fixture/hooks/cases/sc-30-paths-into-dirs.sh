@@ -125,6 +125,15 @@ if [ "$(id -u)" != 0 ]; then
   chmod 000 "$WS/docs/u/sub"; guard "$(bash_payload "cp -r docs/u docs/c")"; chmod 755 "$WS/docs/u/sub"
   assert_exit 0 || { echo "    con su llave, la carpeta que no se puede leer entera debería permitirse" >&2; exit 1; }
 fi
+# Enlaces en bucle (a '.') en el origen y en el destino: cp no sigue los del origen, así que el
+# Centinela tampoco, y decide enseguida (con un límite de 30 s para que el banco no se cuelgue)
+mkdir -p "$WS/docs/s2" "$WS/docs/l2"
+for n in a b; do ln -s . "$WS/docs/s2/$n"; ln -s . "$WS/docs/l2/$n"; done
+( cd "$WS" && bash_payload "cp -r docs/s2/. docs/l2" | env -u CLAUDE_PROJECT_DIR HOME="$WS/home" \
+    SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY" SENTINEL_OVERRIDES_LOG="$WS/overrides.log" \
+    perl -e 'alarm 30; exec @ARGV' bash "$GUARD_HOOK" ) >/dev/null 2>&1
+r=$?
+[ "$r" = 0 ] || { echo "    con enlaces en bucle, el Centinela debería decidir y permitirlo (salió con $r)" >&2; exit 1; }
 
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────
 guard "{\"cwd\":\"$WS/sentinel\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"mv hooks /tmp/x\"}}"
