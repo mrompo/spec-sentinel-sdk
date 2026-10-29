@@ -358,9 +358,10 @@ glob_matches() (
 # también si empieza por '-' (tras '--' es una ruta, y una opción como -rf no existe ni lleva
 # '/'). Si el comando nombra más rutas de las que el guard comprueba, no se puede saber qué
 # toca: lo decide la regla too-many-paths, que bloquea y que la llave de esa acción salva
-# (revisión de sentinel-paths, P5 = A8). Dejar de mirar a partir de la N dejaría pasar la N+1
+# (revisión de sentinel-paths, P5 = A8). Dejar de mirar a partir de la N dejaría pasar la N+1.
+# TOO_MANY guarda el motivo
 MAX_PATHS=512
-_n=0; TOO_MANY=false
+_n=0; TOO_MANY=""
 add_word() {
   local w o
   [ -n "$1" ] || return
@@ -374,24 +375,96 @@ add_word() {
     [ -d "${w%/*}/" ] || return
   fi
   _n=$((_n+1))
-  [ "$_n" -le "$MAX_PATHS" ] || { TOO_MANY=true; return; }
+  [ "$_n" -le "$MAX_PATHS" ] || {
+    TOO_MANY="el comando nombra más de $MAX_PATHS rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+    return
+  }
   add_target "$w"
+}
+
+# add_tree <destino> <carpeta de origen> → lo que deja en el destino copiar, mover o enlazar
+# una carpeta: cada entrada del origen, con su ruta relativa, dentro del destino. El destino se
+# resuelve una vez y cada entrada cuelga de él, salvo la que ya está allí como enlace, que
+# escribe donde apunta (revisión de la #17). Si el origen tiene más entradas de las que el guard
+# comprueba, o alguna que no puede leer, no se sabe qué deja: lo decide too-many-paths
+MAX_TREE=10000
+add_tree() {
+  local s="$2" ph cn out line p r
+  case "$s" in /*) ;; *) s="$PWD/$s" ;; esac
+  [ -d "$s" ] || return 0
+  # Lo que find no puede leer sale como «find: …» (una entrada sale como «./…»); que head corte
+  # la salida no lo es
+  out="$(cd "$s" 2>/dev/null && { find . -mindepth 1 2>&1 || true; } | head -n "$((MAX_TREE + 1))")" ||
+    out="find: $s"
+  case "$out" in
+    "find: "*|*$'\n'"find: "*)
+      TOO_MANY="el comando copia o enlaza una carpeta que el Centinela no puede leer entera ($2) y no sabe qué deja en el destino"
+      return ;;
+  esac
+  [ -n "$out" ] || return 0
+  [ "$(printf '%s\n' "$out" | wc -l)" -le "$MAX_TREE" ] || {
+    TOO_MANY="el comando copia o enlaza una carpeta de más de $MAX_TREE entradas ($2) y el Centinela no puede comprobarlas todas — cópiala por partes"
+    return
+  }
+  out="$(printf '%s\n' "$out" | sed 's|^\./||')"
+  ph="$(phys_path "$1")"; cn="$(canon "$ph")"
+  [ "$cn" = . ] && cn=""
+  TOUCHED="$TOUCHED
+$(printf '%s\n' "$out" | C="${cn:+$cn/}" awk '{ print ENVIRON["C"] $0 }')"
+  # La configuración de la persona, como en add_target
+  while IFS= read -r line; do
+    p="${line%%	*}"
+    case "$p" in
+      "${ph%/}"/*)
+        printf '%s\n' "$out" | grep -qxF -- "${p#"${ph%/}"/}" && TOUCHED="$TOUCHED
+${line#*	}" ;;
+    esac
+  done <<EOF
+$PERSONAL
+EOF
+  while IFS= read -r r; do
+    [ -L "$ph/$r" ] || continue
+    add_target "$ph/$r"
+    # cp no sigue los enlaces del origen (find tampoco): solo una carpeta de verdad deja algo
+    # dentro, y así un enlace en bucle no hace que el recorrido no acabe
+    [ -L "$s/$r" ] || add_tree "$ph/$r" "$s/$r"
+  done <<EOF
+$out
+EOF
 }
 
 # into_dir <palabras de un tramo> → copiar, mover o enlazar a una carpeta toca, dentro de ella,
 # un fichero con el nombre de cada origen: «cp x/config .git» escribe .git/config aunque el
-# comando no lo nombre (revisión de sentinel-paths, A1)
+# comando no lo nombre (revisión de sentinel-paths, A1). Revisión de la #16: el programa es la
+# primera palabra del tramo que copia, mueve o enlaza, también detrás de un prefijo de
+# ejecución (sudo, env, command…) o de una asignación (que el lector parte por el '='); esa
+# palabra entre los argumentos de otro programa solo puede añadir rutas. El contenido de una
+# carpeta (rsync con '/' al final, -T; 'carpeta/.' ya lo es) va directamente al destino, y lo
+# que hay dentro de una carpeta copiada o enlazada también se toca
 into_dir() {
-  local v="${1##*/}" dest="" w t=0 opts=1 srcs=()
-  case "$v" in cp|mv|ln|install|rsync) ;; *) return 0 ;; esac
+  local v="" dest="" w b t=0 opts=1 tdir=0 srcs=()
+  while [ "$#" -gt 0 ]; do
+    case "${1##*/}" in cp|mv|ln|install|rsync) v="${1##*/}"; break ;; esac
+    shift
+  done
+  [ -n "$v" ] || return 0
   shift
   for w in "$@"; do
     if [ "$t" = 1 ]; then dest="$w"; t=0; continue; fi
     if [ "$opts" = 1 ]; then
       case "$w" in
         --) opts=0; continue ;;
-        -t|--target-directory) t=1; continue ;;
-        -*) continue ;;
+        --target-directory) t=1; continue ;;
+        --no-target-directory) tdir=1; continue ;;
+        --*) continue ;;
+        -*)
+          # rsync -t conserva las fechas; en los demás, -t lleva la carpeta de destino, también
+          # dentro de un grupo (-rt carpeta, -tcarpeta)
+          if [ "$v" != rsync ]; then
+            case "$w" in *T*) tdir=1 ;; esac
+            case "$w" in *t*) b="${w#*t}"; if [ -n "$b" ]; then dest="$b"; else t=1; fi ;; esac
+          fi
+          continue ;;
       esac
     fi
     srcs+=("$w")
@@ -405,10 +478,14 @@ into_dir() {
   case "$dest" in /*) ;; *) dest="$PWD/$dest" ;; esac
   [ -d "$dest" ] || return 0
   for w in ${srcs[@]+"${srcs[@]}"}; do
-    while case "$w" in ?*/) true ;; *) false ;; esac; do w="${w%/}"; done
-    w="${w##*/}"
-    case "$w" in ""|.|..) continue ;; esac
-    add_word "${dest%/}/$w"
+    tilde "$w"; w="$_w"
+    case "$tdir:$v:$w" in 1:*|*:rsync:*/) add_tree "$dest" "$w"; continue ;; esac
+    b="$w"
+    while case "$b" in ?*/) true ;; *) false ;; esac; do b="${b%/}"; done
+    b="${b##*/}"
+    [ -n "$b" ] || continue
+    add_word "${dest%/}/$b"
+    add_tree "${dest%/}/$b" "$w"
   done
 }
 
@@ -437,12 +514,17 @@ if [ -n "$COMMAND" ]; then
   done <<EOF
 $WORDS
 EOF
-  # Lo que cada tramo copia, mueve o enlaza a una carpeta
-  _seg=()
+  # Lo que cada tramo copia, mueve o enlaza a una carpeta, con los comodines ya expandidos
+  _seg=(); _globbed=0
   while IFS= read -r w; do
     case "${w:0:1}" in
-      l) printf -v w '%b' "${w:1}"; _seg+=("$w") ;;
-      s) [ "${#_seg[@]}" -gt 0 ] && into_dir "${_seg[@]}"; _seg=() ;;
+      g)
+        printf -v w '%b' "${w:1}"; tilde "$w"; _globbed=0
+        while IFS= read -r -d '' f; do _globbed=1; _seg+=("$f"); done < <(glob_matches "$_w") ;;
+      l)
+        [ "$_globbed" = 1 ] && { _globbed=0; continue; }
+        printf -v w '%b' "${w:1}"; _seg+=("$w") ;;
+      s) [ "${#_seg[@]}" -gt 0 ] && into_dir "${_seg[@]}"; _seg=(); _globbed=0 ;;
     esac
   done <<EOF
 $WORDS
@@ -688,11 +770,12 @@ eval_policy() {
   apply_rule || true
 }
 
-# Más rutas de las que el guard comprueba: no se sabe qué toca el comando, así que se bloquea, y
-# la llave de esa acción lo salva (revisión de sentinel-paths, P5 = A8)
-if [ "$TOO_MANY" = true ]; then
+# Más rutas o entradas de las que el guard comprueba, o una carpeta que no puede leer: no se sabe
+# qué toca el comando, así que se bloquea, y la llave de esa acción lo salva (revisión de
+# sentinel-paths, P5 = A8, y de la #17)
+if [ -n "$TOO_MANY" ]; then
   CUR_POLICY="$DEFAULT_POLICY"
-  rule_matched too-many-paths block "el comando nombra más de $MAX_PATHS rutas y el Centinela no puede comprobarlas todas — pártelo en comandos más cortos"
+  rule_matched too-many-paths block "$TOO_MANY"
 fi
 
 # De todas las reglas que matchean, en las dos políticas, gana la más estricta y, a igualdad,

@@ -18,6 +18,13 @@ solo por el texto de la ruta.
 - **AND** copiar, mover o enlazar a una carpeta (`cp x/config .git`, `cp -t .git x/config`)
   toca, dentro de ella, un fichero con el nombre de cada origen, y se decide como si el
   comando lo nombrara
+- **AND** lo mismo con el programa detrás de un prefijo de ejecución o de una asignación
+  (`sudo cp`, `env -i cp`, `X=1 cp`), con los orígenes de un comodín (`cp docs/* .git/`), con
+  el contenido de una carpeta (`rsync -a x/ .git/`, `cp -r x/. .git/`, `cp -rT x .git`), con
+  `-t` dentro de un grupo de opciones (`cp -rt .git x/config`) y con lo que hay dentro de una
+  carpeta copiada o enlazada (`cp -r x/.config ~` toca `~/.config/git/config`); una entrada que
+  ya está en el destino como enlace toca lo que apunta; una carpeta de más entradas de las que
+  el hook comprueba, o que no puede leer entera, se bloquea, y la llave de esa acción lo salva
 - **AND** las rutas relativas se resuelven desde la carpeta de la sesión (el `cwd` del tool
   call), no desde la del hook
 - **AND** lo mismo si el programa se escribe por su ruta (`/bin/mv`), con una barra delante
