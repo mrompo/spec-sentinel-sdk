@@ -378,20 +378,67 @@ add_word() {
   add_target "$w"
 }
 
+# add_tree <destino> <carpeta de origen> → lo que deja en el destino copiar, mover o enlazar
+# una carpeta: cada entrada del origen, con su ruta relativa, dentro del destino. Son nombres de
+# lo que aún no existe, así que el destino se resuelve una vez y cada entrada cuelga de él. Si
+# el origen tiene más entradas de las que el guard comprueba, lo decide too-many-paths
+MAX_TREE=10000
+add_tree() {
+  local s="$2" ph cn out line p
+  case "$s" in /*) ;; *) s="$PWD/$s" ;; esac
+  [ -d "$s" ] || return 0
+  out="$(cd "$s" 2>/dev/null && find . -mindepth 1 2>/dev/null | head -n "$((MAX_TREE + 1))" | sed 's|^\./||')"
+  [ -n "$out" ] || return 0
+  [ "$(printf '%s\n' "$out" | wc -l)" -le "$MAX_TREE" ] || { TOO_MANY=true; return; }
+  ph="$(phys_path "$1")"; cn="$(canon "$ph")"
+  [ "$cn" = . ] && cn=""
+  TOUCHED="$TOUCHED
+$(printf '%s\n' "$out" | C="${cn:+$cn/}" awk '{ print ENVIRON["C"] $0 }')"
+  # La configuración de la persona, como en add_target
+  while IFS= read -r line; do
+    p="${line%%	*}"
+    case "$p" in
+      "${ph%/}"/*)
+        printf '%s\n' "$out" | grep -qxF -- "${p#"${ph%/}"/}" && TOUCHED="$TOUCHED
+${line#*	}" ;;
+    esac
+  done <<EOF
+$PERSONAL
+EOF
+}
+
 # into_dir <palabras de un tramo> → copiar, mover o enlazar a una carpeta toca, dentro de ella,
 # un fichero con el nombre de cada origen: «cp x/config .git» escribe .git/config aunque el
-# comando no lo nombre (revisión de sentinel-paths, A1)
+# comando no lo nombre (revisión de sentinel-paths, A1). Revisión de la #16: el programa es la
+# primera palabra del tramo que copia, mueve o enlaza, también detrás de un prefijo de
+# ejecución (sudo, env, command…) o de una asignación (que el lector parte por el '='); esa
+# palabra entre los argumentos de otro programa solo puede añadir rutas. El contenido de una
+# carpeta (rsync con '/' al final, -T; 'carpeta/.' ya lo es) va directamente al destino, y lo
+# que hay dentro de una carpeta copiada o enlazada también se toca
 into_dir() {
-  local v="${1##*/}" dest="" w t=0 opts=1 srcs=()
-  case "$v" in cp|mv|ln|install|rsync) ;; *) return 0 ;; esac
+  local v="" dest="" w b t=0 opts=1 tdir=0 srcs=()
+  while [ "$#" -gt 0 ]; do
+    case "${1##*/}" in cp|mv|ln|install|rsync) v="${1##*/}"; break ;; esac
+    shift
+  done
+  [ -n "$v" ] || return 0
   shift
   for w in "$@"; do
     if [ "$t" = 1 ]; then dest="$w"; t=0; continue; fi
     if [ "$opts" = 1 ]; then
       case "$w" in
         --) opts=0; continue ;;
-        -t|--target-directory) t=1; continue ;;
-        -*) continue ;;
+        --target-directory) t=1; continue ;;
+        --no-target-directory) tdir=1; continue ;;
+        --*) continue ;;
+        -*)
+          # rsync -t conserva las fechas; en los demás, -t lleva la carpeta de destino, también
+          # dentro de un grupo (-rt carpeta, -tcarpeta)
+          if [ "$v" != rsync ]; then
+            case "$w" in *T*) tdir=1 ;; esac
+            case "$w" in *t*) b="${w#*t}"; if [ -n "$b" ]; then dest="$b"; else t=1; fi ;; esac
+          fi
+          continue ;;
       esac
     fi
     srcs+=("$w")
@@ -405,10 +452,14 @@ into_dir() {
   case "$dest" in /*) ;; *) dest="$PWD/$dest" ;; esac
   [ -d "$dest" ] || return 0
   for w in ${srcs[@]+"${srcs[@]}"}; do
-    while case "$w" in ?*/) true ;; *) false ;; esac; do w="${w%/}"; done
-    w="${w##*/}"
-    case "$w" in ""|.|..) continue ;; esac
-    add_word "${dest%/}/$w"
+    tilde "$w"; w="$_w"
+    case "$tdir:$v:$w" in 1:*|*:rsync:*/) add_tree "$dest" "$w"; continue ;; esac
+    b="$w"
+    while case "$b" in ?*/) true ;; *) false ;; esac; do b="${b%/}"; done
+    b="${b##*/}"
+    [ -n "$b" ] || continue
+    add_word "${dest%/}/$b"
+    add_tree "${dest%/}/$b" "$w"
   done
 }
 
@@ -437,12 +488,17 @@ if [ -n "$COMMAND" ]; then
   done <<EOF
 $WORDS
 EOF
-  # Lo que cada tramo copia, mueve o enlaza a una carpeta
-  _seg=()
+  # Lo que cada tramo copia, mueve o enlaza a una carpeta, con los comodines ya expandidos
+  _seg=(); _globbed=0
   while IFS= read -r w; do
     case "${w:0:1}" in
-      l) printf -v w '%b' "${w:1}"; _seg+=("$w") ;;
-      s) [ "${#_seg[@]}" -gt 0 ] && into_dir "${_seg[@]}"; _seg=() ;;
+      g)
+        printf -v w '%b' "${w:1}"; tilde "$w"; _globbed=0
+        while IFS= read -r -d '' f; do _globbed=1; _seg+=("$f"); done < <(glob_matches "$_w") ;;
+      l)
+        [ "$_globbed" = 1 ] && { _globbed=0; continue; }
+        printf -v w '%b' "${w:1}"; _seg+=("$w") ;;
+      s) [ "${#_seg[@]}" -gt 0 ] && into_dir "${_seg[@]}"; _seg=(); _globbed=0 ;;
     esac
   done <<EOF
 $WORDS
