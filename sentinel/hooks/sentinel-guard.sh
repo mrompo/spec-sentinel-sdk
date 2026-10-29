@@ -425,7 +425,9 @@ EOF
   while IFS= read -r r; do
     [ -L "$ph/$r" ] || continue
     add_target "$ph/$r"
-    add_tree "$ph/$r" "$s/$r"
+    # cp no sigue los enlaces del origen (find tampoco): solo una carpeta de verdad deja algo
+    # dentro, y así un enlace en bucle no hace que el recorrido no acabe
+    [ -L "$s/$r" ] || add_tree "$ph/$r" "$s/$r"
   done <<EOF
 $out
 EOF
