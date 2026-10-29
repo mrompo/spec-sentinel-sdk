@@ -19,6 +19,8 @@ solo por el texto de la ruta.
   (`\mv`) o entre comillas (`'mv'`), o si el comando lo separa del anterior con un salto de
   línea o un tabulador escritos como escape del JSON: las reglas del comando deciden sobre lo
   que ejecuta bash
+- **AND** una comilla dentro de un comentario, escapada dentro de `$'…'` o suelta en el cuerpo
+  de un heredoc no esconde las líneas que le siguen
 - **AND** las subcarpetas que no son enforcement siguen libres (p. ej. `mv .claude/skills/a
   .claude/skills/b` o `rm -r sentinel/.backup`)
 - **AND** entrar antes en la carpeta (`cd sentinel && rm -r hooks`) es el límite documentado
