@@ -2,7 +2,9 @@
 # SC-sentinel-paths-08: leer desde la shell un fichero protegido por self-protection o
 #   managed-files no se bloquea cuando el comando solo lee (lista cerrada de lectores, sin
 #   redirecciones, sustituciones ni opciones que escriben). Lo que escribe, aunque empiece
-#   leyendo, sigue bloqueado, e isolation-env sigue bloqueando la lectura.
+#   leyendo, sigue bloqueado, e isolation-env sigue bloqueando la lectura. Un separador entre
+#   comillas no parte el comando, una redirección a /dev/null junto a un separador sigue
+#   siendo lectura, y printf -v, que asigna, no lo es (revisión de sentinel-paths, P8, A5, V6).
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -26,6 +28,12 @@ cd docs && grep -rn llave ../sentinel/README.md 2>/dev/null
 ls -la sentinel/hooks && echo ---
 grep -c x CHANGELOG.md 2>&1 | head -1
 cat ~/.gitconfig
+grep -E 'a|b' sentinel/policy.yaml
+grep -n "a;b" sentinel/policy.yaml
+git diff main -- sentinel/policy.yaml | grep -E '^(a|b)'
+cat sentinel/policy.yaml 2>/dev/null; echo x
+tail -3 sentinel/overrides.log 2>&1|head -1
+cat sentinel/policy.yaml >/dev/null 2>/dev/null
 EOF
 
 while IFS= read -r cmd; do
@@ -53,6 +61,10 @@ git diff '--output=sentinel/hooks/sentinel-guard.sh'
 git diff "--output=sentinel/policy.yaml"
 git log -1 --out""put=sentinel/policy.yaml
 git show \--output sentinel/policy.yaml
+printf -v PATH x; cat sentinel/policy.yaml
+grep 'a|b' sentinel/policy.yaml | tee sentinel/.override
+cat sentinel/policy.yaml 2>/dev/null; rm sentinel/policy.yaml
+cat sentinel/policy.yaml 2>/dev/null>sentinel/policy.yaml
 EOF
 
 # Unas comillas en un comando que solo lee no lo convierten en escritura (revisión de la #12)

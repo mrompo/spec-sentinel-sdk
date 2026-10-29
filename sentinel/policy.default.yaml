@@ -14,7 +14,9 @@
 #                                (a igualdad, la primera)
 #     - id:            único y obligatorio en las dos políticas (lo referencia overrides.log)
 #       tool:          regex sobre tool_name (Bash, Edit|Write, …)
-#       command_re:    regex sobre el comando (solo tool Bash)
+#       command_re:    regex sobre el comando (solo tool Bash): tal como llega, con los
+#                      escapes del JSON deshechos y cada tramo como lo ve bash (sin comillas ni
+#                      escapes, cada palabra por su nombre: /bin/mv es mv); basta con que case una
 #       path_re:       regex sobre file_path (tools de fichero) y el comando, también sobre la
 #                      ruta física de lo que tocan (enlaces resueltos; la configuración de git
 #                      real se nombra .git/…, la de Claude Code de la persona .claude/…)
@@ -72,7 +74,8 @@ rules:
   # permisos o borrarlas deja el Centinela o la Esclusa sin efecto (sin el script el hook sale
   # con 127, que no bloquea). Se decide por la ruta física de cada ruta del comando, así que
   # vale cualquier grafía (./sentinel/, "sentinel", la ruta absoluta) y sus subcarpetas libres
-  # siguen libres (SC-sentinel-paths-01).
+  # siguen libres (SC-sentinel-paths-01). El programa se reconoce por su nombre, se escriba como
+  # se escriba (/bin/mv, \mv, 'mv'), porque command_re ve también el comando como lo ve bash.
   - id: protect-enforcement-dirs
     tool: Bash
     command_re: (^|[;&|(`[:space:]])(mv|cp|rsync|ln|rm|rmdir|unlink|chmod|chown|chflags|git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(rm|mv))[[:space:]]
@@ -98,7 +101,12 @@ rules:
     # sentinel-paths (SC-sentinel-paths-03): también las formas de cambiar core.hooksPath sin
     # nombrarlo — borrar o renombrar la sección core, un include.path o includeIf.*.path (en
     # git config o con git -c) y abrir la configuración en un editor
-    command_re: (--no-verify|core\.hooksPath|HUSKY=0|SENTINEL_[A-Z_]+=|--(remove|rename)-section[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[[:space:]"'])[Ii]nclude([Ii]f\.[^[:space:]=]*)?\.path|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$))
+    # Revisión de sentinel-paths (A2, A3): también los subcomandos sin guiones de git 2.46
+    # (remove-section, rename-section, edit); las claves en cualquier caja, porque git no
+    # distingue mayúsculas en la sección ni en la clave; y include.path tras un '='
+    # (--config-env=include.path=…, GIT_CONFIG_KEY_0=include.path). Entre el subcomando y la
+    # sección pueden ir opciones (remove-section --local core, revisión de la #15)
+    command_re: (--no-verify|[Cc][Oo][Rr][Ee]\.[Hh][Oo][Oo][Kk][Ss][Pp][Aa][Tt][Hh]|HUSKY=0|SENTINEL_[A-Z_]+=|(--|[[:space:]])(remove|rename)-section([[:space:]]+[^[:space:];&|]+)*[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[^[:alnum:]_.-])[Ii][Nn][Cc][Ll][Uu][Dd][Ee]([Ii][Ff]\.[^[:space:]=]*)?\.[Pp][Aa][Tt][Hh]|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$)|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+(-[^[:space:]]+[[:space:]]+)*edit([[:space:];&|]|$))
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 

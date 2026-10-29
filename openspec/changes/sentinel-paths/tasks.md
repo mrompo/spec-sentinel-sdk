@@ -112,7 +112,8 @@ lectura sobre una protección ya basada en la ruta física.
        variables, fail-closed). `sentinel/settings.fragment.json` no se versiona: `setup` lo
        genera de ese mismo fichero. En el instalador cambia solo el aviso del `PATH`, que ya no
        es cierto. Comprobado en macOS (banco completo en un clon limpio); Linux, en la CI
-- [ ] 9. 👤 Reiniciar la sesión del agente y comprobar con `/hooks` que el cableado nuevo carga
+- [x] 9. 👤 Reiniciar la sesión del agente y comprobar con `/hooks` que el cableado nuevo carga
+       (la persona, 2026-10-28)
 - [x] 10. Banco en verde; en `sentinel/README.md` salen los límites «hook ausente» y «PATH de la
         sesión»; `STATUS.md`. `merge` (PR #13, `cacbe86`, 2026-10-28). Banco en verde (hooks
         28/28, githooks 16/16, install 17/17), y en el README los dos límites dejan su sitio a
@@ -133,15 +134,16 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
 
 **PR 4 · Lo que ejecuta bash** (temas 1 y 2 de la revisión)
 
-- [ ] R1. Casos en rojo: un salto de línea o un tabulador escritos como escape del JSON delante
+- [x] R1. Casos en rojo (`sc-29` nuevo, y `sc-23` y `sc-26`): un salto de línea o un tabulador escritos como escape del JSON delante
        del verbo (V1); el verbo por su ruta, con barra o entre comillas (V2); `git config
        remove-section`/`rename-section`/`edit` sin guiones (A2); `core.hookspath` en otra caja,
        `include.PATH`, `--config-env` y `GIT_CONFIG_KEY_n` (A3 = V3); y en solo lectura, un `\|`
        entre comillas (P8 = V7), `2>/dev/null` junto a un separador (A5) y `printf -v` (V6)
-- [ ] R2. 👤 Parche: las reglas del comando deciden sobre el comando decodificado y el verbo de
+- [x] R2. 👤 Parche `sentinel-paths-4.patch` (aplicado por la persona, `c37d293`): las reglas del comando deciden sobre el comando decodificado y el verbo de
        cada tramo sin comillas ni escapes y reducido a su nombre; los tramos de solo lectura se
-       parten respetando las comillas; claves de git sin distinguir mayúsculas. Banco en verde y
-       `merge`
+       parten respetando las comillas; claves de git sin distinguir mayúsculas. En un clon
+       limpio con el parche, el banco entero en verde (hooks 29/29, githooks 16/16, install
+       17/17) y los trece mutantes rompen algún caso. Falta el `merge`
 
 **PR 5 · Carpetas y ruta física** (tema 3 y el tope de 128 rutas)
 

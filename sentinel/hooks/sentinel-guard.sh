@@ -160,26 +160,10 @@ $PERSONAL
 EOF
 }
 [ -n "$NORM_PATH" ] && add_target "$NORM_PATH"
-# cmd_words → una palabra del comando por línea, como la vería la shell: deshace los escapes
-# del JSON tal cual (\t es un tabulador, \u00XX su carácter), respeta '…' y "…" (una ruta con
-# espacios es una sola palabra; dentro de "…" la barra solo escapa $ ` " \ y el salto de línea)
-# y el escape con '\', y parte por espacios, separadores (; | & < > ( ) `) y '=' (--file=x,
-# include.path=x). Cada palabra sale con '\' y el salto de línea escapados (\\ y \n), para que
-# una palabra con saltos siga en una sola línea; quien la lee la deshace con printf %b. Sale
-# como 'l<palabra>', precedida de 'g<patrón>' si lleva un comodín sin comillas (* ? [): en el
-# patrón, lo que iba entre comillas o escapado se escapa con '\', como lo vería la shell
-cmd_words() {
+# json_text → el comando tal como lo recibe bash: los escapes del JSON deshechos (\n es un
+# salto de línea, \t un tabulador, \u00XX su carácter, con los pares sustitutos)
+json_text() {
   printf '%s' "$COMMAND" | LC_ALL=C awk '
-    function esc(x,   r, k, ch) {
-      r = ""
-      for (k = 1; k <= length(x); k++) {
-        ch = substr(x, k, 1)
-        if (ch == "\\") r = r "\\\\"; else if (ch == "\n") r = r "\\n"; else r = r ch
-      }
-      return r
-    }
-    function flush() { if (has) { if (g) print "g" esc(pw); print "l" esc(w) }; w = ""; pw = ""; has = 0; g = 0 }
-    function lit(ch) { w = w ch; pw = pw (index("*?[]\\", ch) ? "\\" ch : ch) }
     function hex(h,   k, x, v) {
       if (length(h) < 4) return -1
       v = 0
@@ -197,8 +181,9 @@ cmd_words() {
       if (v < 65536) return sprintf("%c%c%c", 224 + int(v / 4096), 128 + int(v / 64) % 64, 128 + v % 64)
       return sprintf("%c%c%c%c", 240 + int(v / 262144), 128 + int(v / 4096) % 64, 128 + int(v / 64) % 64, 128 + v % 64)
     }
-    {
-      s = $0; t = ""; n = length(s)
+    { s = (NR > 1 ? s "\n" : "") $0 }
+    END {
+      t = ""; n = length(s)
       for (i = 1; i <= n; i++) {
         c = substr(s, i, 1)
         if (c == "\\" && i < n) {
@@ -216,10 +201,76 @@ cmd_words() {
           else t = t d
         } else t = t c
       }
-      n = length(t); q = ""; w = ""; pw = ""; has = 0; g = 0
+      printf "%s", t
+    }'
+}
+
+# cmd_words <texto> → una palabra del comando por línea, como la vería la shell: respeta '…' y
+# "…" (una ruta con espacios es una sola palabra; dentro de "…" la barra solo escapa $ ` " \ y
+# el salto de línea) y el escape con '\', y parte por espacios, separadores (; | & ( ) ` y el
+# salto de línea), redirecciones (< >) y '=' (--file=x, include.path=x). Cada palabra sale con
+# '\' y el salto de línea escapados (\\ y \n), para que una palabra con saltos siga en una sola
+# línea; quien la lee la deshace con printf %b. Sale como 'l<palabra>', precedida de
+# 'g<patrón>' si lleva un comodín sin comillas (* ? [): en el patrón, lo que iba entre comillas
+# o escapado se escapa con '\', como lo vería la shell. Cada separador sale como 's', y cada
+# tramo, como 'n<tramo>': sus palabras separadas por un espacio, cada una por su nombre (lo
+# que sigue a su última '/') y con sus espacios cambiados por '_', para que las reglas del
+# comando reconozcan el programa se escriba como se escriba (/bin/mv, \mv, 'mv'). Lo que bash
+# no lee como palabras no abre comillas que se coman las líneas siguientes (revisión de la
+# #15): un comentario (# al principio de una palabra) se salta hasta el final de la línea; en
+# $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de un heredoc
+# (<<FIN, <<-FIN, <<'FIN') se lee línea a línea, sin comillas que pasen de una a otra ni
+# comentarios, hasta la línea que lo cierra: sus palabras siguen contando, así que un << que
+# no abre un heredoc (el de una expresión aritmética) no esconde nada
+cmd_words() {
+  printf '%s' "$1" | LC_ALL=C awk '
+    function esc(x,   r, k, ch) {
+      r = ""
+      for (k = 1; k <= length(x); k++) {
+        ch = substr(x, k, 1)
+        if (ch == "\\") r = r "\\\\"; else if (ch == "\n") r = r "\\n"; else r = r ch
+      }
+      return r
+    }
+    function flush(   b) {
+      if (has) {
+        if (g) print "g" esc(pw)
+        print "l" esc(w)
+        b = w
+        if (b ~ /\/./) { sub(/\/+$/, "", b); sub(/^.*\//, "", b) }
+        gsub(/[ \t\n\r]/, "_", b)
+        seg = seg (seg == "" ? "" : " ") b
+      }
+      w = ""; pw = ""; has = 0; g = 0
+    }
+    function sep() { flush(); if (seg != "") print "n" seg; seg = ""; print "s" }
+    function lit(ch) { w = w ch; pw = pw (index("*?[]\\", ch) ? "\\" ch : ch) }
+    # hend → tras un salto de línea dentro de un heredoc: si la línea siguiente lo cierra, la
+    # salta y pasa al siguiente heredoc pendiente de la misma línea, o sale del cuerpo
+    function hend(   j, line) {
+      while (hb) {
+        j = index(substr(t, i + 1), "\n")
+        line = j ? substr(t, i + 1, j - 1) : substr(t, i + 1)
+        if (hs[hq]) sub(/^\t+/, "", line)
+        if (line != hd[hq]) return
+        i = j ? i + j : n
+        if (++hq > hn) { hb = 0; hn = 0; hq = 1 }
+      }
+    }
+    { t = (NR > 1 ? t "\n" : "") $0 }
+    END {
+      n = length(t); q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""
+      hb = 0; hn = 0; hq = 1
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
+        if (hb && c == "\n") q = ""
         if (q == "\047") { if (c == q) q = ""; else lit(c); continue }
+        if (q == "$") {
+          if (c == "\\" && i < n) { lit(c); lit(substr(t, ++i, 1)) }
+          else if (c == "\047") q = ""
+          else lit(c)
+          continue
+        }
         if (q == "\"") {
           if (c == "\"") q = ""
           else if (c == "\\" && i < n) {
@@ -229,12 +280,37 @@ cmd_words() {
           else lit(c)
           continue
         }
+        if (c == "$" && substr(t, i + 1, 1) == "\047") { q = "$"; i++; has = 1; continue }
         if (c == "\047" || c == "\"") { q = c; has = 1; continue }
         if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { lit(d); has = 1 }; continue }
-        if (index(" \t\n;|&<>()`=", c)) { flush(); continue }
+        if (!hb && c == "#" && !has && (i == 1 || index(" \t\n;|&()`", substr(t, i - 1, 1)))) {
+          while (i < n && substr(t, i + 1, 1) != "\n") i++
+          continue
+        }
+        if (!hb && c == "<" && substr(t, i + 1, 1) == "<") {
+          flush(); i += 2; st = 0
+          if (substr(t, i, 1) == "-") { st = 1; i++ }
+          while (i <= n && index(" \t", substr(t, i, 1))) i++
+          dl = ""
+          while (i <= n && !index(" \t\n;|&()<>", (ch = substr(t, i, 1)))) {
+            if (ch == "\047" || ch == "\"") {
+              k = index(substr(t, i + 1), ch)
+              if (!k) { dl = dl substr(t, i + 1); i = n + 1; break }
+              dl = dl substr(t, i + 1, k - 1); i += k + 1; continue
+            }
+            if (ch == "\\" && i < n) { dl = dl substr(t, i + 1, 1); i += 2; continue }
+            dl = dl ch; i++
+          }
+          hd[++hn] = dl; hs[hn] = st
+          i--
+          continue
+        }
+        if (c == "\n") { sep(); if (hq <= hn) { hb = 1; hend() }; continue }
+        if (index(";|&()`", c)) { sep(); continue }
+        if (index(" \t<>=", c)) { flush(); continue }
         w = w c; pw = pw c; has = 1; if (index("*?[", c)) g = 1
       }
-      flush()
+      sep()
     }'
 }
 
@@ -277,11 +353,21 @@ add_word() {
   add_target "$w"
 }
 
+# El comando como lo recibe bash, sus palabras y sus tramos (los ven las reglas del comando)
+CMD_TEXT=""; WORDS=""; CMD_NORM=""
+if [ -n "$COMMAND" ]; then
+  CMD_TEXT="$(json_text)"
+  WORDS="$(cmd_words "$CMD_TEXT")"
+  CMD_NORM="$(printf '%s\n' "$WORDS" | sed -n 's/^n//p')"
+fi
+
 if [ -n "$COMMAND" ]; then
   # Un patrón con coincidencias cuenta por ellas; sin coincidencias, la shell deja la palabra tal cual
   _globbed=0
   while IFS= read -r w; do
-    _k="${w:0:1}"; printf -v w '%b' "${w:1}"
+    _k="${w:0:1}"
+    case "$_k" in g|l) ;; *) continue ;; esac
+    printf -v w '%b' "${w:1}"
     if [ "$_k" = g ]; then
       tilde "$w"; _globbed=0
       while IFS= read -r -d '' f; do _globbed=1; add_word "$f"; done < <(glob_matches "$_w")
@@ -290,15 +376,23 @@ if [ -n "$COMMAND" ]; then
     [ "$_globbed" = 1 ] && { _globbed=0; continue; }
     add_word "$w"
   done <<EOF
-$(cmd_words)
+$WORDS
 EOF
 fi
 
 # Superficie de rutas: relativa al repo + absoluta + comando (un shell toca ficheros sin
-# file_path) + la ruta física de lo que se toca, nombrada como la política y absoluta
+# file_path), también decodificado, + la ruta física de lo que se toca, nombrada como la
+# política y absoluta
 PATH_SURFACE="$REL_PATH
 $FILE_PATH
-$COMMAND$TOUCHED$PHYS_ALL"
+$COMMAND
+$CMD_TEXT$TOUCHED$PHYS_ALL"
+# Superficie del comando: tal como llega, con los escapes del JSON deshechos y sus tramos como
+# los ve bash (sin comillas ni escapes, cada programa por su nombre). Cada forma solo puede
+# hacer que una regla case más, nunca menos
+CMD_SURFACE="$COMMAND
+$CMD_TEXT
+$CMD_NORM"
 
 ACTIVE_CHANGE=""
 if [ -d "$REPO_ROOT_DIR/openspec/changes" ]; then
@@ -308,36 +402,49 @@ fi
 ACTION_DESC="${TOOL_NAME}:${COMMAND:-${REL_PATH:-$FILE_PATH}}"
 
 # ── Solo lee (SC-sentinel-paths-08) ──────────────────────────────────────────────────────
-# Lista cerrada, sin parser de shell: el comando solo lee si cada tramo (separado por ; && ||
-# | & o un salto de línea) empieza por un lector conocido, sin redirecciones (salvo a
-# /dev/null y 2>&1), sustituciones, asignaciones ni opciones que escriben. Ante la duda, no
-# solo lee y se evalúa como siempre. Lo aplican las reglas con skip_read_only: true.
-is_read_only() {
-  local c seg
-  [ "$TOOL_NAME" = Bash ] && [ -n "$COMMAND" ] || return 1
-  # Un \u00XX del JSON puede ser un separador o una redirección (\u003b, \u003e):
-  # esta lectura no los decodifica, así que ante uno el comando no cuenta como solo lectura
-  case "$COMMAND" in *'\u'*) return 1 ;; esac
-  c="$(printf '%s' "$COMMAND" | sed -e 's/\\n/;/g' -e 's/\\t/ /g')"
-  case "$c" in *'$('*|*'`'*|*'<('*|*'>('*|*'<>'*) return 1 ;; esac
-  c="$(printf '%s' "$c" | sed -E -e 's#(^|[[:space:]])(&|[0-9])?>>?[[:space:]]*/dev/null([[:space:]]|$)# #g' -e 's#(^|[[:space:]])[0-9]?>&[0-9]([[:space:]]|$)# #g')"
-  case "$c" in *'>'*|*'<'*) return 1 ;; esac
-  while IFS= read -r seg; do
-    set -f; set -- $seg; set +f
-    [ "$#" -gt 0 ] || continue
-    case "$1" in
-      cat|head|tail|wc|grep|ls|stat|diff|cmp|cut|tr|nl|echo|printf|true|cd) ;;
-      git) case "${2:-}" in diff|log|show|status|blame|ls-files|rev-parse|cat-file) ;; *) return 1 ;; esac ;;
-      *) return 1 ;;
-    esac
-    # --output escribe un fichero. Se busca sin comillas ni barras, como lo recibe el programa
-    # ('--output=x', --out""put, \--output); quitarlas solo puede hacer que más comandos
-    # dejen de contar como lectura
-    case " $(printf '%s' "$seg" | tr -d "\"'\\\\") " in *[[:space:]]--output[[:space:]=]*) return 1 ;; esac
-  done <<EOF
-$(printf '%s' "$c" | sed -e 's/||/;/g' -e 's/&&/;/g' | tr ';|&' '\n\n\n')
-EOF
+# Lista cerrada, sin parser de shell: el comando solo lee si cada tramo (partido como lo parte
+# bash: un separador entre comillas no parte nada) empieza por un lector conocido, sin
+# redirecciones (salvo a /dev/null y 2>&1), sustituciones, asignaciones ni opciones que
+# escriben. Ante la duda, no solo lee y se evalúa como siempre. Lo aplican las reglas con
+# skip_read_only: true.
+ro_segment() { # "$@" = las palabras de un tramo, sin comillas ni escapes → 0 si solo lee
+  local w
+  [ "$#" -gt 0 ] || return 0
+  case "$1" in
+    cat|head|tail|wc|grep|ls|stat|diff|cmp|cut|tr|nl|echo|printf|true|cd) ;;
+    git) case "${2:-}" in diff|log|show|status|blame|ls-files|rev-parse|cat-file) ;; *) return 1 ;; esac ;;
+    *) return 1 ;;
+  esac
+  for w in "$@"; do
+    # --output escribe un fichero; printf -v asigna una variable
+    case "$w" in --output|--output=*) return 1 ;; esac
+    if [ "$1" = printf ]; then case "$w" in -v*) return 1 ;; esac; fi
+  done
   return 0
+}
+is_read_only() {
+  local c w k seg=()
+  [ "$TOOL_NAME" = Bash ] && [ -n "$CMD_TEXT" ] || return 1
+  c="$CMD_TEXT"
+  case "$c" in *'$('*|*'`'*|*'<('*|*'>('*|*'<>'*) return 1 ;; esac
+  # Las redirecciones a /dev/null y entre descriptores (2>&1) no escriben: se quitan, también
+  # pegadas a un separador o seguidas, hasta que no quede ninguna
+  while :; do
+    w="$(printf '%s' "$c" | sed -E -e 's#(^|[[:space:];&|])(&|[0-9])?>>?[[:space:]]*/dev/null([[:space:];&|]|$)#\1 \3#g' -e 's#(^|[[:space:];&|])[0-9]?>&[0-9]([[:space:];&|]|$)#\1 \2#g')"
+    [ "$w" = "$c" ] && break
+    c="$w"
+  done
+  case "$c" in *'>'*|*'<'*) return 1 ;; esac
+  while IFS= read -r w; do
+    k="${w:0:1}"
+    case "$k" in
+      l) printf -v w '%b' "${w:1}"; seg+=("$w") ;;
+      s) ro_segment ${seg[@]+"${seg[@]}"} || return 1; seg=() ;;
+    esac
+  done <<EOF
+$(cmd_words "$c")
+EOF
+  ro_segment ${seg[@]+"${seg[@]}"}
 }
 READ_ONLY=false
 is_read_only && READ_ONLY=true
@@ -442,7 +549,7 @@ apply_rule() {
   if [ -n "$r_tool" ]; then match "$TOOL_NAME" "^($r_tool)$" || return 1; fi
   if [ -n "$r_command_re" ]; then
     [ -n "$COMMAND" ] || return 1
-    match "$COMMAND" "$r_command_re" || return 1
+    match "$CMD_SURFACE" "$r_command_re" || return 1
   fi
   if [ -n "$r_path_re" ]; then
     match "$PATH_SURFACE" "$r_path_re" -i || return 1
