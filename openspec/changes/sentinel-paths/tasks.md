@@ -11,7 +11,7 @@ que toca el enforcement es un fichero protegido: lo entrega el agente como parch
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
 **Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
-2 de `apply` va por la revisión de la PR 5 (las PRs 4 y 5 en `main` por la #15 y la #16).
+2 de `apply` va por la PR 6 (las PRs 4 y 5 en `main` por la #15, la #16 y la #17).
 
 ## Engine · antes de teclear
 
@@ -192,8 +192,14 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        quitar el git del sistema) y que `setup` detecta un cableado que no deja pasar nada; de
        *dubious ownership*, que el motivo es lo que dice git (como no-root no se puede
        reproducir)
-- [ ] R6. 👤 Parche (cableado, `setup`, guard y `breakglass.sh`), banco en verde, `STATUS.md` y
-       `sc-28` al día (A10), deuda P7 y P9 registrada, y `merge`
+- [x] R6. 👤 Parche `sentinel-paths-6.patch` (aplicado por la persona, `c0bea22`): el cableado
+       con las carpetas de Git for Windows, Nix y linuxbrew detrás de las del sistema, el motivo
+       sin git con el PATH y lo que dice git, y el de una rama sin el SDK; la prueba de humo de
+       `setup` a través del cableado; la llave sin sangría en el Centinela y en la Esclusa; y con
+       `SENTINEL_OVERRIDE`, la llave de otra acción se conserva. En un clon con el parche, el
+       banco entero en verde (hooks 30/30, githooks 16/16, install 18/18) y los doce mutantes
+       rompen algún caso. `STATUS.md` y `sc-28` al día (A10) y la deuda P7 y P9 registrada en
+       `STATUS.md`. Falta el `merge`
 
 **Tribunal**
 
