@@ -207,5 +207,7 @@ toda la sesión, no se ata.
 - **AND** con `SENTINEL_OVERRIDE` activo, la excepción sale de la sesión y una llave atada a
   otra acción se conserva; la llave de esta misma acción se gasta, porque si quedara valdría
   para repetirla cuando ya no haya excepción de sesión
+- **AND** el `para:` y la acción se comparan sin los espacios del final: la llave del aviso de
+  una acción que acaba en espacio la autoriza y, con `SENTINEL_OVERRIDE`, se gasta igual
 - **AND** una acción que contiene la autorizada pero no es ella (`para: Bash:git diff x` frente
   a `git diff x; rm -r sentinel`) no la gasta
