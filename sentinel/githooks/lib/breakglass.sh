@@ -41,9 +41,10 @@ esclusa_reject() {
     line="$(printf '%s | esclusa:%s | %s | %s' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hook" \
       "$(printf '%s' "$what" | tr '\n' ' ')" "$(printf '%s' "$reason" | sed -e 's/[[:space:]]*$//')")"
     if mkdir -p "$(dirname "$log")" 2>/dev/null && printf '%s\n' "$line" >>"$log" 2>/dev/null; then
-      # Un solo uso: se consume DESPUÉS de registrar, y solo si la excepción salió de la llave
-      # (con SENTINEL_OVERRIDE, una llave para otra acción se conserva: sentinel-paths, V4)
-      if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ]; then
+      # Un solo uso: se consume DESPUÉS de registrar, si la excepción salió de la llave o si es
+      # la de este hook (con SENTINEL_OVERRIDE, solo una llave para otra acción se conserva:
+      # sentinel-paths, V4; la de este hook valdría para repetir el salto sin la sesión, #18)
+      if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ] || [ "$(_bg_para "$token")" = "esclusa:$hook" ]; then
         [ -f "$token" ] && rm -f "$token"
       fi
       echo "⚠ [Esclusa] Excepción aplicada: rechazo permitido y auditado en sentinel/overrides.log — ${reason}" >&2

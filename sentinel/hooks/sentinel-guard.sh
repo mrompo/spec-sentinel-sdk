@@ -646,9 +646,10 @@ log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se
   mkdir -p "$(dirname "$OVERRIDES_LOG")" 2>/dev/null
   printf '%s\n' "$line" >> "$OVERRIDES_LOG" 2>/dev/null \
     || deny "[$1] override rechazado: no se pudo escribir la auditoría en $OVERRIDES_LOG — sin registro no hay excepción"
-  # Token de un solo uso, que se gasta solo si la excepción salió de él: con SENTINEL_OVERRIDE
-  # activo, una llave para otra acción se conserva (revisión de sentinel-paths, V4)
-  if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ]; then
+  # Token de un solo uso: se gasta si la excepción salió de él o si es de esta misma acción. Con
+  # SENTINEL_OVERRIDE activo, solo una llave para otra acción se conserva (revisión de
+  # sentinel-paths, V4); la de esta, si quedara, valdría para repetirla sin la sesión (#18)
+  if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ] || [ "$(token_para)" = "$ACTION_DESC" ]; then
     [ -f "$OVERRIDE_TOKEN" ] && rm -f "$OVERRIDE_TOKEN"
   fi
   return 0
