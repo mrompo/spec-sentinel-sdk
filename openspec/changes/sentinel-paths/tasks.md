@@ -215,7 +215,12 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        SC-sentinel-paths-10); sin el Centinela, el motivo restaura desde `HEAD` y, con el SDK aún
        sin versionar, manda reinstalarlo con `setup`. Casos en `e9be393` (`sc-31` nuevo, `sc-28` y
        `sc-27`), delta y README en `f0fba7e`; banco entero en verde (hooks 31/31) y los veinticinco
-       mutantes rompen algún caso. Falta el `merge`
+       mutantes rompen algún caso. Tercera pasada de la #18, en `sentinel-paths-6d.patch`
+       (`baa7be7`): con `SENTINEL_OVERRIDE`, la llave de esa misma acción (o de ese hook en la
+       Esclusa) se gasta, porque si quedara valdría para repetirla sin la sesión; solo se
+       conserva la de otra. Casos en `6d6540b` (hooks `sc-27`, githooks `sc-13`, y `sc-28` con
+       espacios en la ruta), deltas en `c157709`; banco entero en verde (hooks 31/31, githooks
+       16/16, install 18/18) y los veintisiete mutantes rompen algún caso. Falta el `merge`
 
 **Tribunal**
 
