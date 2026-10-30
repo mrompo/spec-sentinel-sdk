@@ -95,8 +95,12 @@ for sh in bash sh; do
   if [ "$sh" = bash ]; then
     # El agente no puede ejecutar la llave del aviso: el comando escribe la llave del proyecto
     aviso="$RH_ERR"
-    guard "$(jq -n --arg c "$(key_block "$aviso")" '{tool_name: "Bash", tool_input: {command: $c}}')"
+    bloque="$(key_block "$aviso")"
+    payload="$(jq -n --arg c "$bloque" '{tool_name: "Bash", tool_input: {command: $c}}')"
+    [ -n "$bloque" ] && [ -n "$payload" ] || fail_case "no se pudo preparar el comando del aviso (¿falta jq?)"
+    guard "$payload"
     assert_exit 2 || fail_case "el agente no debería poder escribir la llave con el comando del aviso"
+    assert_err_contains "[self-protection]" || fail_case "el comando del aviso debería bloquearse por self-protection: $RH_ERR"
     RH_ERR="$aviso"
   fi
   paste_key "$RH_ERR" "$sh" || fail_case "el aviso no trae la llave"

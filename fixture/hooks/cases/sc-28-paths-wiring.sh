@@ -3,9 +3,10 @@
 #   (ni el bash ni el grep del PATH, ni BASH_ENV, SHELLOPTS, funciones exportadas o GIT_DIR), y
 #   el Centinela decide como sin ese entorno.
 # SC-sentinel-paths-09: si el Centinela no está, no se puede leer o termina con un código que no
-#   es ni 0 ni 2, el cableado sale con 2 y dice cómo restaurarlo; en una rama sin el SDK, cómo
-#   volver. Sin un git que responda en el proyecto, sale con 2 y dice por qué: que no está
-#   instalado o lo que dice git (revisión de sentinel-paths, P3, P6 = A9).
+#   es ni 0 ni 2, el cableado sale con 2 y dice cómo restaurarlo desde HEAD; en una rama sin el
+#   SDK, cómo volver; con el SDK aún sin versionar, cómo reinstalarlo (revisión de la #18). Sin
+#   un git que responda en el proyecto, sale con 2 y dice por qué: que no está instalado o lo
+#   que dice git (revisión de sentinel-paths, P3, P6 = A9).
 # El PATH fijo incluye las carpetas donde Git for Windows y Nix dejan git (P1), y solo carpetas
 # que el agente no puede modificar (revisión de la #18).
 # Se ejecuta el comando del cableado tal como queda en .claude/settings.json, con /bin/sh, como
@@ -110,12 +111,17 @@ git -C "$P" init -q
 git -C "$P" add -A && git -C "$P" -c user.email=f@l -c user.name=f commit -qm "con el SDK"
 B0="$(git -C "$P" symbolic-ref --short HEAD)"
 
-# Sin el script: 2 y cómo restaurarlo
-rm -f "$G"
-wire "$P" "$INNOCUOUS"
-assert_exit 2 || { echo "    sin el Centinela, el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
-assert_err_contains "sentinel-guard.sh" || { echo "    el bloqueo no dice qué falta: $RH_ERR" >&2; exit 1; }
-assert_err_contains "git checkout -- sentinel/hooks" || { echo "    el bloqueo no dice cómo restaurarlo: $RH_ERR" >&2; exit 1; }
+# Sin el script: 2 y cómo restaurarlo desde HEAD, que vale también si se borró del índice
+# (git rm): el comando del motivo lo devuelve (revisión de la #18)
+RESTORE="git checkout HEAD -- sentinel/hooks/sentinel-guard.sh"
+for borra in "rm -f $G" "git -C $P rm -q sentinel/hooks/sentinel-guard.sh"; do
+  $borra
+  wire "$P" "$INNOCUOUS"
+  assert_exit 2 || { echo "    sin el Centinela ($borra), el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
+  assert_err_contains "sentinel-guard.sh" || { echo "    el bloqueo no dice qué falta: $RH_ERR" >&2; exit 1; }
+  assert_err_contains "$RESTORE" || { echo "    el bloqueo no dice cómo restaurarlo: $RH_ERR" >&2; exit 1; }
+  ( cd "$P" && $RESTORE ) && [ -f "$G" ] || { echo "    el comando del motivo no restaura el Centinela ($borra)" >&2; exit 1; }
+done
 
 # En una rama (o un commit) sin el SDK no hay nada que restaurar: dice cómo volver (P3)
 git -C "$P" checkout -q --orphan sin-sdk && git -C "$P" rm -rqf --cached . && rm -rf "$P/sentinel"
@@ -124,8 +130,19 @@ wire "$P" "$INNOCUOUS"
 assert_exit 2 || { echo "    en una rama sin el SDK, el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
 assert_err_contains "no tiene el SDK" || { echo "    el bloqueo no dice que la rama no tiene el SDK: $RH_ERR" >&2; exit 1; }
 assert_err_contains "git checkout -" || { echo "    el bloqueo no dice cómo volver: $RH_ERR" >&2; exit 1; }
-case "$RH_ERR" in *"git checkout -- sentinel/hooks"*)
+case "$RH_ERR" in *"$RESTORE"*)
   echo "    en una rama sin el SDK, el bloqueo manda restaurar lo que no hay: $RH_ERR" >&2; exit 1 ;; esac
+
+# El SDK instalado y aún sin versionar (setup acaba de terminar), sin el Centinela: ni restaurar
+# ni volver de rama, sino reinstalar (revisión de la #18)
+mkdir -p "$P/sentinel/hooks" && : >"$P/sentinel/hooks/session-start.sh"
+wire "$P" "$INNOCUOUS"
+assert_exit 2 || { echo "    con el SDK sin versionar y sin el Centinela, el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
+assert_err_contains "sin versionar" || { echo "    el bloqueo no dice que el SDK está sin versionar: $RH_ERR" >&2; exit 1; }
+assert_err_contains "ai-specs/skills/setup/setup.sh" || { echo "    el bloqueo no dice cómo reinstalarlo: $RH_ERR" >&2; exit 1; }
+case "$RH_ERR" in *"$RESTORE"*|*"git checkout -"*)
+  echo "    con el SDK sin versionar, el bloqueo manda restaurar o volver de rama: $RH_ERR" >&2; exit 1 ;; esac
+rm -rf "$P/sentinel"
 git -C "$P" checkout -q "$B0"
 
 # Ilegible (como root se puede leer igual: ese caso no aplica)
