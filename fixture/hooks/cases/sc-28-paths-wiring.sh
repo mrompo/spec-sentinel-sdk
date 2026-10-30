@@ -114,13 +114,17 @@ B0="$(git -C "$P" symbolic-ref --short HEAD)"
 # Sin el script: 2 y cómo restaurarlo desde HEAD, que vale también si se borró del índice
 # (git rm): el comando del motivo lo devuelve (revisión de la #18)
 RESTORE="git checkout HEAD -- sentinel/hooks/sentinel-guard.sh"
-for borra in "rm -f $G" "git -C $P rm -q sentinel/hooks/sentinel-guard.sh"; do
-  $borra
+for borra in rm "git rm"; do
+  case "$borra" in
+    rm) rm -f "$G" ;;
+    *) git -C "$P" rm -q sentinel/hooks/sentinel-guard.sh ;;
+  esac
   wire "$P" "$INNOCUOUS"
   assert_exit 2 || { echo "    sin el Centinela ($borra), el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
   assert_err_contains "sentinel-guard.sh" || { echo "    el bloqueo no dice qué falta: $RH_ERR" >&2; exit 1; }
   assert_err_contains "$RESTORE" || { echo "    el bloqueo no dice cómo restaurarlo: $RH_ERR" >&2; exit 1; }
-  ( cd "$P" && $RESTORE ) && [ -f "$G" ] || { echo "    el comando del motivo no restaura el Centinela ($borra)" >&2; exit 1; }
+  ( cd "$P" && git checkout HEAD -- sentinel/hooks/sentinel-guard.sh ) && [ -f "$G" ] \
+    || { echo "    el comando del motivo no restaura el Centinela ($borra)" >&2; exit 1; }
 done
 
 # En una rama (o un commit) sin el SDK no hay nada que restaurar: dice cómo volver (P3)

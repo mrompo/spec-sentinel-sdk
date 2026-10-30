@@ -4,7 +4,8 @@
 #   bloqueada (de cualquier agente) sigue bloqueada y la llave se conserva. Sin `para:` no
 #   autoriza nada. El aviso de bloqueo da la llave de esa acción lista para copiar: pegada tal
 #   cual en una shell, la escribe (revisión de sentinel-paths, P4 = A6). Con SENTINEL_OVERRIDE
-#   activo, la llave de otra acción se conserva (V4).
+#   activo, la llave de otra acción se conserva (V4) y la de esta acción se gasta (revisión de
+#   la #18).
 # SC-sentinel-guard-08/09 (modificados): con su `para:` la acción pasa, se audita y la llave
 #   desaparece; una llave solo con `para:` (sin motivo) no vale.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
@@ -69,6 +70,11 @@ printf 'parche de sentinel-paths\npara: Write:sentinel/policy.yaml\n' >"$TOKEN"
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$OTRA" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$WS/sentinel/policy.default.yaml" SENTINEL_POLICY="$NO_POLICY" SENTINEL_OVERRIDE="sesión de mantenimiento"
 assert_exit 0 || fail_case "SENTINEL_OVERRIDE debería seguir valiendo para toda la sesión"
 [ -s "$TOKEN" ] || fail_case "con SENTINEL_OVERRIDE, la llave de otra acción debería conservarse"
+# La llave de ESTA acción sí se gasta, aunque la excepción salga de la sesión: si no, al quitar
+# SENTINEL_OVERRIDE la acción se podría repetir con ella (revisión de la #18)
+RH_CWD="$WS" run_hook "$GUARD_HOOK" "$AUTORIZADA" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$WS/sentinel/policy.default.yaml" SENTINEL_POLICY="$NO_POLICY" SENTINEL_OVERRIDE="sesión de mantenimiento"
+assert_exit 0 || fail_case "con SENTINEL_OVERRIDE, la acción de la llave debería pasar"
+[ ! -e "$TOKEN" ] || fail_case "con SENTINEL_OVERRIDE, la llave de esta misma acción debería gastarse"
 rm -f "$TOKEN"
 
 # key_block <aviso> → las líneas de la llave tal como salen en el aviso (de la que la escribe a la
