@@ -4,8 +4,9 @@
 #   bloqueada (de cualquier agente) sigue bloqueada y la llave se conserva. Sin `para:` no
 #   autoriza nada. El aviso de bloqueo da la llave de esa acción lista para copiar: pegada tal
 #   cual en una shell, la escribe (revisión de sentinel-paths, P4 = A6). Con SENTINEL_OVERRIDE
-#   activo, la llave de otra acción se conserva (V4) y la de esta acción se gasta (revisión de
-#   la #18).
+#   activo, la llave de otra acción se conserva (V4) y la de esta acción se gasta, también si la
+#   acción acaba en espacio: el para: y la acción se comparan sin los espacios del final
+#   (revisión de la #18).
 # SC-sentinel-guard-08/09 (modificados): con su `para:` la acción pasa, se audita y la llave
 #   desaparece; una llave solo con `para:` (sin motivo) no vale.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
@@ -114,5 +115,22 @@ for sh in bash sh; do
     || fail_case "la llave pegada en $sh debería quedar con el motivo y el para:: $(cat "$TOKEN" 2>/dev/null)"
   guard "$AUTORIZADA"
   assert_exit 0 || fail_case "con la llave pegada en $sh, la acción debería pasar"
+done
+
+# Una acción que acaba en espacio: el para: se lee sin los espacios del final (los que deja un
+# editor), y la acción se compara igual. La llave del aviso la autoriza y, con SENTINEL_OVERRIDE,
+# se gasta: si se conservara, valdría para repetir la acción sin la sesión (revisión de la #18)
+CON_ESPACIO='{"tool_name":"Bash","tool_input":{"command":"echo x > sentinel/policy.yaml "}}'
+guard "$CON_ESPACIO"
+assert_exit 2 || fail_case "sin llave, la acción que acaba en espacio debería bloquearse"
+paste_key "$RH_ERR" bash || fail_case "el aviso de la acción que acaba en espacio no trae la llave"
+guard "$CON_ESPACIO"
+assert_exit 0 || fail_case "la llave del aviso debería autorizar la acción que acaba en espacio: $RH_ERR"
+[ ! -e "$TOKEN" ] || fail_case "la llave de la acción que acaba en espacio no se gastó"
+for para in 'Bash:echo x > sentinel/policy.yaml' 'Bash:echo x > sentinel/policy.yaml   '; do
+  printf 'parche de sentinel-paths\npara: %s\n' "$para" >"$TOKEN"
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$CON_ESPACIO" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$WS/sentinel/policy.default.yaml" SENTINEL_POLICY="$NO_POLICY" SENTINEL_OVERRIDE="sesión de mantenimiento"
+  assert_exit 0 || fail_case "con SENTINEL_OVERRIDE, la acción que acaba en espacio debería pasar"
+  [ ! -e "$TOKEN" ] || fail_case "con SENTINEL_OVERRIDE, la llave de la acción que acaba en espacio debería gastarse (para: '$para')"
 done
 exit 0
