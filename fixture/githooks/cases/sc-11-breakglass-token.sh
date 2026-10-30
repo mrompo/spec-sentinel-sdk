@@ -58,15 +58,20 @@ grep -q "esclusa:pre-push" "$LOG" 2>/dev/null || fail_case "la bitácora no regi
 grep -q "INC-10" "$LOG" 2>/dev/null || fail_case "la bitácora no tiene el motivo del push"
 
 # paste_key <aviso> <shell> → copia del aviso las líneas de la llave tal como salen (de la que la
-# escribe a la que la cierra), pone el motivo y las pega en esa shell, en el workspace
+# escribe a la que la cierra), pone el motivo y las pega en esa shell, desde una subcarpeta del
+# workspace: una persona no tiene por qué estar en la raíz
 paste_key() {
-  printf '%s\n' "$1" | sed -n "/cat > sentinel\/.override <<'LLAVE'/,/^[[:space:]]*LLAVE/p" \
+  printf '%s\n' "$1" | sed -n "/^cat > .*<<'LLAVE'\$/,/^[[:space:]]*LLAVE/p" \
     | sed 's/<motivo>/arreglo aprobado/' >"$WS.pegar"
   [ -s "$WS.pegar" ] || return 1
-  ( cd "$WS" && "$2" "$WS.pegar" </dev/null >/dev/null 2>&1 ); rm -f "$WS.pegar"
+  mkdir -p "$WS/src/sub"
+  ( cd "$WS/src/sub" && "$2" "$WS.pegar" </dev/null >/dev/null 2>&1 ); rm -f "$WS.pegar"
 }
-# La llave del rechazo, pegada tal cual en bash o en sh, queda con el motivo y el para: del hook,
-# y salta ese rechazo
+# Un repo en una carpeta con espacios y comillas: la llave pegada va a su sitio igual
+NEW="$WS-la 'llave' \$x"; mv "$WS" "$NEW"; mv "$WS.remote" "$NEW.remote"; WS="$NEW"
+TOKEN="$WS/sentinel/.override"; LOG="$WS/sentinel/overrides.log"
+# La llave del rechazo, pegada tal cual en bash o en sh desde una subcarpeta, queda en la raíz
+# del repo con el motivo y el para: del hook, y salta ese rechazo (revisión de la #18)
 for sh in bash sh; do
   gh_commit "otro sin formato"
   assert_exit 1 || fail_case "sin llave debería rechazar"

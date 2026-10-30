@@ -6,7 +6,8 @@
 #   es ni 0 ni 2, el cableado sale con 2 y dice cómo restaurarlo; en una rama sin el SDK, cómo
 #   volver. Sin un git que responda en el proyecto, sale con 2 y dice por qué: que no está
 #   instalado o lo que dice git (revisión de sentinel-paths, P3, P6 = A9).
-# El PATH fijo incluye las carpetas donde Git for Windows, Nix y linuxbrew dejan git (P1).
+# El PATH fijo incluye las carpetas donde Git for Windows y Nix dejan git (P1), y solo carpetas
+# que el agente no puede modificar (revisión de la #18).
 # Se ejecuta el comando del cableado tal como queda en .claude/settings.json, con /bin/sh, como
 # lo ejecuta Claude Code.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
@@ -77,16 +78,20 @@ P="$TMPD/proyecto"; G="$P/sentinel/hooks/sentinel-guard.sh"
 mkdir -p "$P/sentinel/hooks"
 fake() { printf '#!/usr/bin/env bash\ncat >/dev/null\n%s\n' "$1" > "$G"; }
 
-# El PATH fijo, con las carpetas del sistema delante, también lleva las de Git for Windows, Nix y
-# linuxbrew, donde puede estar el único git de la máquina (revisión de sentinel-paths, P1)
+# El PATH fijo, con las carpetas del sistema delante, también lleva las que hacen de sistema en
+# Git for Windows y Nix, donde puede estar el único git de la máquina (revisión de
+# sentinel-paths, P1). Solo carpetas que el agente no puede modificar: ninguna de la persona
+# (~/.nix-profile), ni linuxbrew, que es suya; si no, un git falso ahí decidiría la rama
+# (revisión de la #18)
 fake 'printf %s "$PATH"; exit 0'
 git -C "$P" init -q
 wire "$P" "$INNOCUOUS"
-case "$RH_OUT" in /usr/bin:/bin:/usr/sbin:/sbin:*) ;; *)
-  echo "    el PATH del cableado no empieza por las carpetas del sistema: $RH_OUT" >&2; exit 1 ;; esac
-for d in /mingw64/bin /nix/var/nix/profiles/default/bin /home/linuxbrew/.linuxbrew/bin \
-         "/etc/profiles/per-user/$(id -un)/bin" "$HOME/.nix-profile/bin"; do
-  case ":$RH_OUT:" in *":$d:"*) ;; *) echo "    el PATH del cableado no lleva $d: $RH_OUT" >&2; exit 1 ;; esac
+[ "$RH_OUT" = "/usr/bin:/bin:/usr/sbin:/sbin:/run/current-system/sw/bin:/mingw64/bin:/nix/var/nix/profiles/default/bin:/etc/profiles/per-user/$(id -un)/bin" ] \
+  || { echo "    el PATH del cableado no es el fijo: $RH_OUT" >&2; exit 1; }
+IFS=: read -ra dirs <<<"$RH_OUT"
+for d in "${dirs[@]}"; do
+  case "$d/" in "$HOME"/*) echo "    el PATH del cableado lleva una carpeta de la persona: $d" >&2; exit 1 ;; esac
+  if [ -e "$d" ] && [ -w "$d" ]; then echo "    el PATH del cableado lleva una carpeta que se puede escribir: $d" >&2; exit 1; fi
 done
 rm -rf "$P/.git"
 
@@ -98,6 +103,8 @@ fake 'exit 0'
 wire "$P" "$INNOCUOUS"
 assert_exit 2 || { echo "    sin un git que responda, el cableado no bloqueó (exit $RH_EXIT)" >&2; exit 1; }
 assert_err_contains "not a git repository" || { echo "    el bloqueo no dice lo que dice git: $RH_ERR" >&2; exit 1; }
+assert_err_contains "solo carpetas que el agente no puede modificar" \
+  || { echo "    el bloqueo no dice que el cableado solo busca git donde el agente no llega: $RH_ERR" >&2; exit 1; }
 case "$RH_ERR" in *"Instala git"*) echo "    con git instalado, el bloqueo manda instalarlo: $RH_ERR" >&2; exit 1 ;; esac
 git -C "$P" init -q
 git -C "$P" add -A && git -C "$P" -c user.email=f@l -c user.name=f commit -qm "con el SDK"

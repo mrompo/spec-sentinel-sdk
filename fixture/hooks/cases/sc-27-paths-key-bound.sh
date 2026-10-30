@@ -71,19 +71,34 @@ assert_exit 0 || fail_case "SENTINEL_OVERRIDE debería seguir valiendo para toda
 [ -s "$TOKEN" ] || fail_case "con SENTINEL_OVERRIDE, la llave de otra acción debería conservarse"
 rm -f "$TOKEN"
 
-# paste_key <aviso> <shell> → copia del aviso las líneas de la llave tal como salen (de la que la
-# escribe a la que la cierra), pone el motivo y las pega en esa shell, en el workspace
-paste_key() {
-  printf '%s\n' "$1" | sed -n "/cat > sentinel\/.override <<'LLAVE'/,/^[[:space:]]*LLAVE/p" \
-    | sed 's/<motivo>/arreglo aprobado/' >"$WS.pegar"
-  [ -s "$WS.pegar" ] || return 1
-  ( cd "$WS" && "$2" "$WS.pegar" </dev/null >/dev/null 2>&1 ); rm -f "$WS.pegar"
+# key_block <aviso> → las líneas de la llave tal como salen en el aviso (de la que la escribe a la
+# que la cierra), con el motivo puesto
+key_block() {
+  printf '%s\n' "$1" | sed -n "/^cat > .*<<'LLAVE'\$/,/^[[:space:]]*LLAVE/p" | sed 's/<motivo>/arreglo aprobado/'
 }
-# La llave del aviso, pegada tal cual en bash o en sh, queda con el motivo y el para: de la acción,
-# y la autoriza (P4 = A6)
+# paste_key <aviso> <shell> → pega la llave del aviso en esa shell, desde una subcarpeta del
+# workspace: una persona no tiene por qué estar en la raíz
+paste_key() {
+  key_block "$1" >"$WS.pegar"
+  [ -s "$WS.pegar" ] || return 1
+  mkdir -p "$WS/src/sub"
+  ( cd "$WS/src/sub" && "$2" "$WS.pegar" </dev/null >/dev/null 2>&1 ); rm -f "$WS.pegar"
+}
+# Un proyecto en una carpeta con espacios y comillas: la llave pegada va a su sitio igual
+NEW="$WS-la 'llave' \$x"; mv "$WS" "$NEW"; WS="$NEW"
+TOKEN="$WS/sentinel/.override"; LOG="$WS/sentinel/overrides.log"
+# La llave del aviso, pegada tal cual en bash o en sh desde una subcarpeta, queda en la raíz del
+# proyecto con el motivo y el para: de la acción, y la autoriza (P4 = A6, revisión de la #18)
 for sh in bash sh; do
   guard "$AUTORIZADA"
   assert_exit 2 || fail_case "sin llave debería bloquearse"
+  if [ "$sh" = bash ]; then
+    # El agente no puede ejecutar la llave del aviso: el comando escribe la llave del proyecto
+    aviso="$RH_ERR"
+    guard "$(jq -n --arg c "$(key_block "$aviso")" '{tool_name: "Bash", tool_input: {command: $c}}')"
+    assert_exit 2 || fail_case "el agente no debería poder escribir la llave con el comando del aviso"
+    RH_ERR="$aviso"
+  fi
   paste_key "$RH_ERR" "$sh" || fail_case "el aviso no trae la llave"
   [ "$(cat "$TOKEN" 2>/dev/null)" = "$(printf 'arreglo aprobado\npara: Write:sentinel/policy.yaml')" ] \
     || fail_case "la llave pegada en $sh debería quedar con el motivo y el para:: $(cat "$TOKEN" 2>/dev/null)"
