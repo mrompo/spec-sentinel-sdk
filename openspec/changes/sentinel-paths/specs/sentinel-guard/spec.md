@@ -140,16 +140,33 @@ del repo ni de la sesión, y SHALL bloquear cuando el Centinela no puede decidir
 
 - **WHEN** el script del Centinela no existe o no se puede leer (la carpeta se movió o se
   borró), o el Centinela termina con un código que no es ni 0 ni 2
-- **THEN** el cableado sale con 2 y un motivo que dice cómo restaurarlo: la acción se bloquea,
-  en vez del 127 que el harness deja pasar
+- **THEN** el cableado sale con 2 y un motivo que dice cómo restaurarlo desde `HEAD`
+  (`git checkout HEAD -- sentinel/hooks/sentinel-guard.sh`, que vale también si se borró del
+  índice): la acción se bloquea, en vez del 127 que el harness deja pasar
 - **AND** si la rama o el commit en que está el proyecto no tiene el Centinela (una rama de
   antes de instalar el SDK, `git bisect`), el motivo no manda restaurarlo, sino volver a la
   rama anterior (`git checkout -`) o integrar la que instala el SDK
+- **AND** si el SDK está instalado pero aún sin versionar (`setup` acaba de terminar y no hay
+  commit), el motivo no manda restaurarlo ni volver de rama, sino reinstalarlo con `setup`
 - **AND** sin un git que responda en el proyecto, el cableado también sale con 2, porque sin la
   rama no se aplicarían las reglas de rama, y el motivo dice por qué: con qué `PATH` buscó git
   (solo carpetas que el agente no puede modificar) y lo que dice (que no lo encuentra; o, en un
   repo de otro dueño, *dubious ownership* y cómo declararlo seguro), sin mandar instalar un git
   que ya está
+
+### Requirement: La rama es la de HEAD, también sin commits
+
+El Centinela SHALL aplicar las reglas de rama a la rama a la que apunta `HEAD`, también en un
+repo sin commits.
+
+#### Scenario: El primer commit en una rama protegida (SC-sentinel-paths-10)
+
+- **WHEN** el agente intenta `git commit` en un repo sin commits cuya rama es protegida (p. ej.
+  `main` recién creado con `git init`)
+- **THEN** el hook deniega por `protected-branches`, como con commits (antes la rama salía como
+  `HEAD` y el primer commit en `main` pasaba)
+- **AND** en una rama feature sin commits pasa, y con `HEAD` desligado no hay rama y las reglas
+  de rama no se aplican
 
 ## MODIFIED Requirements
 
