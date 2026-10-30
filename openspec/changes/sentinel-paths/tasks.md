@@ -199,7 +199,13 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
        `SENTINEL_OVERRIDE`, la llave de otra acción se conserva. En un clon con el parche, el
        banco entero en verde (hooks 30/30, githooks 16/16, install 18/18) y los doce mutantes
        rompen algún caso. `STATUS.md` y `sc-28` al día (A10) y la deuda P7 y P9 registrada en
-       `STATUS.md`. Falta el `merge`
+       `STATUS.md`. Revisión de la #18 (CodeRabbit), en `sentinel-paths-6b.patch` (`43f99dc`):
+       el PATH del cableado solo lleva carpetas que el agente no puede modificar (fuera
+       `~/.nix-profile` y linuxbrew, CWE-426), y la llave del aviso, en el Centinela y en la
+       Esclusa, lleva la ruta absoluta entrecomillada (se pega desde una subcarpeta, también con
+       espacios o comillas en la ruta). Casos en `1702f40` (hooks `sc-27` y `sc-28`, githooks
+       `sc-11`), deltas, README y guía en `db20006`; banco entero en verde y los veintiún
+       mutantes (nueve nuevos y los doce de antes) rompen algún caso. Falta el `merge`
 
 **Tribunal**
 
