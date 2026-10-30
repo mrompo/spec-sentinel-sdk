@@ -39,7 +39,11 @@ esclusa_reject() {
     line="$(printf '%s | esclusa:%s | %s | %s' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hook" \
       "$(printf '%s' "$what" | tr '\n' ' ')" "$(printf '%s' "$reason" | sed -e 's/[[:space:]]*$//')")"
     if mkdir -p "$(dirname "$log")" 2>/dev/null && printf '%s\n' "$line" >>"$log" 2>/dev/null; then
-      [ -f "$token" ] && rm -f "$token"    # un solo uso: se consume DESPUÉS de registrar
+      # Un solo uso: se consume DESPUÉS de registrar, y solo si la excepción salió de la llave
+      # (con SENTINEL_OVERRIDE, una llave para otra acción se conserva: sentinel-paths, V4)
+      if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ]; then
+        [ -f "$token" ] && rm -f "$token"
+      fi
       echo "⚠ [Esclusa] Excepción aplicada: rechazo permitido y auditado en sentinel/overrides.log — ${reason}" >&2
       exit 0
     fi
@@ -52,10 +56,13 @@ esclusa_reject() {
   if [ -s "$token" ]; then
     echo "    (La llave de sentinel/.override no vale para este rechazo — le falta el motivo o el para:, o es para otra acción ($(_bg_para "$token")) — y se conserva.)" >&2
   fi
-  echo "    (Excepción auditada: una persona, desde su terminal, escribe la llave de este hook — un solo uso, queda en la bitácora:" >&2
-  echo "       cat > sentinel/.override <<'LLAVE'" >&2
-  echo "       <motivo>" >&2
-  echo "       para: esclusa:$hook" >&2
-  echo "       LLAVE  )" >&2
+  # Sin sangría: pegada tal cual en una shell, la línea LLAVE cierra el heredoc (sentinel-paths,
+  # P4 = A6)
+  echo "    (Excepción auditada: una persona, desde su terminal, escribe la llave de este hook — un solo uso," >&2
+  echo "    queda en la bitácora. Copia estas cuatro líneas tal cual y pon el motivo:)" >&2
+  echo "cat > sentinel/.override <<'LLAVE'" >&2
+  echo "<motivo>" >&2
+  echo "para: esclusa:$hook" >&2
+  echo "LLAVE" >&2
   exit 1
 }

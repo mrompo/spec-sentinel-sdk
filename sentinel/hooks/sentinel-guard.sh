@@ -618,7 +618,9 @@ override_reason() {
   printf '%s' "$motivo"
 }
 
-# key_hint → la llave de ESTA acción, lista para copiar, y por qué no vale la que hay
+# key_hint → la llave de ESTA acción, lista para copiar, y por qué no vale la que hay. Sin
+# sangría: pegada tal cual en una shell, la línea LLAVE cierra el heredoc (revisión de
+# sentinel-paths, P4 = A6)
 key_hint() {
   local why=""
   if [ -s "$OVERRIDE_TOKEN" ]; then
@@ -629,7 +631,7 @@ key_hint() {
     why="
   Ojo: $why."
   fi
-  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave\n    cat > sentinel/.override <<'"'"'LLAVE'"'"'\n    <motivo>\n    para: %s\n    LLAVE' "$why" "$ACTION_DESC"
+  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave (copia\n  estas cuatro líneas tal cual y pon el motivo):\ncat > sentinel/.override <<'"'"'LLAVE'"'"'\n<motivo>\npara: %s\nLLAVE' "$why" "$ACTION_DESC"
 }
 
 log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se puede escribir, se deniega)
@@ -638,7 +640,11 @@ log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se
   mkdir -p "$(dirname "$OVERRIDES_LOG")" 2>/dev/null
   printf '%s\n' "$line" >> "$OVERRIDES_LOG" 2>/dev/null \
     || deny "[$1] override rechazado: no se pudo escribir la auditoría en $OVERRIDES_LOG — sin registro no hay excepción"
-  [ -f "$OVERRIDE_TOKEN" ] && rm -f "$OVERRIDE_TOKEN"   # token de un solo uso
+  # Token de un solo uso, que se gasta solo si la excepción salió de él: con SENTINEL_OVERRIDE
+  # activo, una llave para otra acción se conserva (revisión de sentinel-paths, V4)
+  if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ]; then
+    [ -f "$OVERRIDE_TOKEN" ] && rm -f "$OVERRIDE_TOKEN"
+  fi
   return 0
 }
 
