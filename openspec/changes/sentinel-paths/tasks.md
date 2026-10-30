@@ -133,6 +133,10 @@ lectura sobre una protección ya basada en la ruta física.
 
 Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada una mergeable sola.
 
+Hallazgos de CodeRabbit (disposición de la persona del 2026-10-30, desde la tercera pasada de
+la #18): se arregla en la PR lo que toca código de la PR o es de seguridad; lo anterior a la PR y
+menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
+
 **PR 4 · Lo que ejecuta bash** (temas 1 y 2 de la revisión)
 
 - [x] R1. Casos en rojo (`sc-29` nuevo, y `sc-23` y `sc-26`): un salto de línea o un tabulador escritos como escape del JSON delante
