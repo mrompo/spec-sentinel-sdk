@@ -209,7 +209,13 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        Esclusa, lleva la ruta absoluta entrecomillada (se pega desde una subcarpeta, también con
        espacios o comillas en la ruta). Casos en `1702f40` (hooks `sc-27` y `sc-28`, githooks
        `sc-11`), deltas, README y guía en `db20006`; banco entero en verde y los veintiún
-       mutantes (nueve nuevos y los doce de antes) rompen algún caso. Falta el `merge`
+       mutantes (nueve nuevos y los doce de antes) rompen algún caso. Segunda pasada de la #18,
+       en `sentinel-paths-6c.patch` (`1e246d1`): en un repo sin commits, la rama es la de `HEAD`
+       (`symbolic-ref`) y `protected-branches` bloquea el primer commit en `main` (CWE-863,
+       SC-sentinel-paths-10); sin el Centinela, el motivo restaura desde `HEAD` y, con el SDK aún
+       sin versionar, manda reinstalarlo con `setup`. Casos en `e9be393` (`sc-31` nuevo, `sc-28` y
+       `sc-27`), delta y README en `f0fba7e`; banco entero en verde (hooks 31/31) y los veinticinco
+       mutantes rompen algún caso. Falta el `merge`
 
 **Tribunal**
 
