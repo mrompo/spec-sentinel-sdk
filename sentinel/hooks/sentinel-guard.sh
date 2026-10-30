@@ -71,7 +71,9 @@ FILE_PATH="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"(file_path|notebook_path)"[[
 COMMAND="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -1)"
 # Contenido que se ESCRIBE (no old_string): evita bloquear la retirada de un .skip existente
 NEW_CONTENT="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"(new_string|content|new_source)"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\2/p' | head -1)"
-BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+# La rama a la que apunta HEAD, también sin commits (rev-parse diría HEAD y el primer commit en
+# main pasaría: revisión de la #18); con HEAD desligado no hay rama
+BRANCH="$(git symbolic-ref --short -q HEAD 2>/dev/null || echo "")"
 # sdd: lo declara el consumidor; si no lo hace, vale el de la distribuida
 read_sdd() { sed -nE 's/^[[:space:]]*sdd:[[:space:]]*(true|false).*/\1/p' "$1" | head -1; }
 POLICY_SDD=""
