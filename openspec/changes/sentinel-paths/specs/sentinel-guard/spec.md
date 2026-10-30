@@ -205,6 +205,7 @@ toda la sesión, no se ata.
   pegado desde cualquier carpeta del proyecto, y aunque su ruta tenga espacios o comillas, la
   llave va a la raíz del proyecto; y el agente no puede ejecutarlo
 - **AND** con `SENTINEL_OVERRIDE` activo, la excepción sale de la sesión y una llave atada a
-  otra acción se conserva
+  otra acción se conserva; la llave de esta misma acción se gasta, porque si quedara valdría
+  para repetirla cuando ya no haya excepción de sesión
 - **AND** una acción que contiene la autorizada pero no es ella (`para: Bash:git diff x` frente
   a `git diff x; rm -r sentinel`) no la gasta
