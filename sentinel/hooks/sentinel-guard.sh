@@ -618,9 +618,13 @@ override_reason() {
   printf '%s' "$motivo"
 }
 
+# sh_quote <texto> → el texto entre comillas simples, tal que una shell lo lee igual
+sh_quote() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
+
 # key_hint → la llave de ESTA acción, lista para copiar, y por qué no vale la que hay. Sin
 # sangría: pegada tal cual en una shell, la línea LLAVE cierra el heredoc (revisión de
-# sentinel-paths, P4 = A6)
+# sentinel-paths, P4 = A6); con la ruta absoluta de la llave, pegada desde cualquier carpeta va
+# a la raíz del proyecto (revisión de la #18)
 key_hint() {
   local why=""
   if [ -s "$OVERRIDE_TOKEN" ]; then
@@ -631,7 +635,7 @@ key_hint() {
     why="
   Ojo: $why."
   fi
-  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave (copia\n  estas cuatro líneas tal cual y pon el motivo):\ncat > sentinel/.override <<'"'"'LLAVE'"'"'\n<motivo>\npara: %s\nLLAVE' "$why" "$ACTION_DESC"
+  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave (copia\n  estas cuatro líneas tal cual y pon el motivo):\ncat > %s <<'"'"'LLAVE'"'"'\n<motivo>\npara: %s\nLLAVE' "$why" "$(sh_quote "$OVERRIDE_TOKEN")" "$ACTION_DESC"
 }
 
 log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se puede escribir, se deniega)

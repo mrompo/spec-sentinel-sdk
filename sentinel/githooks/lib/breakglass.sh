@@ -9,6 +9,8 @@
 # Falsifica: SC-git-gates-11, 12, 13 (fixture/githooks/cases/).
 
 _bg_root() { git rev-parse --show-toplevel 2>/dev/null || pwd; }
+# _bg_quote <texto> → el texto entre comillas simples, tal que una shell lo lee igual
+_bg_quote() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
 
 # La llave: el motivo (las líneas que no son para:) y la acción que autoriza (para:)
 _bg_para()   { sed -nE 's/^[[:space:]]*para:[[:space:]]*//p' "$1" 2>/dev/null | head -1 | sed -E 's/[[:space:]]+$//'; }
@@ -57,10 +59,11 @@ esclusa_reject() {
     echo "    (La llave de sentinel/.override no vale para este rechazo — le falta el motivo o el para:, o es para otra acción ($(_bg_para "$token")) — y se conserva.)" >&2
   fi
   # Sin sangría: pegada tal cual en una shell, la línea LLAVE cierra el heredoc (sentinel-paths,
-  # P4 = A6)
+  # P4 = A6); con la ruta absoluta de la llave, pegada desde cualquier carpeta va a la raíz del
+  # repo (revisión de la #18)
   echo "    (Excepción auditada: una persona, desde su terminal, escribe la llave de este hook — un solo uso," >&2
   echo "    queda en la bitácora. Copia estas cuatro líneas tal cual y pon el motivo:)" >&2
-  echo "cat > sentinel/.override <<'LLAVE'" >&2
+  echo "cat > $(_bg_quote "$token") <<'LLAVE'" >&2
   echo "<motivo>" >&2
   echo "para: esclusa:$hook" >&2
   echo "LLAVE" >&2
