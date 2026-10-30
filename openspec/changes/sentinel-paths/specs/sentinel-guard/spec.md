@@ -126,9 +126,12 @@ del repo ni de la sesión, y SHALL bloquear cuando el Centinela no puede decidir
   (`HOME`, `CLAUDE_PROJECT_DIR`, `CLAUDE_CONFIG_DIR`, `SENTINEL_OVERRIDE`), y el Centinela
   decide como sin ese entorno
 - **AND** detrás de las carpetas del sistema, el `PATH` fijo lleva las que usan como sistema
-  Git for Windows (`/mingw64/bin`), Nix (`/nix/var/nix/profiles/default/bin`, el perfil de la
-  persona en `/etc/profiles/per-user/<persona>/bin` y `~/.nix-profile/bin`) y linuxbrew
-  (`/home/linuxbrew/.linuxbrew/bin`), donde puede estar el único git de la máquina
+  Git for Windows (`/mingw64/bin`) y Nix (`/nix/var/nix/profiles/default/bin` y el perfil de la
+  persona que gestiona el sistema, `/etc/profiles/per-user/<persona>/bin`), donde puede estar el
+  único git de la máquina
+- **AND** el `PATH` fijo solo lleva carpetas que el agente no puede modificar: ninguna de la
+  persona (`~/.nix-profile/bin`) ni linuxbrew, que es suya, porque un `git` falso ahí diría al
+  Centinela otra rama; sin un git en esas carpetas, el cableado bloquea y lo dice
 - **AND** `setup` lanza su prueba de humo a través del cableado, tal como queda en
   `.claude/settings.json`: si en esa máquina el cableado no deja pasar una acción inocua, lo dice
   y termina con pendientes
@@ -143,9 +146,10 @@ del repo ni de la sesión, y SHALL bloquear cuando el Centinela no puede decidir
   antes de instalar el SDK, `git bisect`), el motivo no manda restaurarlo, sino volver a la
   rama anterior (`git checkout -`) o integrar la que instala el SDK
 - **AND** sin un git que responda en el proyecto, el cableado también sale con 2, porque sin la
-  rama no se aplicarían las reglas de rama, y el motivo dice por qué: con qué `PATH` buscó git y
-  lo que dice (que no lo encuentra; o, en un repo de otro dueño, *dubious ownership* y cómo
-  declararlo seguro), sin mandar instalar un git que ya está
+  rama no se aplicarían las reglas de rama, y el motivo dice por qué: con qué `PATH` buscó git
+  (solo carpetas que el agente no puede modificar) y lo que dice (que no lo encuentra; o, en un
+  repo de otro dueño, *dubious ownership* y cómo declararlo seguro), sin mandar instalar un git
+  que ya está
 
 ## MODIFIED Requirements
 
@@ -180,6 +184,9 @@ toda la sesión, no se ata.
 - **AND** el aviso de bloqueo da, lista para copiar, la llave de **esa** acción (motivo por
   rellenar y su `para:`), así que la persona sabe qué autoriza; copiada tal cual, sin sangría
   que deje el heredoc sin cerrar, y pegada en bash, zsh o sh, escribe la llave
+- **AND** el comando del aviso lleva la ruta absoluta de la llave, entrecomillada para la shell:
+  pegado desde cualquier carpeta del proyecto, y aunque su ruta tenga espacios o comillas, la
+  llave va a la raíz del proyecto; y el agente no puede ejecutarlo
 - **AND** con `SENTINEL_OVERRIDE` activo, la excepción sale de la sesión y una llave atada a
   otra acción se conserva
 - **AND** una acción que contiene la autorizada pero no es ella (`para: Bash:git diff x` frente

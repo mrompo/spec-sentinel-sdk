@@ -23,7 +23,9 @@ el Centinela SHALL impedir que el agente la escriba.
 - **AND** si el rechazo es de otro hook (`commit-msg`) o la llave está atada a una acción del
   Centinela o no tiene `para:`, el rechazo se mantiene, el mensaje da la llave de ese hook lista
   para copiar y la llave sigue en su sitio
-- **AND** la llave del mensaje, copiada tal cual y pegada en bash, zsh o sh, escribe la llave
+- **AND** la llave del mensaje, copiada tal cual y pegada en bash, zsh o sh, escribe la llave;
+  lleva la ruta absoluta, entrecomillada para la shell, así que pegada desde una subcarpeta, y
+  aunque la ruta del repo tenga espacios o comillas, la llave va a la raíz del repo
 
 #### Scenario: Bitácora no escribible (SC-git-gates-12)
 
