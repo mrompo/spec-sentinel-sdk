@@ -19,5 +19,6 @@ grep -q 'PATH=/nonexistent' "$SDK/.claude/settings.json" || fail_case "no se pud
 mk_git_workspace
 _capture env "$(gl_ok)" bash "$SDK/ai-specs/skills/setup/setup.sh" "$WS"
 assert_exit 3 || fail_case "con un cableado que no deja pasar nada, setup debería terminar con 3 (exit $RH_EXIT): $RH_ERR"
-assert_out_contains "cableado" || fail_case "setup debería decir que lo que falla es el cableado: $RH_ERR"
+assert_out_contains "no deja pasar una acción inocua" || fail_case "setup debería decir que lo que falla es el cableado: $RH_ERR"
+assert_out_lacks "deniega una acción inocua" || fail_case "setup no debería achacárselo al Centinela: $RH_ERR"
 rm -rf "$SDK"; cleanup_git_workspace
