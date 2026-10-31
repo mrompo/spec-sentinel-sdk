@@ -553,6 +553,10 @@ if [ -d "$REPO_ROOT_DIR/openspec/changes" ]; then
 fi
 
 ACTION_DESC="${TOOL_NAME}:${COMMAND:-${REL_PATH:-$FILE_PATH}}"
+# La acción como la nombra el para: de la llave, que se lee sin los espacios del final (los que
+# deja un editor): si no se quitaran también aquí, la llave de una acción que acaba en espacio no
+# la autorizaría nunca y, con SENTINEL_OVERRIDE, se conservaría para repetirla sin la sesión (#18)
+ACTION_PARA="${ACTION_DESC%"${ACTION_DESC##*[![:space:]]}"}"
 
 # ── Solo lee (SC-sentinel-paths-08) ──────────────────────────────────────────────────────
 # Lista cerrada, sin parser de shell: el comando solo lee si cada tramo (partido como lo parte
@@ -616,7 +620,7 @@ override_reason() {
   fi
   [ -s "$OVERRIDE_TOKEN" ] || return 1
   motivo="$(token_motivo)"
-  [ -n "$motivo" ] && [ "$(token_para)" = "$ACTION_DESC" ] || return 1
+  [ -n "$motivo" ] && [ "$(token_para)" = "$ACTION_PARA" ] || return 1
   printf '%s' "$motivo"
 }
 
@@ -637,7 +641,7 @@ key_hint() {
     why="
   Ojo: $why."
   fi
-  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave (copia\n  estas cuatro líneas tal cual y pon el motivo):\ncat > %s <<'"'"'LLAVE'"'"'\n<motivo>\npara: %s\nLLAVE' "$why" "$(sh_quote "$OVERRIDE_TOKEN")" "$ACTION_DESC"
+  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave (copia\n  estas cuatro líneas tal cual y pon el motivo):\ncat > %s <<'"'"'LLAVE'"'"'\n<motivo>\npara: %s\nLLAVE' "$why" "$(sh_quote "$OVERRIDE_TOKEN")" "$ACTION_PARA"
 }
 
 log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se puede escribir, se deniega)
@@ -649,7 +653,7 @@ log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se
   # Token de un solo uso: se gasta si la excepción salió de él o si es de esta misma acción. Con
   # SENTINEL_OVERRIDE activo, solo una llave para otra acción se conserva (revisión de
   # sentinel-paths, V4); la de esta, si quedara, valdría para repetirla sin la sesión (#18)
-  if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ] || [ "$(token_para)" = "$ACTION_DESC" ]; then
+  if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ] || [ "$(token_para)" = "$ACTION_PARA" ]; then
     [ -f "$OVERRIDE_TOKEN" ] && rm -f "$OVERRIDE_TOKEN"
   fi
   return 0
