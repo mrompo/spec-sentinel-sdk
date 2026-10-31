@@ -65,4 +65,18 @@ por arreglados 15. Los otros seis quedan **a medias** para una lente:
 
 ## Disposición (gate **Resolución** 👤)
 
-Pendiente.
+Decidida por una persona el 2026-10-31: una **ronda 3 acotada**.
+
+- **Se arregla en este cambio**, en dos PRs pequeñas desde `main` (slices R8-R11 de
+  `tasks.md`):
+  - los cuatro bloqueantes: V4 = A3, A1 = V3, A2 y V1;
+  - los graves baratos: V6, V2 y A4 = V9;
+  - las regresiones de la ronda 2 que no son de coste: A5 y P1.
+- **Deuda** en `STATUS.md`:
+  - lo que pide diseño o comprobarlo fuera: V5 (proteger la bitácora sin bloquear
+    `git restore .`) y P6 (qué ruta manda Claude Code en Windows);
+  - el coste por llamada (P2, que amplía P9);
+  - los menores y retoques restantes: A6, A7, A8, A10, P3, P4, P5, P7, P8, P9, P10, V7, V8 y V10.
+    A9 ya está corregido en esta rama.
+- Al terminar, un **panel corto**: tres lentes con contexto limpio que solo confirman lo
+  arreglado en la ronda 3, con variantes cercanas, sin buscar hallazgos nuevos.

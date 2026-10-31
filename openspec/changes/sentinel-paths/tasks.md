@@ -11,7 +11,8 @@ que toca el enforcement es un fichero protegido: lo entrega el agente como parch
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
 **Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
-2 de `apply` está en `main` (PRs 4 a 6, de la #15 a la #18). Toca el panel de confirmación (R7).
+2 de `apply` está en `main` (PRs 4 a 6, de la #15 a la #18); el panel de confirmación dio `HOLD`
+y la ronda 3 (PRs 7 y 8) arregla sus bloqueantes.
 
 ## Engine · antes de teclear
 
@@ -229,11 +230,42 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
 
 **Tribunal**
 
-- [ ] R7. Panel de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 4 a 6 →
+- [x] R7. Panel de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 4 a 6 →
        `disposition` 👤. Panel hecho el 2026-10-31, en [review-2/](review-2/README.md): `HOLD`,
        con 30 hallazgos validados (4 bloqueantes: A1 = V3, A2, V1 y V4 = A3). De los 21 que
-       había que arreglar, 15 están arreglados para las tres lentes y 6 a medias. Falta la
-       disposición
-- [ ] R8. Lo que decida la persona; después, el 11 queda cerrado
+       había que arreglar, 15 están arreglados para las tres lentes y 6 a medias. Disposición
+       de la persona el mismo día: ronda 3 acotada (abajo); el resto, a deuda en `STATUS.md`
+
+### Ronda 3 · los bloqueantes del panel de confirmación (disposición del 2026-10-31)
+
+Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Dos PRs desde `main`, cada una
+mergeable sola.
+
+**PR 7 · Lo que ejecuta bash, otra vez** (tema 1 de `review-2`)
+
+- [ ] R8. Casos en rojo:
+       - V4 = A3: lo que ejecutan una sustitución entre comillas dobles (`"$(…)"`, `` "`…`" ``),
+         `bash -c`, `sh -c` y `eval`;
+       - V6: `<<<` y el `<<` aritmético no abren heredoc;
+       - A5: un argumento entrecomillado que se llama como un verbo no bloquea una lectura.
+       Delta de SC-sentinel-paths-01 si hace falta
+- [ ] R9. 👤 Parche `sentinel-paths-7.patch`; banco en verde y mutantes muertos
+
+**PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
+
+- [ ] R10. Casos en rojo:
+       - A1 = V3: el destino de `cp`/`mv` cuando no es la última palabra (redirecciones) y
+         `--target-directory` abreviado;
+       - A2: `mv .git`;
+       - V1: la caja en un disco que no la distingue;
+       - V2: `git commit -n`, `--no-verif`;
+       - A4 = V9: `protected-branches` con `git -C`, `git -c`, `env` y asignaciones delante;
+       - P1: `no-hook-disabling` deja leer
+- [ ] R11. 👤 Parche `sentinel-paths-8.patch`; banco en verde y mutantes muertos
+
+**Tribunal**
+
+- [ ] R12. Panel corto (tres lentes, contexto limpio): solo confirman lo arreglado en la ronda 3,
+       con variantes cercanas → `disposition` 👤; después, el 11 queda cerrado
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
