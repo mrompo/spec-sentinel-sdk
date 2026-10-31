@@ -1,0 +1,202 @@
+{
+  "lens": "pragmatist",
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "minor",
+      "file": "sentinel/policy.default.yaml",
+      "line": 100,
+      "title": "no-hook-disabling no tiene skip_read_only y, con las claves en cualquier caja y tras '=' (A3), bloquea búsquedas y lecturas que solo nombran core.hooksPath o include.path, con un motivo que habla de desactivar los gates",
+      "evidence": "$P/pragmatist/fp-hookspath.sh (salida en fp-hookspath.out), base cacbe86 reconstruida con git apply -R de ronda2.diff frente a 9036d89: «grep -rni core.hookspath docs» base 0 → ronda2 2; «git log --oneline -Score.hookspath» 0 → 2; «grep -rn 'GIT_CONFIG_KEY_0=include.path' docs» 0 → 2. Motivo: «[no-hook-disabling] No se desactivan los gates ni se auto-conceden overrides desde un comando». Me ha pasado dos veces en esta misma revisión con el Centinela real de la sesión, buscando en la documentación. SC-sentinel-paths-08 promete que leer no se bloquea; esta regla no lo declara, y es la única que la ronda 2 ensanchó hacia texto que también aparece en lecturas. La lista de lectores ya excluye git config, git -c y las asignaciones, así que skip_read_only no abre ninguna de las formas de SC-03.",
+      "fix": "Añadir skip_read_only: true a no-hook-disabling y un caso en sc-26 (grep -rni core.hookspath docs → 0; git config core.hookspath /dev/null y GIT_CONFIG_KEY_0=include.path git commit siguen en 2).",
+      "of": null
+    },
+    {
+      "id": "P2",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 365,
+      "title": "Con el tope subido a 512 rutas y la copia a carpetas (add_tree), el peor caso por llamada pasa de ~1,4 s a 8-24 s, y el tope de 10000 entradas es por carpeta, no por comando: la misma copia se bloquea en 0,5 s o pasa en 22 s según se escriba",
+      "evidence": "$P/pragmatist/perf.sh (perf.out) y $P/pragmatist/perf-tree.sh (perf-tree.out, perf-tree-255.out, perf-tree-500.out): cableado completo (sh -c del comando de settings.json), macOS bash 3.2, mediana de 5, con la máquina cargada (load 8-10, afecta igual a las dos versiones). Uso normal sin cambios: Read 547→512 ms, git status 461→438, git add 40 rutas 671→765, heredoc de 60 líneas 1128→980. Peor caso: «git add» de 500 ficheros 1404 ms (base, bloqueado por el tope de 128) → 8416 ms (pasa); «wc -l src/a/*.js» con 500 840 → 3536 ms; «cp -r pk/* dest/» con 200 carpetas de 150 ficheros 22,5 s y con 255×300 23,8 s (≈95 ms por carpeta), mientras «rsync -a pk/ dest/» con el mismo contenido se bloquea en 0,5 s por «más de 10000 entradas». Con 500 carpetas tarda 28 s y luego bloquea. STATUS.md describe la deuda P9 como «un heredoc de 60 líneas pasaba de 0,36 s a 1 s»: ya no es el peor caso. Con el timeout de 60 s de Claude Code y la máquina cargada el margen es de 2-3×; con un Claude Code anterior a v2.1.295 (sin onFailure) un timeout no bloquea.",
+      "fix": "Mínimo: actualizar la deuda P9 de STATUS.md con estas cifras y añadir un caso de rendimiento con umbral holgado (p. ej. git add de 500 rutas < 15 s). Mejor: un presupuesto por comando (rutas + entradas de todas las carpetas, p. ej. 10000 en total) en vez de uno por carpeta, y caché de phys_dir/canon por carpeta para que el coste no sea un subshell por palabra.",
+      "of": "P9"
+    },
+    {
+      "id": "P3",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 793,
+      "title": "too-many-paths también bloquea comandos que solo leen (wc o grep sobre un comodín grande) y su motivo engaña: cuenta los destinos que calcula into_dir como rutas «nombradas» y propone partir un comodín",
+      "evidence": "$P/pragmatist/misc.sh (misc.out), apartado 3, y $P/pragmatist/fp.sh (fp.out): «wc -l src/a/*.js» y «grep -l TODO src/a/*.js» con 520 ficheros → exit 2 «el comando nombra más de 512 rutas … pártelo en comandos más cortos», aunque READ_ONLY es true (el tope se decide antes de las reglas). «cp -r pk/* dest/» con 300 carpetas → exit 2 con el mismo motivo, aunque el comando nombra 300: into_dir añade dest/<origen> por cada una con add_word, en el mismo contador. La llave lo salva (la spec lo acepta), pero para una lectura el agente tiene alternativas que el motivo no le da (la herramienta Grep, nombrar la carpeta: «git add src/a», «grep -rl TODO src/a»). El arreglo de P5 (no contar el texto de un heredoc) sí está hecho.",
+      "fix": "Que el motivo diga qué hacer: «nombra la carpeta en vez de cada fichero (git add src/a, grep -r … src/a) o estrecha el comodín». Contar aparte los destinos de into_dir. Valorar que en un comando que solo lee el tope no deniegue y solo corte la recogida (la única regla sin skip_read_only con rutas, isolation-env, ve también el texto del comando).",
+      "of": "P5"
+    },
+    {
+      "id": "P4",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 644,
+      "title": "La llave en forma de heredoc solo funciona si se pega sin sangría: copiada de una interfaz que sangra el resultado del hook o el mensaje del agente, el terminador LLAVE no cierra y la shell se queda esperando",
+      "evidence": "$P/pragmatist/key.sh con $P/pragmatist/paste.py (salida en key.out), pegando en una pty: el bloque tal cual del aviso funciona en bash, zsh, sh y dash, desde una subcarpeta y con una ruta con espacio y comilla; la acción reintentada pasa (exit 0) y la llave se gasta. Con 5 espacios delante de cada línea (como muestra Claude Code el resultado de una herramienta, y con 2 el texto que el agente le repite a la persona), bash y zsh se quedan en PS2 y la acción sigue en 2. No he podido capturar la interfaz de Claude Code para confirmar la sangría al copiar: confianza media. La Esclusa (breakglass.sh) da el mismo heredoc.",
+      "fix": "Dar la llave en una sola línea, insensible a la sangría: printf '%s\\n' '<motivo>' 'para: <acción>' > '<ruta>' (con el para: pasado por sh_quote), o aceptar las dos formas en el aviso. Caso en sc-27/sc-11: ejecutar el bloque con sangría delante.",
+      "of": "P4"
+    },
+    {
+      "id": "P5",
+      "severity": "minor",
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "Los remedios del cableado se dan como si el agente pudiera ejecutarlos (todas sus acciones están bloqueadas), «git checkout HEAD -- sentinel/hooks/…» falla desde una subcarpeta, y sin git no dice qué hacer",
+      "evidence": "$P/pragmatist/misc.sh (misc.out, apartado 1) y $P/pragmatist/wiring.sh (wiring.out): con el script borrado, el aviso dice «Restáuralo con: git checkout HEAD -- sentinel/hooks/sentinel-guard.sh»; ejecutado desde docs/ → «error: pathspec … did not match» y no se restaura; el agente que lo intenta recibe el mismo bloqueo (exit 2). En una rama sin el SDK, «Vuelve a la rama anterior con: git checkout -» igual: el agente lo intenta y se bloquea. Sin git (Docker Debian y Alpine, $P/pragmatist/in-docker.sh, docker.out, git solo en /usr/local/bin o ~/.nix-profile) el motivo acaba en «Lo que dice: bash: line 1: git: command not found», sin decir que hay que poner git en una de esas carpetas; el pendiente de setup tampoco lo dice (el README sí). El aviso de la llave ya resolvió lo mismo con la ruta absoluta (#18).",
+      "fix": "En los tres motivos: «una persona, desde su terminal (el agente no puede: todas sus acciones están bloqueadas)», y la orden con la raíz: git -C '<proyecto>' checkout HEAD -- sentinel/hooks/sentinel-guard.sh. Sin git: «instala el git del sistema o enlaza uno, como root, en una de esas carpetas».",
+      "of": "P3"
+    },
+    {
+      "id": "P6",
+      "severity": "major",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 70,
+      "title": "Las rutas de Edit/Write con barras invertidas (las de Windows) no se reconocen: Write de sentinel\\policy.yaml o .claude\\settings.json pasa con 0; si Claude Code en Windows (Git Bash, que el README declara soportado) envía así file_path, el enforcement se edita sin la llave",
+      "evidence": "$P/pragmatist/misc.sh (misc.out, apartado 2): Write de 'sentinel\\policy.yaml', '<ws>/sentinel\\policy.yaml' y '.claude\\settings.json' → exit 0; 'sentinel/policy.yaml' → 2. FILE_PATH se queda con los escapes del JSON (C:\\\\…) y ni las path_re (con '/') ni canon()/phys_path los normalizan. No he ejecutado Claude Code en Windows: no sé si file_path y CLAUDE_PROJECT_DIR llegan como C:\\… o como /c/…; confianza baja. Si llegan así, es un bloqueante (SC-sentinel-paths-02). En el mismo entorno tampoco he podido probar que git.exe funcione bajo env -i sin SYSTEMROOT ni WINDIR.",
+      "fix": "Verificarlo en Windows. Si se confirma: decodificar FILE_PATH (json_text) y, en MINGW/MSYS, pasarlo por cygpath -u (y CLAUDE_PROJECT_DIR); caso en el banco con una ruta C:\\…\\sentinel\\policy.yaml que debe dar 2. Si no se puede, documentarlo en la fila Windows del README.",
+      "of": null
+    },
+    {
+      "id": "P7",
+      "severity": "nit",
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "El motivo de cada bloqueo llega al agente detrás de los 2,2 KB del comando del cableado",
+      "evidence": "Visto en esta revisión con el Centinela real: Claude Code da el error como «PreToolUse:Bash hook error: [/usr/bin/env -i HOME=… (todo el cableado) …]: sentinel-guard: [no-hook-disabling] …». El motivo y la llave quedan al final de un bloque de shell que el agente y la persona tienen que saltar.",
+      "fix": "Acortar lo que va en línea (los tres mensajes de diagnóstico podrían vivir en un script protegido junto al Centinela, dejando en línea solo env -i, el PATH y la comprobación de que existe), o asumirlo en la guía.",
+      "of": null
+    },
+    {
+      "id": "P8",
+      "severity": "nit",
+      "file": ".claude/settings.json",
+      "line": 9,
+      "title": "Con un uid sin entrada en /etc/passwd (devcontainers, OpenShift), id -un escribe un error en cada llamada, delante de cada motivo",
+      "evidence": "$P/pragmatist/dk/uid.sh en Docker Debian con setpriv --reuid=4321 (uid.out): Read → exit 0 con «id: cannot find name for user ID 4321» en stderr; Write de sentinel/policy.yaml → exit 2 con esa línea antes del motivo.",
+      "fix": "$(id -un 2>/dev/null) en el cableado.",
+      "of": null
+    },
+    {
+      "id": "P9",
+      "severity": "nit",
+      "file": "sentinel/policy.default.yaml",
+      "line": 71,
+      "title": "Leer el enforcement con lectores habituales que no están en la lista (sed -n, awk, rg, jq, git --no-pager) se bloquea con un motivo que dice que se modifica, sin decir cómo leerlo",
+      "evidence": "$P/pragmatist/fp.sh (fp.out): «sed -n 1,20p sentinel/policy.yaml», «awk 'NR<5' …», «rg -n hooks …», «jq . .claude/settings.json», «cat -n … | sed -n 1,5p», «git --no-pager diff -- …» y «git -C . log -- …» → exit 2 «No se modifica ni borra el propio enforcement». La spec deja la lista cerrada y excluye las opciones globales de git, así que no la incumple; el motivo sí engaña y no da la salida (la herramienta Read, o cat/grep/head).",
+      "fix": "Añadir al motivo de self-protection y managed-files: «para leerlo, usa Read o cat/grep/head/tail (sed, awk y rg no cuentan como lectura)». Valorar rg y jq en la lista.",
+      "of": null
+    },
+    {
+      "id": "P10",
+      "severity": "nit",
+      "file": "STATUS.md",
+      "line": 120,
+      "title": "La deuda P7 es más ancha de lo que dice STATUS: el cuerpo de un heredoc cuenta como comandos y bloquea un mensaje de commit o una nota que mencionan rm o mv junto a una carpeta del enforcement",
+      "evidence": "$P/pragmatist/fp.sh (fp.out): «git commit -F - <<'EOF' … docs: explica que mv sentinel/hooks se bloquea … EOF» y «cat >> docs/notas.md <<'EOF' … Para desinstalar: rm -r sentinel … EOF» → exit 2 [protect-enforcement-dirs]. En cambio la forma canónica de Claude Code, git commit -m \"$(cat <<'EOF' … EOF)\", pasa. Es la deuda P7 (se decide sobre el comando entero), pero STATUS solo cita «ls -la .claude && rm -f tmp.txt» y «cp -r .claude /tmp/bk».",
+      "fix": "Añadir el caso del heredoc a la deuda P7 en STATUS.md (o tratar el cuerpo de un heredoc como datos para command_re, que ya se lee aparte en cmd_words).",
+      "of": "P7"
+    }
+  ],
+  "confirmations": [
+    {
+      "id": "V1",
+      "status": "fixed",
+      "evidence": "$P/pragmatist/conf.sh (conf.out): salto de línea y tabulador del JSON delante del verbo, también tras '&&' y tras una barra de continuación; git config con tabuladores para --remove-section core e include.path → 2."
+    },
+    {
+      "id": "V2",
+      "status": "fixed",
+      "evidence": "conf.out: /bin/mv, \\mv, 'mv', \"rm\", m''v, command mv, sudo -n mv, env -i /usr/bin/env mv, X=1 mv, git -C . mv, /usr/bin/git rm → 2."
+    },
+    {
+      "id": "P8",
+      "status": "fixed",
+      "evidence": "conf.out y fp.out: grep -E 'a|b', grep -c \"x;y\" y git diff | grep -E '^(a|b)' sobre ficheros protegidos → 0; grep … | tee sentinel/.override → 2. git --no-pager sigue bloqueado, como dice la spec (ver P9, nit)."
+    },
+    {
+      "id": "A5",
+      "status": "fixed",
+      "evidence": "conf.out: 2>/dev/null pegado a ';', '|' y '&&', 2>&1|, >/dev/null 2>/dev/null y &>/dev/null → 0; 2>/dev/null >sentinel/.override → 2."
+    },
+    {
+      "id": "V6",
+      "status": "fixed",
+      "evidence": "conf.out: printf -v PATH … y printf -vX … no cuentan como lectura (2); printf '%s\\n' sí (0)."
+    },
+    {
+      "id": "A2",
+      "status": "fixed",
+      "evidence": "conf.out: remove-section, rename-section (también con --local delante y detrás), edit, --local edit → 2; git config user.name y --get core.editor → 0."
+    },
+    {
+      "id": "A3",
+      "status": "fixed",
+      "evidence": "conf.out: core.hookspath, CORE.HOOKSPATH con -c, include.PATH, --config-env=include.path=P, GIT_CONFIG_KEY_0=include.path, includeIf.gitdir:/x/.path → 2. Efecto lateral en lecturas: P1."
+    },
+    {
+      "id": "A1",
+      "status": "fixed",
+      "evidence": "conf.out: cp/mv/rsync/install a .git, cp -t .git, cp a sentinel/adapters y sentinel/githooks/lib, mv sentinel/githooks/lib → 2; cp a docs/ → 0."
+    },
+    {
+      "id": "P2",
+      "status": "fixed",
+      "evidence": "$P/pragmatist/bare.sh (bare.out): clone --bare + worktree dentro: mv .claude, chmod -R 000 sentinel/hooks, mv sentinel/githooks, rm -r sentinel, Write de la config del bare y printf >> ../config → 2; mv docs docs2 → 0."
+    },
+    {
+      "id": "A4",
+      "status": "fixed",
+      "evidence": "bare.out: con el cwd del payload en otro repo y en /tmp, Write de <bare>/config y <bare>/hooks/pre-commit y printf >> <bare>/config → 2."
+    },
+    {
+      "id": "A7",
+      "status": "fixed",
+      "evidence": "conf.out: con h -> sentinel/hooks, Write de <ws>/h/../policy.yaml y Edit de h/../policy.yaml → 2."
+    },
+    {
+      "id": "V5",
+      "status": "fixed",
+      "evidence": "conf.out: cwd del payload en docs/ (mv ../sentinel/hooks) y en sentinel/ (mv hooks) → 2; con cwd en la raíz, mv a b → 0."
+    },
+    {
+      "id": "P1",
+      "status": "fixed",
+      "evidence": "$P/pragmatist/in-docker.sh en Debian 12 y Alpine 3.20 (docker.out): con git solo en /mingw64/bin, /nix/var/nix/profiles/default/bin o /etc/profiles/per-user/<persona>/bin, el cableado deja pasar el Read (0); con git solo en /usr/local/bin o ~/.nix-profile/bin bloquea (2, como dice la spec) y setup termina con 3 y el pendiente «el cableado del Centinela … no deja pasar una acción inocua». Git Bash real no lo he ejecutado. Mensaje sin remedio: P5."
+    },
+    {
+      "id": "P3",
+      "status": "fixed",
+      "evidence": "$P/pragmatist/wiring.sh (wiring.out): rama sin el SDK → «esta rama … no tiene el SDK … git checkout -»; script borrado y versionado → «git checkout HEAD -- sentinel/hooks/sentinel-guard.sh», que funciona desde la raíz; sin versionar lo cubre sc-28. Restos en los remedios: P5."
+    },
+    {
+      "id": "P6",
+      "status": "fixed",
+      "evidence": "docker.out (otro usuario sobre un repo de root, Debian y Alpine) y wiring.out (GIT_TEST_ASSUME_DIFFERENT_OWNER en macOS): el motivo incluye «detected dubious ownership … git config --global --add safe.directory …» y ya no manda instalar git. Read sigue bloqueado sin git, como recoge ahora SC-09."
+    },
+    {
+      "id": "P4",
+      "status": "partial",
+      "evidence": "$P/pragmatist/key.sh + paste.py (key.out): el bloque tal cual funciona en bash, zsh, sh y dash, desde una subcarpeta y con espacios y comilla en la ruta, también para un comando multilínea; con la sangría con que lo muestra una interfaz, no cierra (P4 nuevo)."
+    },
+    {
+      "id": "V4",
+      "status": "fixed",
+      "evidence": "key.out: con SENTINEL_OVERRIDE, una llave para Write:docs/otra.md se conserva y la de esta misma acción se gasta (exit 0 en los dos)."
+    },
+    {
+      "id": "P5",
+      "status": "fixed",
+      "evidence": "conf.out y fp.out: heredoc de 80 líneas con a/b y de 200 URLs, git add de 130 y de 500 rutas → 0. Restos en el tope (lecturas y motivo): P3; coste: P2."
+    },
+    {
+      "id": "A10",
+      "status": "fixed",
+      "evidence": "STATUS.md al día con la ronda 2 (en 9036d89 dice que la PR 6 sigue abierta: es el estado de cuando se escribió) y el comentario de sc-28 remite a «La shell que lanza el cableado»."
+    }
+  ]
+}

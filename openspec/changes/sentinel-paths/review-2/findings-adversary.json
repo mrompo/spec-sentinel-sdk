@@ -1,0 +1,202 @@
+{
+ "lens": "adversary",
+ "findings": [
+  {
+   "id": "V1",
+   "severity": "blocker",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 727,
+   "title": "En un sistema de ficheros que no distingue mayúsculas (APFS por defecto en macOS, NTFS en Git for Windows), protect-enforcement-dirs no reconoce la carpeta escrita con otra caja: «mv Sentinel/githooks» pasa y deja la Esclusa sin hooks",
+   "evidence": "$P/adversary/v1-caja-fs.sh (salida en v1-caja-fs.out) y t2-nuevo.sh. canon() nombra la ruta física con la caja escrita (cd -P Sentinel/githooks && pwd -P devuelve «…/Sentinel/githooks»), los prefijos de canon() se comparan con case y dir_re se evalúa sin -i (apply_rule l.727), al contrario que path_re. Salidas: «mv sentinel/githooks …» exit 2 [protect-enforcement-dirs]; «mv Sentinel/githooks …» exit 0; «mv sentinel/GITHOOKS …» exit 0; «mv .Claude …» exit 0; «mv SENTINEL /tmp/s», «chmod -R 000 Sentinel/hooks», «mv sentinel/githooks/LIB /tmp/l» exit 0. Efecto real en el clon: el mv se hace, sentinel/githooks deja de existir y un commit con mensaje no conventional, que antes rechazaba la Esclusa (exit 1), entra. Incumple SC-sentinel-paths-01 («se decide por la ruta física … vale cualquier grafía») en la plataforma de desarrollo por defecto. Lo mismo para la carpeta común de git escrita en otra caja (.BARE/config en un repo bare): canon() no la nombra .git/…",
+   "fix": "Comparar sin distinguir mayúsculas cuando el sistema de ficheros no las distingue: detectarlo una vez (p. ej. [ -e \"$REPO_ROOT_DIR/SENTINEL\" ] con sentinel existente) y entonces pasar -i a match en dir_re y comparar los prefijos de canon() en minúsculas; o canonizar la caja con la del disco (ls/find del nombre real por componente). Caso en sc-21: «mv Sentinel/githooks /tmp/g» y «mv .Claude /tmp/c» → 2 cuando el FS no distingue mayúsculas (se salta en Linux).",
+   "of": null
+  },
+  {
+   "id": "V2",
+   "severity": "major",
+   "file": "sentinel/policy.default.yaml",
+   "line": 112,
+   "title": "no-hook-disabling solo reconoce --no-verify entero: «git commit -n» (su forma corta) y las abreviaturas que acepta git (--no-verif, --no-veri) se saltan pre-commit y commit-msg sin la llave",
+   "evidence": "$P/adversary/v2-commit-n.sh (salida en v2-commit-n.out), en un clon en feature/x con core.hooksPath=sentinel/githooks. Centinela: «git commit --no-verify -m …» exit 2; «git commit -n -m …», «git commit -nm …», «git commit --no-verif -m …», «git commit --no-veri -m …», «git push --no-verif …», «git merge --no-verif …» exit 0. Git 2.54: el commit con mensaje no conventional sin opciones sale con 1 (la Esclusa lo rechaza); con -n, -nm, --no-verif y --no-veri entra (exit 0); --no-ver es ambiguo (129). SC-sentinel-guard-13 dice «ejecutar git commit --no-verify» y su límite «otras grafías» solo cubre las asignaciones y core.hooksPath. Es previo a la ronda 2, pero la regla es la que tocó (A2, A3) y se salta el escáner de secretos de pre-commit; pre-push y la Aduana siguen.",
+   "fix": "En no-hook-disabling: '--no-veri(f(y)?)?([[:space:]=]|$)' para las abreviaturas, y para git commit un grupo de opciones cortas con n: 'git([[:space:]]+[^[:space:]]+)*[[:space:]]+commit([[:space:]]+[^[:space:]]+)*[[:space:]]+-[a-zA-Z]*n' (en merge -n es --no-stat: no aplicarlo allí). Casos en sc-16: git commit -n, -nm, --no-verif → 2.",
+   "of": null
+  },
+  {
+   "id": "V3",
+   "severity": "major",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 459,
+   "title": "into_dir solo reconoce --target-directory escrito entero; GNU cp, mv, ln e install aceptan sus abreviaturas (--target=, --targ, --t) y entonces «cp --target=.git x/config» escribe .git/config sin bloqueo",
+   "evidence": "$P/adversary/v3-target-abrev.sh (salida en v3-target-abrev.out) y t3-config-dirs.sh. Centinela: «cp --target-directory=.git $E/config» exit 2 [self-protection]; «cp --target=.git $E/config», «cp --targ .git $E/config», «mv --t .git $E/config», «install --target=sentinel/adapters $E/stack.sh» exit 0. Con la forma abreviada, into_dir la salta como opción larga cualquiera (l.461), toma el último origen como destino, que no es una carpeta, y no añade .git/config; .git no está en dir_re. En debian:12-slim (GNU coreutils 9.1): «cp --target=d1 config» deja d1/config, «cp --targ d2 config» deja d2/config, «mv --t d3 c2» deja d3/c2. Con $E/config = '[core] hooksPath = /dev/null' la Esclusa queda sin efecto en Linux; con install, el adaptador que carga pre-commit es del agente. Reabre A1 a medias: SC-sentinel-paths-01 pone «cp -t .git x/config» como ejemplo.",
+   "fix": "En into_dir, tratar como --target-directory cualquier prefijo de al menos '--t' que no sea de otra opción ('--t'|'--ta'|…|'--target-directory', o case \"--target-directory\" in \"$w\"*), y lo mismo para --no-target-directory ('--no-t…'). Casos en sc-30: cp --target=.git x/config, mv --t .git x/config → 2.",
+   "of": "A1"
+  },
+  {
+   "id": "V4",
+   "severity": "blocker",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 295,
+   "title": "Lo que bash ejecuta dentro de una sustitución entre comillas dobles (\"$(…)\", \"`…`\") o de una shell anidada (bash -c '…', sh -c, eval) es una sola palabra para cmd_words: «x=\"$(rm -rf sentinel)\"» o «bash -c 'mv sentinel/githooks /tmp/g'» pasan",
+   "evidence": "$P/adversary/t7-lector.sh (salida en t7-lector.out). Centinela: «echo $(mv sentinel/githooks /tmp/g)» exit 2, pero «echo \"$(mv sentinel/githooks /tmp/g)\"» exit 0, «x=\"$(rm -rf sentinel)\"» exit 0 (tampoco pide confirmación destructive, que exige rm al principio del tramo), «echo \"`mv sentinel/githooks /tmp/g`\"» exit 0, «echo \"$(echo \"a\"; mv sentinel/githooks /tmp/g; echo \"b\")\"» exit 0, «bash -c 'mv sentinel/githooks /tmp/g'», «sh -c \"chmod -R 000 sentinel/hooks\"» y «eval 'mv …'» exit 0. En modo \"…\" cmd_words (l.295-303) guarda $( y ` como literales, así que la palabra es «$(mv sentinel/githooks /tmp/g)» y add_word la descarta (su carpeta no existe): dir_re no ve sentinel/githooks aunque command_re sí ve el mv. Ejecutado en el clon con bash, el primero mueve sentinel/githooks. SC-sentinel-paths-01: «las reglas del comando deciden sobre lo que ejecuta bash»; el README dice que las sustituciones «no se expanden» (su salida), pero sin comillas sí se analiza su comando, y bash -c y eval no aparecen en los límites. Es el tema 1 del primer panel por otra puerta; \"$(…)\" es la forma habitual de escribir una sustitución.",
+   "fix": "En cmd_words, dentro de \"…\", al encontrar $( o ` leer su contenido como código (recursivo, con su propia pila de comillas) y emitir sus palabras y tramos; para los tramos cuyo programa es bash, sh, zsh, dash con -c, o eval, volver a pasar el argumento por cmd_words. Alternativa fail-closed y mínima: si el texto tiene $( o ` dentro de comillas dobles, o -c/eval tras una shell, aplicar dir_re también a las palabras que salen de partir cada palabra con espacios. Casos en sc-29: los cuatro de arriba → 2.",
+   "of": null
+  },
+  {
+   "id": "V5",
+   "severity": "major",
+   "file": "sentinel/policy.default.yaml",
+   "line": 84,
+   "title": "Restaurar una carpeta del enforcement desde git (git restore sentinel, git checkout <rev> -- sentinel, git stash push -- sentinel) pasa: borra las líneas de la bitácora que aún no están en un commit y trae una versión antigua del enforcement",
+   "evidence": "$P/adversary/t6-tope-bitacora.sh (salida en t6-tope-bitacora.out) y $P/adversary/v5-restore-version.sh (salida en v5-restore-version.out). Con una línea de excepción añadida a sentinel/overrides.log: «git restore sentinel/overrides.log» y «git checkout -- sentinel/overrides.log» exit 2, pero «git restore sentinel», «git checkout -- sentinel», «git restore --source=HEAD~1 sentinel», «git stash push -- sentinel» y «git checkout HEAD -- .» exit 0, y tras «git restore sentinel» la línea de la excepción ha desaparecido y git status no muestra nada. Con una revisión anterior cuya política no tenía protect-enforcement-dirs: «git restore --source=HEAD~1 sentinel» exit 0, la política queda sin esa regla y luego «mv sentinel/githooks /tmp/g» exit 0. self-protection solo ve la carpeta si se nombra un fichero suyo y protect-enforcement-dirs no tiene restore, checkout ni stash entre sus verbos. Incumple el requisito de break-glass auditado («SHALL registrar … en sentinel/overrides.log») y SC-sentinel-paths-01 (copiar encima de una carpeta protegida). Cambiar de rama entera a una revisión antigua es legítimo y no se puede evitar (P3); la forma quirúrgica sobre la carpeta y la bitácora sí.",
+   "fix": "Añadir a command_re de protect-enforcement-dirs 'git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(restore|checkout|stash|reset)' para que dir_re decida con las carpetas (sentinel, sentinel/hooks…), y para la bitácora, que la excepción quede también fuera de lo que git restaura (p. ej. una copia en .git/, ya protegida, que doctor compare con sentinel/overrides.log). Casos en sc-21: git restore sentinel y git checkout HEAD~1 -- sentinel → 2.",
+   "of": null
+  },
+  {
+   "id": "V6",
+   "severity": "major",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 311,
+   "title": "cmd_words toma «<<<» (here-string) y el «<<» aritmético por un heredoc sin cerrar: desde la línea siguiente lee en modo cuerpo, donde una comilla no pasa de una línea a otra, y una comilla de dos líneas esconde el comando que sigue",
+   "evidence": "$P/adversary/t7-lector.sh (salida en t7-lector.out). Con el comando de tres líneas «cat <<< x», «echo 'a», «b'; mv sentinel/githooks /tmp/g»: exit 0; igual con «echo $((1<<2))» en la primera línea; «cat <<< x; mv sentinel/githooks /tmp/g» en una línea, exit 2. En l.311 el primer par de '<' de '<<<' abre un heredoc con delimitador vacío (el tercer '<' corta la lectura del delimitador), y en $((1<<2)) el delimitador es '2'. En modo cuerpo la comilla se reinicia en cada salto de línea (l.287), así que «b'» abre una comilla que se come «; mv sentinel/githooks /tmp/g» y dir_re no ve la carpeta. Ejecutados con bash en el clon, los dos mueven sentinel/githooks. Lo introdujo la lectura de heredocs de la ronda 2 (#15); el comentario de cmd_words dice que un << que no abre un heredoc «no esconde nada».",
+   "fix": "No abrir heredoc si tras '<<' viene '<' (here-string) ni dentro de $(( … )) o (( … )); y, fail-closed, en modo cuerpo no cambiar de estado de comillas: tratar cada línea del cuerpo como literal (sin abrir comillas), que es lo que hace bash. Casos en sc-29: los dos comandos de tres líneas → 2.",
+   "of": null
+  },
+  {
+   "id": "V7",
+   "severity": "minor",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 339,
+   "title": "tilde() sustituye ~ y $HOME pero no ~+ ni ~- (que bash expande a $PWD y $OLDPWD): «mv ~+/sentinel/githooks /tmp/g» pasa",
+   "evidence": "$P/adversary/t2-nuevo.sh (salida en t2-nuevo.out): «mv ~+/sentinel/githooks /tmp/g» exit 0 y «chmod -R 000 ~+/sentinel/hooks» exit 0, mientras «mv sentinel/githooks /tmp/g» exit 2. La palabra no existe como ruta relativa ni existe su carpeta, así que add_word la descarta. No es una variable (el límite documentado), es una expansión de tilde como ~.",
+   "fix": "En tilde(): '~+'|'~+/'*) → \"$PWD${_w#\\~+}\"; y '~-' con $OLDPWD si lo hay (si no, fail-closed: añadir la palabra sin el prefijo). Caso en sc-21.",
+   "of": null
+  },
+  {
+   "id": "V8",
+   "severity": "minor",
+   "file": "sentinel/hooks/sentinel-guard.sh",
+   "line": 793,
+   "title": "Con SENTINEL_OVERRIDE activo, un comando con más de 512 rutas queda en la bitácora como too-many-paths aunque además borre el enforcement: se puede ocultar qué regla se saltó",
+   "evidence": "$P/adversary/t4-llave.sh (salida en t4-llave.out). «rm -rf sentinel/hooks; ls .» con SENTINEL_OVERRIDE → exit 0 y la bitácora dice «protect-enforcement-dirs»; el mismo comando con 520 '.' detrás → exit 0 y la bitácora dice «too-many-paths». too-many-paths se decide antes de evaluar las políticas (l.793-796), así que la excepción se registra con su id y no con el de la regla que de verdad aplica. La bitácora es el KPI de overrides.",
+   "fix": "Evaluar las políticas también cuando TOO_MANY está puesto y registrar los dos ids (o el más estricto de las reglas además de too-many-paths) en log_override.",
+   "of": null
+  },
+  {
+   "id": "V9",
+   "severity": "minor",
+   "file": "sentinel/policy.default.yaml",
+   "line": 130,
+   "title": "protected-branches no reconoce git con una opción global que lleva argumento aparte (git -C . commit, git -c user.name=x commit): en main pasan",
+   "evidence": "$P/adversary/t2-nuevo.sh (salida en t2-nuevo.out), en main: «git commit -m x» y «git --git-dir=.git commit -m x» exit 2, pero «git -C . commit -m x» y «git -c user.name=x commit -m x» exit 0. La regex solo admite opciones de una palabra o 'clave=valor' con [a-zA-Z-] (sin '.'). Previo a la ronda 2, pero SC-sentinel-paths-10 (la rama de HEAD) solo vale si la regla casa; la Esclusa lo para en pre-push.",
+   "fix": "Admitir '(-C|-c|--git-dir|--work-tree|--namespace)[[:space:]]+[^[:space:]]+' y claves con '.' en el prefijo de opciones; o decidir sobre CMD_NORM con el subcomando como la primera palabra que no es opción ni su argumento. Caso en sc-03.",
+   "of": null
+  },
+  {
+   "id": "V10",
+   "severity": "nit",
+   "file": "sentinel/README.md",
+   "line": 51,
+   "title": "El límite «Regex evadibles» no dice que los programas que escriben por su cuenta (tar -x, git apply, patch) ni las rutas que calcula otro programa (find … -exec) quedan fuera, y con ellos se escribe la llave",
+   "evidence": "$P/adversary/t2-nuevo.sh (salida en t2-nuevo.out): «tar -xf /tmp/k.tar -C sentinel» exit 0 (un tar con .override deja la llave escrita por el agente), «find . -name sentinel-guard.sh -exec cp /tmp/evil {} \\;» exit 0, «setfacl -m u:x:0 sentinel/githooks» exit 0. El README nombra el cd previo, las variables, las llaves y xargs como origen, pero no estos. Es la misma clase que el cd previo, así que lo dejo en retoque de documentación.",
+   "fix": "Añadir a la fila «Regex evadibles»: programas que escriben o extraen por su cuenta (tar, unzip, git apply, patch) y rutas que produce otro programa al ejecutarse (find -exec, xargs como destino).",
+   "of": null
+  }
+ ],
+ "confirmations": [
+  {
+   "id": "V1",
+   "status": "fixed",
+   "evidence": "t1-tema1.sh: con un salto de línea, un tabulador, \\r, \\v o \\f escritos como escape delante del verbo, y git config con tabuladores (--remove-section, include.path) → exit 2."
+  },
+  {
+   "id": "V2",
+   "status": "fixed",
+   "evidence": "t1-tema1.sh: /bin/mv, \\mv, 'mv', \"mv\", m''v, m\\v, $'mv', /usr/bin/../../bin/mv, /bin//mv, command/exec/time/!/{ }/if/xargs/nice/timeout/busybox mv → exit 2. Quedan fuera por otra puerta las sustituciones entre comillas y bash -c (V4 nuevo)."
+  },
+  {
+   "id": "P8",
+   "status": "fixed",
+   "evidence": "t1-tema1.sh: grep -nE 'hooks|rules', grep 'a;b' y git diff … | grep -E '^(add|del)' sobre sentinel/policy.yaml → 0; grep 'a|b' … | tee sentinel/.override y > sentinel/.override → 2."
+  },
+  {
+   "id": "A5",
+   "status": "fixed",
+   "evidence": "t1-tema1.sh: 2>/dev/null; |, &&, 2>&1|, >/dev/null 2>/dev/null → 0; '>/dev/null; echo x > sentinel/.override', '2>/dev/null>sentinel/.override', '>/dev/nullx' → 2."
+  },
+  {
+   "id": "V6",
+   "status": "fixed",
+   "evidence": "t1-tema1.sh: printf -v PATH, printf -vPATH (y, fail-closed, cualquier -v detrás de printf) seguidos de cat sentinel/policy.yaml → 2; echo -v y cd → 0."
+  },
+  {
+   "id": "A2",
+   "status": "fixed",
+   "evidence": "t3-config-dirs.sh: git config remove-section core, rename-section core x, --local rename-section, remove-section --local core, remove-section CORE, edit, --local edit, -e → 2."
+  },
+  {
+   "id": "A3",
+   "status": "fixed",
+   "evidence": "t3-config-dirs.sh: core.hookspath, CORE.HOOKSPATH, git -c core.hookspath=, include.PATH, Include.Path, --config-env=include.path=P, GIT_CONFIG_KEY_0=include.path y includeIf.onbranch, includeif.gitdir, core.hooks\\Path, core.\"hooksPath\", 'core'.hooksPath → 2. (git commit -n es otra cosa: V2 nuevo.)"
+  },
+  {
+   "id": "A1",
+   "status": "partial",
+   "evidence": "t3-config-dirs.sh: cp/mv/rsync a .git, cp a sentinel/adapters, -t, -rt, --target-directory(=), sudo/env/X=1, comodín, rsync x/, cp -r x/., -rT, mv de sentinel/githooks/lib y sentinel/adapters → 2. Pero las abreviaturas de --target-directory (--target=, --targ, --t) pasan: V3 nuevo."
+  },
+  {
+   "id": "P2",
+   "status": "fixed",
+   "evidence": "t5-cableado-bare.sh: repo bare que contiene su worktree, CLAUDE_PROJECT_DIR en el worktree: mv .claude, rm -r sentinel, mv sentinel/githooks → 2; Write de <bare>/config y <bare>/hooks/pre-commit → 2."
+  },
+  {
+   "id": "A4",
+   "status": "fixed",
+   "evidence": "t5-cableado-bare.sh: Write de <bare>/config con el cwd en /tmp y en otro repo, y printf x >> <bare>/config desde /tmp → 2."
+  },
+  {
+   "id": "A7",
+   "status": "fixed",
+   "evidence": "t3-config-dirs.sh: con h -> sentinel/hooks, Write de h/../policy.yaml (absoluta y relativa) y h/./../policy.default.yaml → 2; con l -> sentinel/githooks/lib, l/../../hooks/sentinel-guard.sh y l/../../../.git/config → 2."
+  },
+  {
+   "id": "V5",
+   "status": "fixed",
+   "evidence": "t3-config-dirs.sh: payload con cwd en sentinel/ y el hook lanzado desde otra carpeta: rm -r hooks, mv githooks, chmod -R 000 ., mv ../githooks → 2; con un cwd que no existe se usa la carpeta del hook (sigue bloqueando)."
+  },
+  {
+   "id": "P1",
+   "status": "fixed",
+   "evidence": "Leído y probado a medias: el PATH fijo lleva /mingw64/bin, /nix/var/nix/profiles/default/bin y /etc/profiles/per-user/$(id -un)/bin (ninguna de la persona), y setup (l.738-766) lanza la prueba de humo con el comando del cableado de settings.json. No he podido simular un git que solo esté fuera de las carpetas del sistema en macOS."
+  },
+  {
+   "id": "P3",
+   "status": "fixed",
+   "evidence": "t5-cableado-bare.sh, a través del cableado: Centinela borrado pero en HEAD → 'Restáuralo con: git checkout HEAD -- sentinel/hooks/sentinel-guard.sh'; rama huérfana sin el SDK → 'esta rama (o este commit) no tiene el SDK … git checkout -'; Centinela que sale con 1 → 2."
+  },
+  {
+   "id": "P6",
+   "status": "fixed",
+   "evidence": "t5-cableado-bare.sh: proyecto donde git no responde → exit 2 con el PATH del cableado y lo que dice git ('Lo que dice: fatal: not a git repository…'), sin 'Instala git'. Dubious ownership no lo he podido simular (hace falta otro usuario); el cableado imprime el stderr de git, que lo diría."
+  },
+  {
+   "id": "P4",
+   "status": "fixed",
+   "evidence": "t4-llave.sh: el bloque del aviso (Write sentinel/policy.yaml, y un Bash con comillas, $, ` y espacios al final) con el motivo puesto, pegado en bash, sh y zsh desde /tmp → llave de 2 líneas en la raíz del clon, la acción pasa (exit 0, override auditado) y la llave se gasta. t5-cableado-bare.sh: el bloque de la Esclusa (commit-msg) pegado en bash → el commit entra y la llave se gasta."
+  },
+  {
+   "id": "V4",
+   "status": "fixed",
+   "evidence": "t4-llave.sh: con SENTINEL_OVERRIDE y una llave para otra acción → exit 0 y la llave se conserva; con la llave de esta acción → se gasta."
+  },
+  {
+   "id": "P5",
+   "status": "fixed",
+   "evidence": "t6-tope-bitacora.sh: git add de 130 ficheros y un heredoc de 600 líneas con URLs → 0; git add de 600 ficheros existentes → 2 [too-many-paths], que la llave de esa acción salva (t4-llave.sh). Matiz: un heredoc con más de 512 rutas que existen sí cuenta, aunque el README diga «el texto de un heredoc no cuenta»."
+  },
+  {
+   "id": "A10",
+   "status": "fixed",
+   "evidence": "STATUS.md ya dice que las tres PRs están en main y la ronda 2; el comentario de sc-28 (l.58-59) remite a «La shell que lanza el cableado», que es el nombre de la fila del README."
+  }
+ ]
+}

@@ -230,7 +230,10 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
 **Tribunal**
 
 - [ ] R7. Panel de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 4 a 6 →
-       `disposition` 👤
+       `disposition` 👤. Panel hecho el 2026-10-31, en [review-2/](review-2/README.md): `HOLD`,
+       con 30 hallazgos validados (4 bloqueantes: A1 = V3, A2, V1 y V4 = A3). De los 21 que
+       había que arreglar, 15 están arreglados para las tres lentes y 6 a medias. Falta la
+       disposición
 - [ ] R8. Lo que decida la persona; después, el 11 queda cerrado
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
