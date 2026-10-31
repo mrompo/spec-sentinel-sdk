@@ -122,6 +122,10 @@ echo "`mv sentinel/githooks /tmp/x`"
 echo "$(echo "a"; mv sentinel/githooks /tmp/x; echo "b")"
 echo "a $(echo "$(mv sentinel/githooks /tmp/x)") b"
 echo "$( (mv sentinel/githooks /tmp/x) )"
+echo "$( (true); mv sentinel/githooks /tmp/x)"
+echo "$(echo ')'; mv sentinel/githooks /tmp/x)"
+echo "$(echo ")"; mv sentinel/githooks /tmp/x)"
+echo "$(echo "$(echo ")")"; mv sentinel/githooks /tmp/x)"
 bash -c 'mv sentinel/githooks /tmp/x'
 sh -c "chmod -R 000 sentinel/hooks"
 eval 'mv sentinel/githooks /tmp/x'
@@ -142,6 +146,7 @@ echo "$(ls sentinel/githooks)"
 bash -c 'ls -la sentinel/githooks'
 sh -c 'echo hola'
 eval "echo 'mv sentinel/githooks x'"
+echo "$(echo "(") mv sentinel/githooks /tmp/x"
 EOF
 
 # ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
@@ -170,6 +175,8 @@ grep -rn "chmod" sentinel/hooks
 grep -c "cp" .claude
 git log --oneline --grep "mv" -- sentinel
 grep -rln 'rm' sentinel
+grep -rn \chmod sentinel/hooks
+X="mv" ls sentinel/githooks
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
@@ -182,5 +189,23 @@ X= 'mv' sentinel/githooks /tmp/x
 nohup "rm" -rf sentinel
 git "mv" sentinel/githooks /tmp/x
 git -C . 'rm' -r sentinel/githooks
+2>/dev/null 'mv' sentinel/githooks /tmp/x
+>/dev/null "mv" sentinel/githooks /tmp/x
+timeout 5 'mv' sentinel/githooks /tmp/x
+sudo -E 'mv' sentinel/githooks /tmp/x
+{ 'mv' sentinel/githooks /tmp/x; }
+if 'mv' sentinel/githooks /tmp/x; then :; fi
+git --git-dir=.git 'mv' sentinel/githooks /tmp/x
+git -c x.y=z 'rm' -r sentinel/githooks
+bash -o pipefail -c 'mv sentinel/githooks /tmp/x'
+bash -e -c 'mv sentinel/githooks /tmp/x'
 EOF
+
+# Código anidado: hasta 8 niveles se lee entero; con más, no se sabe qué ejecuta y se bloquea
+nest() { local c="$2" k; for ((k = 0; k < $1; k++)); do c="echo \"\$($c)\""; done; printf '%s' "$c"; }
+guard "$(bash_payload "$(nest 8 true)")"
+assert_exit 0 || { echo "    debería permitirse: 8 sustituciones anidadas" >&2; exit 1; }
+guard "$(bash_payload "$(nest 9 true)")"
+assert_exit 2 || { echo "    debería bloquearse: 9 sustituciones anidadas" >&2; exit 1; }
+assert_err_contains "anida código" || exit 1
 exit 0
