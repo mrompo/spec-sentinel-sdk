@@ -11,7 +11,7 @@ que toca el enforcement es un fichero protegido: lo entrega el agente como parch
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
 **Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
-2 de `apply` va por la PR 6 (las PRs 4 y 5 en `main` por la #15, la #16 y la #17).
+2 de `apply` está en `main` (PRs 4 a 6, de la #15 a la #18). Toca el panel de confirmación (R7).
 
 ## Engine · antes de teclear
 
@@ -181,7 +181,7 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        diecinueve mutantes (siete nuevos y los doce de la #16) rompen algún caso. Segunda pasada
        de la #17, en `sentinel-paths-5d.patch` (`0c5339e`): los enlaces del origen no se siguen,
        como `cp` sin `-L`, así que un enlace en bucle no deja el recorrido sin fin; veinte
-       mutantes muertos. Falta el `merge`
+       mutantes muertos. En `main` por la #17 (`3c68518`, 2026-10-29)
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
@@ -225,7 +225,7 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        los espacios del final (CWE-863); antes, la llave de una acción que acaba en espacio no la
        autorizaba nunca y, con `SENTINEL_OVERRIDE`, se conservaba para repetirla sin la sesión.
        Caso en `920612b` (`sc-27`), delta en `14897c4`; banco entero en verde y los treinta
-       mutantes rompen algún caso. Falta el `merge`
+       mutantes rompen algún caso. En `main` por la #18 (`9036d89`, 2026-10-31)
 
 **Tribunal**
 
