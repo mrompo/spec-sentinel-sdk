@@ -243,12 +243,20 @@ mergeable sola.
 
 **PR 7 · Lo que ejecuta bash, otra vez** (tema 1 de `review-2`)
 
-- [ ] R8. Casos en rojo:
+- [x] R8. Casos en rojo:
        - V4 = A3: lo que ejecutan una sustitución entre comillas dobles (`"$(…)"`, `` "`…`" ``),
          `bash -c`, `sh -c` y `eval`;
        - V6: `<<<` y el `<<` aritmético no abren heredoc;
        - A5: un argumento entrecomillado que se llama como un verbo no bloquea una lectura.
        Delta de SC-sentinel-paths-01 si hace falta
+       → En `sc-29`:
+         - V4 = A3: la sustitución entre comillas, con sus comillas, sus paréntesis y anidada;
+           `bash|sh|zsh -c` con opciones y detrás de `sudo`; `eval`; y el tope de 8 niveles;
+         - V6: `<<<`, `$((…))` y `((…))`;
+         - A5: `grep "chmod"`, `grep \chmod` y `X="mv" ls` se permiten, y el programa entre
+           comillas se sigue reconociendo tras prefijos, asignaciones, redirecciones, `{`/`if` y
+           como subcomando de git.
+         Deltas en SC-01 y en la fila «Regex evadibles» del README.
 - [ ] R9. 👤 Parche `sentinel-paths-7.patch`; banco en verde y mutantes muertos
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
