@@ -3,7 +3,9 @@
 #   cómo viene escrito en el JSON (revisión de sentinel-paths, V1 y V2). Un salto de línea o un
 #   tabulador escritos como escape del JSON separan igual que escritos tal cual, y el programa
 #   se reconoce por su nombre aunque se escriba con su ruta, con una barra delante o entre
-#   comillas.
+#   comillas. Panel de confirmación (V4 = A3, V6, A5): lo que bash ejecuta dentro de "$(…)",
+#   de una shell con -c o de eval también cuenta; «<<<» y el «<<» aritmético no abren un
+#   heredoc; y un argumento entre comillas que se llama como un verbo no es el programa.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -104,5 +106,81 @@ echo x\nls sentinel/githooks
 /bin/ls -la sentinel/githooks
 echo 'mv sentinel/githooks x'
 git log --oneline -3\ngit status
+EOF
+
+# ── Panel de confirmación, V4 = A3: lo que bash ejecuta dentro de otra cosa ──────────────
+# Una sustitución entre comillas dobles ("$(…)", "`…`") se lee como código, también anidada y
+# con sus propias comillas; y el argumento de una shell con -c o de eval es un comando más
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo "$(mv sentinel/githooks /tmp/x)"
+x="$(rm -rf sentinel)"
+echo "`mv sentinel/githooks /tmp/x`"
+echo "$(echo "a"; mv sentinel/githooks /tmp/x; echo "b")"
+echo "a $(echo "$(mv sentinel/githooks /tmp/x)") b"
+echo "$( (mv sentinel/githooks /tmp/x) )"
+bash -c 'mv sentinel/githooks /tmp/x'
+sh -c "chmod -R 000 sentinel/hooks"
+eval 'mv sentinel/githooks /tmp/x'
+eval "x=1; mv sentinel/githooks /tmp/x"
+zsh -c 'rm -rf .claude'
+/bin/bash -lc 'mv sentinel/githooks /tmp/x'
+sudo bash -c 'mv sentinel/githooks /tmp/x'
+bash -c 'bash -c "mv sentinel/githooks /tmp/x"'
+bash -c "echo \"\$(mv sentinel/githooks /tmp/x)\""
+EOF
+# Lo que el código de dentro no ejecuta sobre una carpeta protegida sigue libre
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo "$(ls sentinel/githooks)"
+bash -c 'ls -la sentinel/githooks'
+sh -c 'echo hola'
+eval "echo 'mv sentinel/githooks x'"
+EOF
+
+# ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
+# Si lo abrieran, una comilla de dos líneas escondería el comando que la sigue
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cat <<< x\necho 'a\nb'; mv sentinel/githooks /tmp/x
+cat <<<x\necho 'a\nb'; mv sentinel/githooks /tmp/x
+echo $((1<<2))\necho 'a\nb'; mv sentinel/githooks /tmp/x
+x=$(( 1 << 2 ))\necho 'a\nb'; mv sentinel/githooks /tmp/x
+(( a <<= 1 ))\necho 'a\nb'; mv sentinel/githooks /tmp/x
+EOF
+
+# ── A5: un argumento entre comillas que se llama como un verbo no es el programa ─────────
+# Solo el programa de cada tramo (tras sus prefijos y asignaciones, y el subcomando de git) se
+# reconoce escrito entre comillas; buscar «chmod» en una carpeta protegida es leerla
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+grep -rn "chmod" sentinel/hooks
+grep -c "cp" .claude
+git log --oneline --grep "mv" -- sentinel
+grep -rln 'rm' sentinel
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+sudo 'mv' sentinel/githooks /tmp/x
+X=1 'mv' sentinel/githooks /tmp/x
+X= 'mv' sentinel/githooks /tmp/x
+nohup "rm" -rf sentinel
+git "mv" sentinel/githooks /tmp/x
+git -C . 'rm' -r sentinel/githooks
 EOF
 exit 0
