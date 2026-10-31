@@ -34,6 +34,8 @@ printf 'version: 1\nrules:\n  - id: mia\n    tool: Bash\n    command_re: deploy\
 run_setup
 assert_exit 3 || fail_case "con un Centinela que lo deniega todo debería terminar con 3"
 assert_out_contains "mode:" || fail_case "no muestra el motivo que da el Centinela"
+# El motivo es del Centinela, no del cableado: dice que deniega y dónde mirar (sentinel-paths, P1)
+assert_out_contains "deniega una acción inocua" || fail_case "no dice que es el Centinela el que deniega"
 : >"$WS/sentinel/policy.yaml"
 run_setup
 assert_exit 3 || fail_case "con la política del consumidor vacía debería terminar con 3"

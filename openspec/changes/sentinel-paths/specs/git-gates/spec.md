@@ -23,6 +23,9 @@ el Centinela SHALL impedir que el agente la escriba.
 - **AND** si el rechazo es de otro hook (`commit-msg`) o la llave está atada a una acción del
   Centinela o no tiene `para:`, el rechazo se mantiene, el mensaje da la llave de ese hook lista
   para copiar y la llave sigue en su sitio
+- **AND** la llave del mensaje, copiada tal cual y pegada en bash, zsh o sh, escribe la llave;
+  lleva la ruta absoluta, entrecomillada para la shell, así que pegada desde una subcarpeta, y
+  aunque la ruta del repo tenga espacios o comillas, la llave va a la raíz del repo
 
 #### Scenario: Bitácora no escribible (SC-git-gates-12)
 
@@ -34,6 +37,8 @@ el Centinela SHALL impedir que el agente la escriba.
 
 - **WHEN** la sesión se arrancó con `SENTINEL_OVERRIDE="motivo"` y la Esclusa rechazaría un push
 - **THEN** el push se permite y queda registrado; con `SENTINEL_OVERRIDE` vacío, se rechaza
+- **AND** una llave atada a otra acción no se gasta: la excepción sale de la sesión; la llave de
+  este hook sí se gasta, porque si quedara valdría para repetir el salto sin la sesión
 
 #### Scenario: El agente no puede crear la llave (SC-git-gates-14)
 

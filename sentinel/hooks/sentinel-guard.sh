@@ -71,7 +71,9 @@ FILE_PATH="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"(file_path|notebook_path)"[[
 COMMAND="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -1)"
 # Contenido que se ESCRIBE (no old_string): evita bloquear la retirada de un .skip existente
 NEW_CONTENT="$(printf '%s' "$PAYLOAD" | sed -nE 's/.*"(new_string|content|new_source)"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\2/p' | head -1)"
-BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+# La rama a la que apunta HEAD, también sin commits (rev-parse diría HEAD y el primer commit en
+# main pasaría: revisión de la #18); con HEAD desligado no hay rama
+BRANCH="$(git symbolic-ref --short -q HEAD 2>/dev/null || echo "")"
 # sdd: lo declara el consumidor; si no lo hace, vale el de la distribuida
 read_sdd() { sed -nE 's/^[[:space:]]*sdd:[[:space:]]*(true|false).*/\1/p' "$1" | head -1; }
 POLICY_SDD=""
@@ -551,6 +553,10 @@ if [ -d "$REPO_ROOT_DIR/openspec/changes" ]; then
 fi
 
 ACTION_DESC="${TOOL_NAME}:${COMMAND:-${REL_PATH:-$FILE_PATH}}"
+# La acción como la nombra el para: de la llave, que se lee sin los espacios del final (los que
+# deja un editor): si no se quitaran también aquí, la llave de una acción que acaba en espacio no
+# la autorizaría nunca y, con SENTINEL_OVERRIDE, se conservaría para repetirla sin la sesión (#18)
+ACTION_PARA="${ACTION_DESC%"${ACTION_DESC##*[![:space:]]}"}"
 
 # ── Solo lee (SC-sentinel-paths-08) ──────────────────────────────────────────────────────
 # Lista cerrada, sin parser de shell: el comando solo lee si cada tramo (partido como lo parte
@@ -614,11 +620,17 @@ override_reason() {
   fi
   [ -s "$OVERRIDE_TOKEN" ] || return 1
   motivo="$(token_motivo)"
-  [ -n "$motivo" ] && [ "$(token_para)" = "$ACTION_DESC" ] || return 1
+  [ -n "$motivo" ] && [ "$(token_para)" = "$ACTION_PARA" ] || return 1
   printf '%s' "$motivo"
 }
 
-# key_hint → la llave de ESTA acción, lista para copiar, y por qué no vale la que hay
+# sh_quote <texto> → el texto entre comillas simples, tal que una shell lo lee igual
+sh_quote() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
+
+# key_hint → la llave de ESTA acción, lista para copiar, y por qué no vale la que hay. Sin
+# sangría: pegada tal cual en una shell, la línea LLAVE cierra el heredoc (revisión de
+# sentinel-paths, P4 = A6); con la ruta absoluta de la llave, pegada desde cualquier carpeta va
+# a la raíz del proyecto (revisión de la #18)
 key_hint() {
   local why=""
   if [ -s "$OVERRIDE_TOKEN" ]; then
@@ -629,7 +641,7 @@ key_hint() {
     why="
   Ojo: $why."
   fi
-  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave\n    cat > sentinel/.override <<'"'"'LLAVE'"'"'\n    <motivo>\n    para: %s\n    LLAVE' "$why" "$ACTION_DESC"
+  printf '%s\n  Excepción auditada para esta acción: una persona, desde su terminal, escribe la llave (copia\n  estas cuatro líneas tal cual y pon el motivo):\ncat > %s <<'"'"'LLAVE'"'"'\n<motivo>\npara: %s\nLLAVE' "$why" "$(sh_quote "$OVERRIDE_TOKEN")" "$ACTION_PARA"
 }
 
 log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se puede escribir, se deniega)
@@ -638,7 +650,12 @@ log_override() { # $1=id de regla, $2=motivo — auditoría verificada (si no se
   mkdir -p "$(dirname "$OVERRIDES_LOG")" 2>/dev/null
   printf '%s\n' "$line" >> "$OVERRIDES_LOG" 2>/dev/null \
     || deny "[$1] override rechazado: no se pudo escribir la auditoría en $OVERRIDES_LOG — sin registro no hay excepción"
-  [ -f "$OVERRIDE_TOKEN" ] && rm -f "$OVERRIDE_TOKEN"   # token de un solo uso
+  # Token de un solo uso: se gasta si la excepción salió de él o si es de esta misma acción. Con
+  # SENTINEL_OVERRIDE activo, solo una llave para otra acción se conserva (revisión de
+  # sentinel-paths, V4); la de esta, si quedara, valdría para repetirla sin la sesión (#18)
+  if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ] || [ "$(token_para)" = "$ACTION_PARA" ]; then
+    [ -f "$OVERRIDE_TOKEN" ] && rm -f "$OVERRIDE_TOKEN"
+  fi
   return 0
 }
 

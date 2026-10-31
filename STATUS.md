@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-28 · **`sentinel-paths` en la ronda 2 de `apply`**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` (V1, un escape del JSON delante del verbo, y 8 graves) y la persona decidió arreglarlo en este cambio con tres PRs más y un panel de confirmación · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` archivado (PR #7): las seis specs vivas declaran su propósito y el banco impide dejarlo en «TBD» · siguientes: cerrar `sentinel-paths`, los gates Intención de `hook-coexistence` y `sdk-version`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
+**Última actualización**: 2026-10-30 · **`sentinel-paths` en la ronda 2 de `apply`**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` (V1, un escape del JSON delante del verbo, y 8 graves) y la persona decidió arreglarlo en este cambio con tres PRs más y un panel de confirmación. Las PRs 4 y 5 ya están en `main` (#15, #16 y su revisión en #17); la 6, abierta · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` archivado (PR #7): las seis specs vivas declaran su propósito y el banco impide dejarlo en «TBD» · siguientes: cerrar `sentinel-paths`, los gates Intención de `hook-coexistence` y `sdk-version`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0, 1 y **2** ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · siguiente: fase 3 (`ci-gate`) |
-| **Loop** | [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md): Intención ✅ (2026-10-26), Claridad ✅ y Plan ✅ (2026-10-26, tres PRs) · PR 1/3 «Lo que se toca» en `main` (#9, y su revisión en #10 y #11); PR 2/3 «Sin falsos positivos y la llave» en `main` (#12); PR 3/3 «Cableado» en `main` (#13). [Primer panel](openspec/changes/sentinel-paths/review/README.md) (2026-10-28): `HOLD`, 26 hallazgos validados; ronda 2 de `apply` (PRs 4 a 6), panel de confirmación y `archive`. Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
+| **Loop** | [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md): Intención ✅ (2026-10-26), Claridad ✅ y Plan ✅ (2026-10-26, tres PRs) · PR 1/3 «Lo que se toca» en `main` (#9, y su revisión en #10 y #11); PR 2/3 «Sin falsos positivos y la llave» en `main` (#12); PR 3/3 «Cableado» en `main` (#13). [Primer panel](openspec/changes/sentinel-paths/review/README.md) (2026-10-28): `HOLD`, 26 hallazgos validados; ronda 2 de `apply`: PR 4 «Lo que ejecuta bash» en `main` (#15), PR 5 «Carpetas y ruta física» en `main` (#16, y su revisión en #17), PR 6 «El cableado en el uso real y la llave» abierta; después, panel de confirmación y `archive`. Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -115,6 +115,15 @@
   - el cableado dependía del `PATH` de la sesión (A7-2): resuelto en la PR 3/3 de
     `sentinel-paths`, que lo ejecuta con un entorno limpio y falla cerrado. Queda como límite
     la shell con que Claude Code lanza el hook (`SHELLOPTS=noexec`).
+- **Deuda del primer panel de `sentinel-paths`** (decisión del 2026-10-28, detalle en
+  [review/](openspec/changes/sentinel-paths/review/README.md)):
+  - `protect-enforcement-dirs` decide sobre el comando entero: nombrar `.claude` o `sentinel` en
+    un tramo y tener un `rm` o un `cp` en otro (`ls -la .claude && rm -f tmp.txt`), o copiar la
+    carpeta hacia fuera (`cp -r .claude /tmp/bk`), se bloquea. Haría falta decidir por tramo y
+    solo sobre las palabras que siguen al verbo (P7);
+  - el coste por llamada crece con cada palabra con `/` que existe, por los subshells de
+    `phys_path` y `canon` (un heredoc de 60 líneas pasaba de 0,36 s a 1 s antes de contar solo
+    las rutas que existen): faltan una caché por carpeta y un caso de rendimiento (P9).
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.

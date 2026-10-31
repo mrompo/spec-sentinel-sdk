@@ -9,6 +9,8 @@
 # Falsifica: SC-git-gates-11, 12, 13 (fixture/githooks/cases/).
 
 _bg_root() { git rev-parse --show-toplevel 2>/dev/null || pwd; }
+# _bg_quote <texto> → el texto entre comillas simples, tal que una shell lo lee igual
+_bg_quote() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
 
 # La llave: el motivo (las líneas que no son para:) y la acción que autoriza (para:)
 _bg_para()   { sed -nE 's/^[[:space:]]*para:[[:space:]]*//p' "$1" 2>/dev/null | head -1 | sed -E 's/[[:space:]]+$//'; }
@@ -39,7 +41,12 @@ esclusa_reject() {
     line="$(printf '%s | esclusa:%s | %s | %s' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hook" \
       "$(printf '%s' "$what" | tr '\n' ' ')" "$(printf '%s' "$reason" | sed -e 's/[[:space:]]*$//')")"
     if mkdir -p "$(dirname "$log")" 2>/dev/null && printf '%s\n' "$line" >>"$log" 2>/dev/null; then
-      [ -f "$token" ] && rm -f "$token"    # un solo uso: se consume DESPUÉS de registrar
+      # Un solo uso: se consume DESPUÉS de registrar, si la excepción salió de la llave o si es
+      # la de este hook (con SENTINEL_OVERRIDE, solo una llave para otra acción se conserva:
+      # sentinel-paths, V4; la de este hook valdría para repetir el salto sin la sesión, #18)
+      if [ -z "$(printf '%s' "${SENTINEL_OVERRIDE:-}" | tr -d '[:space:]')" ] || [ "$(_bg_para "$token")" = "esclusa:$hook" ]; then
+        [ -f "$token" ] && rm -f "$token"
+      fi
       echo "⚠ [Esclusa] Excepción aplicada: rechazo permitido y auditado en sentinel/overrides.log — ${reason}" >&2
       exit 0
     fi
@@ -52,10 +59,14 @@ esclusa_reject() {
   if [ -s "$token" ]; then
     echo "    (La llave de sentinel/.override no vale para este rechazo — le falta el motivo o el para:, o es para otra acción ($(_bg_para "$token")) — y se conserva.)" >&2
   fi
-  echo "    (Excepción auditada: una persona, desde su terminal, escribe la llave de este hook — un solo uso, queda en la bitácora:" >&2
-  echo "       cat > sentinel/.override <<'LLAVE'" >&2
-  echo "       <motivo>" >&2
-  echo "       para: esclusa:$hook" >&2
-  echo "       LLAVE  )" >&2
+  # Sin sangría: pegada tal cual en una shell, la línea LLAVE cierra el heredoc (sentinel-paths,
+  # P4 = A6); con la ruta absoluta de la llave, pegada desde cualquier carpeta va a la raíz del
+  # repo (revisión de la #18)
+  echo "    (Excepción auditada: una persona, desde su terminal, escribe la llave de este hook — un solo uso," >&2
+  echo "    queda en la bitácora. Copia estas cuatro líneas tal cual y pon el motivo:)" >&2
+  echo "cat > $(_bg_quote "$token") <<'LLAVE'" >&2
+  echo "<motivo>" >&2
+  echo "para: esclusa:$hook" >&2
+  echo "LLAVE" >&2
   exit 1
 }

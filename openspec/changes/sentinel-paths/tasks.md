@@ -11,7 +11,7 @@ que toca el enforcement es un fichero protegido: lo entrega el agente como parch
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
 **Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
-2 de `apply` va por la revisión de la PR 5 (las PRs 4 y 5 en `main` por la #15 y la #16).
+2 de `apply` va por la PR 6 (las PRs 4 y 5 en `main` por la #15, la #16 y la #17).
 
 ## Engine · antes de teclear
 
@@ -133,6 +133,10 @@ lectura sobre una protección ya basada en la ruta física.
 
 Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada una mergeable sola.
 
+Hallazgos de CodeRabbit (disposición de la persona del 2026-10-30, desde la tercera pasada de
+la #18): se arregla en la PR lo que toca código de la PR o es de seguridad; lo anterior a la PR y
+menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
+
 **PR 4 · Lo que ejecuta bash** (temas 1 y 2 de la revisión)
 
 - [x] R1. Casos en rojo (`sc-29` nuevo, y `sc-23` y `sc-26`): un salto de línea o un tabulador escritos como escape del JSON delante
@@ -181,13 +185,47 @@ Mismo ritmo: caso en rojo → parche 👤 → verde. Tres PRs desde `main`, cada
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
-- [ ] R5. Delta de SC-sentinel-paths-09 (sin git que responda en el proyecto, el cableado bloquea
+- [x] R5. Delta de SC-sentinel-paths-09 (sin git que responda en el proyecto, el cableado bloquea
        y dice por qué) y casos en rojo: `git` solo fuera del `PATH` fijo, y `setup` lo detecta
        (P1); rama sin el SDK (P3); *dubious ownership* (P6 = A9); la llave copiada del aviso, tal
        cual, en el Centinela y en la Esclusa (P4 = A6); `SENTINEL_OVERRIDE` con una llave para
-       otra acción (V4)
-- [ ] R6. 👤 Parche (cableado, `setup`, guard y `breakglass.sh`), banco en verde, `STATUS.md` y
-       `sc-28` al día (A10), deuda P7 y P9 registrada, y `merge`
+       otra acción (V4). Casos en `28375cf` y `e106534` (hooks `sc-27` y `sc-28`, githooks
+       `sc-11` y `sc-13`, install `sc-12` y `sc-18` nuevo); deltas de SC-05, 06 y 09 y de
+       SC-git-gates-11 y 13, README y `STATUS.md` en `d823af8` y `6d7d97b`. Del PATH, el banco
+       comprueba que lleva las carpetas de Git for Windows, Nix y linuxbrew (en él no se puede
+       quitar el git del sistema) y que `setup` detecta un cableado que no deja pasar nada; de
+       *dubious ownership*, que el motivo es lo que dice git (como no-root no se puede
+       reproducir)
+- [x] R6. 👤 Parche `sentinel-paths-6.patch` (aplicado por la persona, `c0bea22`): el cableado
+       con las carpetas de Git for Windows, Nix y linuxbrew detrás de las del sistema, el motivo
+       sin git con el PATH y lo que dice git, y el de una rama sin el SDK; la prueba de humo de
+       `setup` a través del cableado; la llave sin sangría en el Centinela y en la Esclusa; y con
+       `SENTINEL_OVERRIDE`, la llave de otra acción se conserva. En un clon con el parche, el
+       banco entero en verde (hooks 30/30, githooks 16/16, install 18/18) y los doce mutantes
+       rompen algún caso. `STATUS.md` y `sc-28` al día (A10) y la deuda P7 y P9 registrada en
+       `STATUS.md`. Revisión de la #18 (CodeRabbit), en `sentinel-paths-6b.patch` (`43f99dc`):
+       el PATH del cableado solo lleva carpetas que el agente no puede modificar (fuera
+       `~/.nix-profile` y linuxbrew, CWE-426), y la llave del aviso, en el Centinela y en la
+       Esclusa, lleva la ruta absoluta entrecomillada (se pega desde una subcarpeta, también con
+       espacios o comillas en la ruta). Casos en `1702f40` (hooks `sc-27` y `sc-28`, githooks
+       `sc-11`), deltas, README y guía en `db20006`; banco entero en verde y los veintiún
+       mutantes (nueve nuevos y los doce de antes) rompen algún caso. Segunda pasada de la #18,
+       en `sentinel-paths-6c.patch` (`1e246d1`): en un repo sin commits, la rama es la de `HEAD`
+       (`symbolic-ref`) y `protected-branches` bloquea el primer commit en `main` (CWE-863,
+       SC-sentinel-paths-10); sin el Centinela, el motivo restaura desde `HEAD` y, con el SDK aún
+       sin versionar, manda reinstalarlo con `setup`. Casos en `e9be393` (`sc-31` nuevo, `sc-28` y
+       `sc-27`), delta y README en `f0fba7e`; banco entero en verde (hooks 31/31) y los veinticinco
+       mutantes rompen algún caso. Tercera pasada de la #18, en `sentinel-paths-6d.patch`
+       (`baa7be7`): con `SENTINEL_OVERRIDE`, la llave de esa misma acción (o de ese hook en la
+       Esclusa) se gasta, porque si quedara valdría para repetirla sin la sesión; solo se
+       conserva la de otra. Casos en `6d6540b` (hooks `sc-27`, githooks `sc-13`, y `sc-28` con
+       espacios en la ruta), deltas en `c157709`; banco entero en verde (hooks 31/31, githooks
+       16/16, install 18/18) y los veintisiete mutantes rompen algún caso. Cuarta pasada, en
+       `sentinel-paths-6e.patch` (`31c5f5f`): el `para:` de la llave y la acción se comparan sin
+       los espacios del final (CWE-863); antes, la llave de una acción que acaba en espacio no la
+       autorizaba nunca y, con `SENTINEL_OVERRIDE`, se conservaba para repetirla sin la sesión.
+       Caso en `920612b` (`sc-27`), delta en `14897c4`; banco entero en verde y los treinta
+       mutantes rompen algún caso. Falta el `merge`
 
 **Tribunal**
 

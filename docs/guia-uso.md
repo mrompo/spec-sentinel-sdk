@@ -308,7 +308,8 @@ LLAVE
 
 La llave lleva el **motivo** y **para qué acción** es (`para:`). No hace falta escribirla a
 mano: el aviso de bloqueo la da lista para copiar, con el `para:` de esa acción
-(`<herramienta>:<ruta>` o `Bash:<comando>`), y solo falta el motivo. Solo la gasta la acción
+(`<herramienta>:<ruta>` o `Bash:<comando>`) y la ruta absoluta de la llave, así que se pega
+desde cualquier carpeta del repo; solo falta el motivo. Solo la gasta la acción
 cuyo `para:` coincide **exactamente**. Si antes llega otra acción bloqueada, también de un
 subagente, sigue bloqueada y la llave se conserva. Una llave sin `para:` o sin motivo no
 autoriza nada.

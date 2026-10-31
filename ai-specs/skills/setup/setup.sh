@@ -737,15 +737,27 @@ fi
 
 # ── 8. El Centinela instalado tiene que dejar pasar lo inocuo ────────────────────────────
 # Una acción de shell, una lectura y una edición (las reglas de ruta solo se evalúan con su
-# tool). Con ids duplicados ya hay un pendiente que explica el bloqueo.
+# tool). Con ids duplicados ya hay un pendiente que explica el bloqueo. Se lanza con su
+# cableado, tal como queda en .claude/settings.json y como lo lanza Claude Code: en esta máquina
+# puede no encontrar git en su PATH fijo, y entonces bloquearía todo (revisión de sentinel-paths,
+# P1)
 if [ -z "$dup" ]; then
   smoke_path="$(printf '%s' "$TARGET/smoke-test.txt" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+  wiring="$(jqx -r '[.hooks.PreToolUse[]?.hooks[]?.command | select(contains("sentinel/hooks/sentinel-guard.sh"))][0] // empty' \
+    "$SDK_ROOT/.claude/settings.json" 2>/dev/null)"
   while IFS='|' read -r what payload; do
     smoke_err="$(cd "$TARGET" && printf '%s' "$payload" \
       | env -u SENTINEL_POLICY -u SENTINEL_POLICY_DEFAULT -u SENTINEL_OVERRIDE -u SENTINEL_CONFIRM \
-          CLAUDE_PROJECT_DIR="$TARGET" bash "$TARGET/sentinel/hooks/sentinel-guard.sh" 2>&1 >/dev/null)" && continue
-    todo "el Centinela instalado deniega una acción inocua ($what): ${smoke_err#sentinel-guard: }
-    Mientras siga así, el agente no podrá trabajar en este repo. Revisa sentinel/policy.yaml"
+          CLAUDE_PROJECT_DIR="$TARGET" /bin/sh -c "$wiring" 2>&1 >/dev/null)" && continue
+    case "$smoke_err" in
+      sentinel-guard:*)
+        todo "el Centinela instalado deniega una acción inocua ($what): ${smoke_err#sentinel-guard: }
+    Mientras siga así, el agente no podrá trabajar en este repo. Revisa sentinel/policy.yaml" ;;
+      *)
+        todo "el cableado del Centinela (.claude/settings.json) no deja pasar una acción inocua ($what) en
+    esta máquina: ${smoke_err:-sale con un código que no es una decisión}
+    Mientras siga así, Claude Code bloqueará todas las acciones del agente en este repo" ;;
+    esac
     break
   done <<EOF
 \`true\` en shell|{"tool_name":"Bash","tool_input":{"command":"true"}}
