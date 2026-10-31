@@ -220,7 +220,12 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        Esclusa) se gasta, porque si quedara valdría para repetirla sin la sesión; solo se
        conserva la de otra. Casos en `6d6540b` (hooks `sc-27`, githooks `sc-13`, y `sc-28` con
        espacios en la ruta), deltas en `c157709`; banco entero en verde (hooks 31/31, githooks
-       16/16, install 18/18) y los veintisiete mutantes rompen algún caso. Falta el `merge`
+       16/16, install 18/18) y los veintisiete mutantes rompen algún caso. Cuarta pasada, en
+       `sentinel-paths-6e.patch` (`31c5f5f`): el `para:` de la llave y la acción se comparan sin
+       los espacios del final (CWE-863); antes, la llave de una acción que acaba en espacio no la
+       autorizaba nunca y, con `SENTINEL_OVERRIDE`, se conservaba para repetirla sin la sesión.
+       Caso en `920612b` (`sc-27`), delta en `14897c4`; banco entero en verde y los treinta
+       mutantes rompen algún caso. Falta el `merge`
 
 **Tribunal**
 
