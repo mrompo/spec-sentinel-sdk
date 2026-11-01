@@ -238,11 +238,15 @@ json_text() {
 # que sigue a su última '/') y con sus espacios cambiados por '_', para que las reglas del
 # comando reconozcan el programa se escriba como se escriba (/bin/mv, \mv, 'mv'). Solo el
 # programa del tramo (tras sus prefijos, sus asignaciones y sus redirecciones) y el subcomando
-# de git salen así; cualquier otra palabra que iba entre comillas o escapada, salvo una opción,
-# sale con '"' delante, para que no haga de programa: grep "chmod" busca, no cambia permisos
-# (panel de confirmación, A5). Lo que bash ejecuta dentro de otra cosa sale como 'c<código>',
-# para leerlo como un comando más (V4 = A3): una sustitución entre comillas dobles ("$(…)",
-# "`…`"; sin comillas ya se lee en su sitio), el argumento de una shell con -c y los de eval.
+# de git salen así; lo que busca un lector (grep, git log, git grep) y el valor de una
+# asignación, si iban entre comillas o escapados, salvo una opción, salen con '"' delante, para
+# que no hagan de programa: grep "chmod" busca, no cambia permisos (panel de confirmación, A5).
+# Los argumentos de cualquier otro programa salen como sin comillas: uno puede ser un programa
+# (find -exec 'rm', sudo -u root 'mv') y las reglas leen otros (el refspec de git push, la rama
+# de git checkout) (revisión de la #20). Lo que bash ejecuta dentro de otra cosa sale como
+# 'c<código>', para leerlo como un comando más (V4 = A3): una sustitución entre comillas dobles
+# ("$(…)", "`…`"; sin comillas ya se lee en su sitio), lo que sigue a -c en una shell (el
+# código, con sus opciones delante, y sus argumentos) y los argumentos de eval.
 # Lo que bash no lee como palabras no abre comillas que se coman las líneas siguientes
 # (revisión de la #15): un comentario (# al principio de una palabra) se salta hasta el final
 # de la línea; en $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de
@@ -260,25 +264,27 @@ cmd_words() {
       return r
     }
     # role → 1 si la palabra se queda con su nombre en el tramo: el programa y lo que va delante
-    # (prefijos de ejecución, sus opciones y números, el nombre de una asignación; su valor es
-    # un argumento) y el subcomando de git con sus opciones. De paso, el código que ejecutan una
-    # shell con -c o eval
+    # (prefijos de ejecución, sus opciones y números, el nombre de una asignación) y el
+    # subcomando de git con sus opciones; 2 si es el valor de una asignación; 0 si es otro
+    # argumento. De paso, el código que ejecutan una shell con -c (también como argumento: sudo
+    # -u root bash, find -exec sh) o eval
     function role(b) {
       if (!pseen) {
-        if (aval) { aval = eqf ? eqv : 0; return 0 }
+        if (aval) { aval = eqf ? eqv : 0; return 2 }
         if (eqf && !qw && w ~ /^[A-Za-z_][A-Za-z0-9_]*$/) { aval = eqv; return 1 }
         if (b ~ /^-/ || (pre && b ~ /^[0-9.]+[smhd]?$/)) return 1
         if (b ~ /^(sudo|doas|env|command|builtin|exec|nice|nohup|time|timeout|xargs|stdbuf|ionice|!|\{|if|then|else|elif|do|while|until)$/) { pre = 1; return 1 }
-        pseen = 1
+        pseen = 1; prog = b
         if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
         else if (b == "eval") ev = 1
         else if (b == "git") gs = 1
         return 1
       }
-      if (sh == 1 && w ~ /^-[a-zA-Z]*c[a-zA-Z]*$/) sh = 2
-      else if (sh == 2) { print "c" esc(w); sh = 0 }
+      if (sh == 2) print "c" esc(w)
+      else if (sh == 1 && w ~ /^-[a-zA-Z]*c[a-zA-Z]*$/) sh = 2
+      else if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
       if (ev) evc = evc (evc == "" ? "" : " ") w
-      if (gs == 1) { if (b !~ /^-/) { gs = 0; return 1 }; if (eqf || b ~ /^-[Cc]$/) gs = 2; return 1 }
+      if (gs == 1) { if (b !~ /^-/) { gs = 0; gsc = b; return 1 }; if (eqf || b ~ /^-[Cc]$/) gs = 2; return 1 }
       if (gs == 2) { if (!eqf) gs = 1; return 1 }
       return 0
     }
@@ -291,7 +297,7 @@ cmd_words() {
         gsub(/[ \t\n\r]/, "_", b)
         keep = 0
         if (fd) ; else if (rd) rd = 0; else keep = role(b)
-        if (qw && !keep && b !~ /^-/) b = "\"" b
+        if (qw && b !~ /^-/ && (keep == 2 || (!keep && (prog ~ /^(grep|egrep|fgrep)$/ || (prog == "git" && gsc ~ /^(log|grep)$/))))) b = "\"" b
         seg = seg (seg == "" ? "" : " ") b
       }
       w = ""; pw = ""; has = 0; g = 0; qw = 0; eqf = 0; fd = 0
