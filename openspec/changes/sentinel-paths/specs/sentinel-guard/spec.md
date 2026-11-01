@@ -35,13 +35,17 @@ solo por el texto de la ruta.
   de un heredoc no esconde las líneas que le siguen, y `<<<` o el `<<` de una expresión
   aritmética no abren un heredoc
 - **AND** también lo que bash ejecuta dentro de otra cosa: una sustitución entre comillas dobles
-  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada (un `)` en un comentario no la
-  cierra, y tras un heredoc o un `case` dentro se lee como código el resto entero del
-  comando), lo que sigue a `-c` en una shell
+  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada, lo que sigue a `-c` en una shell
   (`bash`, `sh`, `zsh`, `dash`, `ksh`), también con opciones delante del código o con la shell
   como argumento (`sudo -u root bash -c`, `find -exec sh -c`), y los argumentos de `eval`; con
   más de 8 niveles de código anidado, el hook no sabe qué se ejecuta y bloquea, y la llave de
   esa acción lo salva
+- **AND** una sustitución entre comillas cierra donde la cierran bash 5 y zsh, que saltan
+  `$'…'`, los acentos, `${…}`, los comentarios y el cuerpo de los heredocs; si bash 3.2, que
+  cuenta paréntesis, la cierra en otro sitio, el comando se lee también así, y lo que va
+  detrás de cualquiera de los dos cierres se lee en su sitio. Si bash 5 no se sabe dónde la
+  cierra (un `case`, una llave suelta en `${…}`, un salto de línea escapado, una aritmética
+  que no cierra con `))`, unas comillas sin cerrar), el hook no sabe qué se ejecuta y bloquea
 - **AND** lo que busca un lector entre comillas (el patrón de `grep` o de `git log`/`git grep`)
   y el valor de una asignación no hacen de programa: buscar un verbo en una carpeta protegida
   (`grep -rn "chmod" sentinel/hooks`) es leerla; los argumentos de cualquier otro programa
