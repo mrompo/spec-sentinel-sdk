@@ -270,7 +270,13 @@ mergeable sola.
        'mv'`. Banco en verde y 43 mutantes muertos.
        Segunda revisión, parche `sentinel-paths-7c.patch` (`78b5789`): un `)` en un comentario
        ya no cierra `"$(…)"`, y tras un heredoc o un `case` dentro se lee como código el resto
-       entero del comando. Banco en verde y 51 mutantes muertos
+       entero del comando. Banco en verde y 51 mutantes muertos.
+       Tercera revisión, tras la fusión (PR aparte), parche `sentinel-paths-7d.patch`
+       (`6649a22`): `"$(…)"` cierra donde la cierran bash 5 y zsh, y si hay un comentario, un
+       heredoc o un `${…}` dentro, también donde la cierra bash 3.2 (se leen los dos tramos);
+       bloquea cuando bash 5 no sabe dónde cierra (un `case`, una llave suelta en `${…}`, un
+       salto de línea escapado, una aritmética sin `))`, comillas sin cerrar). Banco en verde,
+       79 mutantes muertos y ningún escape en ~3700 comandos frente a bash 3.2, bash 5.2 y zsh
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
