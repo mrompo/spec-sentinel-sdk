@@ -185,7 +185,7 @@ done <<'EOF'
 echo \"$(echo a#b) mv sentinel/githooks /tmp/x\"
 echo \"$(echo ${#HOME}) mv sentinel/githooks /tmp/x\"
 echo \"$(echo ok # c\n) mv sentinel/githooks /tmp/x\"
-echo \"$(echo showcase) mv sentinel/githooks /tmp/x\"
+echo \"$(echo showcase x) mv sentinel/githooks /tmp/x\"
 echo \"$(echo cases) mv sentinel/githooks /tmp/x\"
 echo \"$(cat <<< x) mv sentinel/githooks /tmp/x\"
 EOF
