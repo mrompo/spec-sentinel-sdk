@@ -261,7 +261,13 @@ mergeable sola.
        relee como comando lo que va en `"$(…)"`, `` "`…`" ``, `-c` y `eval`, hasta 8 niveles;
        `<<<` y el `<<` aritmético no abren heredoc; y entre comillas solo cuenta el programa de
        cada tramo y el subcomando de git. En un clon con el parche, el banco pasa entero (hooks
-       31/31, githooks 16/16, install 18/18) y los 35 mutantes rompen algún caso de `sc-29`
+       31/31, githooks 16/16, install 18/18) y los 35 mutantes rompen algún caso de `sc-29`.
+       Revisión de la #20 (CodeRabbit), parche `sentinel-paths-7b.patch` (`8beed59`): tras `-c`
+       cuenta todo lo que venga y la shell se reconoce también como argumento (`sudo -u root
+       bash -c`, `find -exec sh -c`); la marca de comillas, solo en lo que busca un lector
+       (`grep`, `git log`/`git grep`) y en el valor de una asignación, porque marcar cualquier
+       argumento dejaba pasar `git push origin '+main:main'`, `find -exec 'rm'` o `sudo -u root
+       'mv'`. Banco en verde y 43 mutantes muertos
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
