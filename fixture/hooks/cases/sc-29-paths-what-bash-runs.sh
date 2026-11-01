@@ -218,6 +218,10 @@ echo \"$(echo `echo )` ; mv sentinel/githooks /tmp/x)\"
 echo \"$(echo \"a`echo \")\"`b\" ; mv sentinel/githooks /tmp/x)\"
 echo \"$(( ( echo a # )\nmv sentinel/githooks /tmp/x\n) ) )\"
 echo \"$(ca\\\nse x in a) mv sentinel/githooks /tmp/x;; esac)\"
+echo \"$((cat <<E\n)\nE\n) ; mv sentinel/githooks /tmp/x ; echo )\"
+echo \"$( ((x=1))\necho a # )\nmv sentinel/githooks /tmp/x)\"
+echo \"$(echo ${x:-)}\"; mv sentinel/githooks /tmp/x; echo \"\n)\"
+echo \"$(cat <<A <<B\nB\nA\n)\nB\nmv sentinel/githooks /tmp/x\n)\"
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
@@ -230,6 +234,13 @@ echo \"$((1<<2))\" ; ls sentinel/githooks
 echo \"$(( (1+2)<<3 ))\" ; ls sentinel/githooks
 echo \"$(echo ${x:-a} ${#x} $'a\\'b')\" ; ls sentinel/githooks
 x=\"$(cat <<E\nhola\nE\n)\"; echo \"$x\"
+echo \"$(echo $((1<<2))\necho a)\" ; echo b
+echo \"$(cat <<< x\necho a)\" ; echo b
+echo \"$(cat << E\nhola )\nE\n)\" ; echo b
+echo \"$(echo `echo )`) ; mv sentinel/githooks /tmp/x ; echo `true`\"
+echo \"$(echo \"a`echo \")\"`b\") ; mv sentinel/githooks /tmp/x ; echo `true`\"
+echo \"$(echo ${x:-\"}\"}) ; mv sentinel/githooks /tmp/x ; echo `true`\"
+echo \"$(echo \"$(echo \")\")\") ; mv sentinel/githooks /tmp/x ; echo `true`\"
 EOF
 
 # ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
