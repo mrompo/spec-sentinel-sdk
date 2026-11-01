@@ -35,12 +35,15 @@ solo por el texto de la ruta.
   de un heredoc no esconde las líneas que le siguen, y `<<<` o el `<<` de una expresión
   aritmética no abren un heredoc
 - **AND** también lo que bash ejecuta dentro de otra cosa: una sustitución entre comillas dobles
-  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada, y el argumento de una shell con
-  `-c` (`bash`, `sh`, `zsh`, `dash`, `ksh`) o de `eval`; con más de 8 niveles de código
-  anidado, el hook no sabe qué se ejecuta y bloquea, y la llave de esa acción lo salva
-- **AND** entre comillas se reconoce el programa de cada tramo (tras sus prefijos, sus
-  asignaciones y sus redirecciones) y el subcomando de git, no cualquier argumento: buscar un
-  verbo en una carpeta protegida (`grep -rn "chmod" sentinel/hooks`) es leerla
+  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada, lo que sigue a `-c` en una shell
+  (`bash`, `sh`, `zsh`, `dash`, `ksh`), también con opciones delante del código o con la shell
+  como argumento (`sudo -u root bash -c`, `find -exec sh -c`), y los argumentos de `eval`; con
+  más de 8 niveles de código anidado, el hook no sabe qué se ejecuta y bloquea, y la llave de
+  esa acción lo salva
+- **AND** lo que busca un lector entre comillas (el patrón de `grep` o de `git log`/`git grep`)
+  y el valor de una asignación no hacen de programa: buscar un verbo en una carpeta protegida
+  (`grep -rn "chmod" sentinel/hooks`) es leerla; los argumentos de cualquier otro programa
+  cuentan como sin comillas (`find -exec 'rm'`, el refspec `'+main:main'` de `git push`)
 - **AND** las subcarpetas que no son enforcement siguen libres (p. ej. `mv .claude/skills/a
   .claude/skills/b` o `rm -r sentinel/.backup`)
 - **AND** entrar antes en la carpeta (`cd sentinel && rm -r hooks`) es el límite documentado
