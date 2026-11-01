@@ -15,8 +15,11 @@
 #     - id:            único y obligatorio en las dos políticas (lo referencia overrides.log)
 #       tool:          regex sobre tool_name (Bash, Edit|Write, …)
 #       command_re:    regex sobre el comando (solo tool Bash): tal como llega, con los
-#                      escapes del JSON deshechos y cada tramo como lo ve bash (sin comillas ni
-#                      escapes, cada palabra por su nombre: /bin/mv es mv); basta con que case una
+#                      escapes del JSON deshechos y cada tramo como lo ve bash, también los de
+#                      "$(…)", bash -c y eval (sin comillas ni escapes, cada palabra por su
+#                      nombre: /bin/mv es mv; un argumento que no es el programa ni una opción y
+#                      que iba entre comillas, con " delante: grep "mv" no es mv); basta con que
+#                      case una
 #       path_re:       regex sobre file_path (tools de fichero) y el comando, también sobre la
 #                      ruta física de lo que tocan (enlaces resueltos; la configuración de git
 #                      real se nombra .git/…, la de Claude Code de la persona .claude/…)
@@ -75,7 +78,8 @@ rules:
   # con 127, que no bloquea). Se decide por la ruta física de cada ruta del comando, así que
   # vale cualquier grafía (./sentinel/, "sentinel", la ruta absoluta) y sus subcarpetas libres
   # siguen libres (SC-sentinel-paths-01). El programa se reconoce por su nombre, se escriba como
-  # se escriba (/bin/mv, \mv, 'mv'), porque command_re ve también el comando como lo ve bash.
+  # se escriba (/bin/mv, \mv, 'mv'), porque command_re ve también el comando como lo ve bash,
+  # también dentro de "$(…)", bash -c y eval (panel de confirmación, V4 = A3).
   # Revisión de sentinel-paths (A1): también las carpetas de la librería de la Esclusa, del
   # adaptador y de husky, que contienen ficheros protegidos; copiar a una carpeta lo resuelve el
   # guard con el nombre del origen.
