@@ -5,7 +5,9 @@
 #   se reconoce por su nombre aunque se escriba con su ruta, con una barra delante o entre
 #   comillas. Panel de confirmación (V4 = A3, V6, A5): lo que bash ejecuta dentro de "$(…)",
 #   de una shell con -c o de eval también cuenta; «<<<» y el «<<» aritmético no abren un
-#   heredoc; y lo que busca un lector, entre comillas, no es el programa.
+#   heredoc; y lo que busca un lector, entre comillas, no es el programa. Revisiones de la #20
+#   (CodeRabbit): lo que sigue a -c, la shell como argumento, los argumentos que leen las
+#   reglas y un ")" que bash no lee como cierre de "$(…)".
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -156,6 +158,36 @@ bash -c -x 'ls -la sentinel/githooks' _ sentinel
 sh -c 'echo hola'
 eval "echo 'mv sentinel/githooks x'"
 echo "$(echo "(") mv sentinel/githooks /tmp/x"
+EOF
+
+# Un ")" que bash no lee como cierre no termina la sustitución: el de un comentario llega hasta
+# el final de la línea, y tras un heredoc o un case no se sabe dónde cierra, así que se lee el
+# resto entero como código (segunda revisión de la #20, CodeRabbit). Cada línea es el valor de
+# "command" en el JSON: \n va escrito como escape
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo \"$(echo ok # )\n'mv' sentinel/githooks /tmp/x)\"
+echo \"$(echo ok # )\nmv sentinel/githooks /tmp/x)\"
+echo \"$(echo \"$(echo ok # )\nmv sentinel/githooks /tmp/x)\")\"
+echo \"$(cat <<E\n)\nE\nmv sentinel/githooks /tmp/x)\"
+echo \"$(cat <<'E'\n)\nE\nmv sentinel/githooks /tmp/x)\"
+echo \"$(case x in a) mv sentinel/githooks /tmp/x;; esac)\"
+echo \"$(true; case x in (a) true;; b) mv sentinel/githooks /tmp/x;; esac)\"
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo \"$(echo a#b) mv sentinel/githooks /tmp/x\"
+echo \"$(echo ${#HOME}) mv sentinel/githooks /tmp/x\"
+echo \"$(echo ok # c\n) mv sentinel/githooks /tmp/x\"
+echo \"$(echo showcase) mv sentinel/githooks /tmp/x\"
+echo \"$(echo cases) mv sentinel/githooks /tmp/x\"
+echo \"$(cat <<< x) mv sentinel/githooks /tmp/x\"
 EOF
 
 # ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
