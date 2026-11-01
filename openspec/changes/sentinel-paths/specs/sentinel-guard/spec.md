@@ -35,7 +35,9 @@ solo por el texto de la ruta.
   de un heredoc no esconde las líneas que le siguen, y `<<<` o el `<<` de una expresión
   aritmética no abren un heredoc
 - **AND** también lo que bash ejecuta dentro de otra cosa: una sustitución entre comillas dobles
-  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada, lo que sigue a `-c` en una shell
+  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada (un `)` en un comentario no la
+  cierra, y tras un heredoc o un `case` dentro se lee como código el resto entero del
+  comando), lo que sigue a `-c` en una shell
   (`bash`, `sh`, `zsh`, `dash`, `ksh`), también con opciones delante del código o con la shell
   como argumento (`sudo -u root bash -c`, `find -exec sh -c`), y los argumentos de `eval`; con
   más de 8 niveles de código anidado, el hook no sabe qué se ejecuta y bloquea, y la llave de
