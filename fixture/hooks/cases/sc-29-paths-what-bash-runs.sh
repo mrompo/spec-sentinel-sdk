@@ -174,7 +174,8 @@ EOF
 
 # ── A5: lo que busca un lector, entre comillas, no es el programa ────────────────────────
 # El patrón de grep o de git log/grep y el valor de una asignación no hacen de programa aunque
-# se llamen como un verbo: buscar «chmod» en una carpeta protegida es leerla
+# se llamen como un verbo: buscar «chmod» en una carpeta protegida es leerla, también con el
+# lector detrás de sus prefijos, asignaciones y redirecciones, y git log tras sus opciones
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
   guard "$(bash_payload "$cmd")"
@@ -186,6 +187,16 @@ git log --oneline --grep "mv" -- sentinel
 grep -rln 'rm' sentinel
 grep -rn \chmod sentinel/hooks
 X="mv" ls sentinel/githooks
+sudo grep -rn "chmod" sentinel/hooks
+sudo -E grep -rn "chmod" sentinel/hooks
+timeout 5 grep -rn "chmod" sentinel/hooks
+X=1 grep -rn "chmod" sentinel/hooks
+2>/dev/null grep -rn "chmod" sentinel/hooks
+>/dev/null grep -rn "chmod" sentinel/hooks
+{ grep -rn "chmod" sentinel/hooks; }
+git -C . log --grep "mv" -- sentinel
+git --git-dir=.git log --grep "mv" -- sentinel
+git -c x.y=z log --grep "mv" -- sentinel
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
