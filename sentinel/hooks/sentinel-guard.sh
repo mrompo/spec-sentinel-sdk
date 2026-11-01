@@ -311,7 +311,10 @@ cmd_words() {
     }
     # subend, dqend, bqend <desde> → dónde acaba lo que empieza en <desde> (el paréntesis que
     # cierra $(…), la comilla que cierra "…", el acento que cierra `…`), con sus comillas y las
-    # sustituciones que lleva dentro; n + 1 si no se cierra
+    # sustituciones que lleva dentro; n + 1 si no se cierra. En $(…), un comentario llega hasta
+    # el final de la línea; tras un heredoc o un case no se sabe dónde cierra (bash lee el
+    # cuerpo y los patrones con sus propios paréntesis), así que también n + 1: el resto entero
+    # se lee como código (revisión de la #20)
     function subend(p,   k, ch, d, j) {
       d = 1
       for (k = p; k <= n; k++) {
@@ -319,6 +322,11 @@ cmd_words() {
         if (ch == "\\") k++
         else if (ch == "\047") { j = index(substr(t, k + 1), "\047"); if (!j) return n + 1; k += j }
         else if (ch == "\"") k = dqend(k + 1)
+        else if (ch == "#" && (k == p || index(" \t\n;|&()", substr(t, k - 1, 1)))) {
+          while (k < n && substr(t, k + 1, 1) != "\n") k++
+        }
+        else if (ch == "<" && substr(t, k + 1, 1) == "<") { if (substr(t, k + 2, 1) != "<") return n + 1; k += 2 }
+        else if (substr(t, k, 4) == "case" && (k == p || index(" \t\n;|&()", substr(t, k - 1, 1))) && index(" \t\n", substr(t, k + 4, 1))) return n + 1
         else if (ch == "(") d++
         else if (ch == ")" && --d == 0) return k
       }
