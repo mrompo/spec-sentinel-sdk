@@ -5,7 +5,7 @@
 #   se reconoce por su nombre aunque se escriba con su ruta, con una barra delante o entre
 #   comillas. Panel de confirmación (V4 = A3, V6, A5): lo que bash ejecuta dentro de "$(…)",
 #   de una shell con -c o de eval también cuenta; «<<<» y el «<<» aritmético no abren un
-#   heredoc; y un argumento entre comillas que se llama como un verbo no es el programa.
+#   heredoc; y lo que busca un lector, entre comillas, no es el programa.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -110,7 +110,9 @@ EOF
 
 # ── Panel de confirmación, V4 = A3: lo que bash ejecuta dentro de otra cosa ──────────────
 # Una sustitución entre comillas dobles ("$(…)", "`…`") se lee como código, también anidada y
-# con sus propias comillas; y el argumento de una shell con -c o de eval es un comando más
+# con sus propias comillas; y el argumento de una shell con -c o de eval es un comando más. La
+# shell se reconoce también como argumento (sudo -u root, find -exec), y tras -c cuenta lo que
+# venga, con más opciones delante del código (revisión de la #20, CodeRabbit)
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
   guard "$(bash_payload "$cmd")"
@@ -135,6 +137,12 @@ zsh -c 'rm -rf .claude'
 sudo bash -c 'mv sentinel/githooks /tmp/x'
 bash -c 'bash -c "mv sentinel/githooks /tmp/x"'
 bash -c "echo \"\$(mv sentinel/githooks /tmp/x)\""
+bash -c -x 'mv sentinel/githooks /tmp/x'
+bash -c -- 'mv sentinel/githooks /tmp/x'
+bash -c -o pipefail 'mv sentinel/githooks /tmp/x'
+sudo -u root bash -c 'mv sentinel/githooks /tmp/x'
+env -u X sh -c 'mv sentinel/githooks /tmp/x'
+find . -name x -exec sh -c 'mv sentinel/githooks /tmp/x' \;
 EOF
 # Lo que el código de dentro no ejecuta sobre una carpeta protegida sigue libre
 while IFS= read -r cmd; do
@@ -144,6 +152,7 @@ while IFS= read -r cmd; do
 done <<'EOF'
 echo "$(ls sentinel/githooks)"
 bash -c 'ls -la sentinel/githooks'
+bash -c -x 'ls -la sentinel/githooks' _ sentinel
 sh -c 'echo hola'
 eval "echo 'mv sentinel/githooks x'"
 echo "$(echo "(") mv sentinel/githooks /tmp/x"
@@ -163,9 +172,9 @@ x=$(( 1 << 2 ))\necho 'a\nb'; mv sentinel/githooks /tmp/x
 (( a <<= 1 ))\necho 'a\nb'; mv sentinel/githooks /tmp/x
 EOF
 
-# ── A5: un argumento entre comillas que se llama como un verbo no es el programa ─────────
-# Solo el programa de cada tramo (tras sus prefijos y asignaciones, y el subcomando de git) se
-# reconoce escrito entre comillas; buscar «chmod» en una carpeta protegida es leerla
+# ── A5: lo que busca un lector, entre comillas, no es el programa ────────────────────────
+# El patrón de grep o de git log/grep y el valor de una asignación no hacen de programa aunque
+# se llamen como un verbo: buscar «chmod» en una carpeta protegida es leerla
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
   guard "$(bash_payload "$cmd")"
@@ -199,6 +208,34 @@ git --git-dir=.git 'mv' sentinel/githooks /tmp/x
 git -c x.y=z 'rm' -r sentinel/githooks
 bash -o pipefail -c 'mv sentinel/githooks /tmp/x'
 bash -e -c 'mv sentinel/githooks /tmp/x'
+find . -name x -exec 'rm' -rf sentinel \;
+timeout -s KILL 5 'mv' sentinel/githooks /tmp/x
+sudo -u root 'mv' sentinel/githooks /tmp/x
+EOF
+
+# Los argumentos de cualquier otro programa siguen contando entre comillas: las reglas que los
+# leen (un refspec con + o :, la rama a la que se cambia) los ven como sin ellas (revisión de la
+# #20, CodeRabbit)
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+git push origin '+main:main'
+git push origin "+main:main"
+git push origin ':rama'
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    ($cmd)" >&2; exit 1; }
+  case "$RH_OUT" in
+    *'"permissionDecision":"ask"'*) ;;
+    *) echo "    debería pedir confirmación: $cmd" >&2; exit 1 ;;
+  esac
+done <<'EOF'
+git checkout "main"
+git switch 'main'
 EOF
 
 # Código anidado: hasta 8 niveles se lee entero; con más, no se sabe qué ejecuta y se bloquea
