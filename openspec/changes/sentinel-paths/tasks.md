@@ -257,7 +257,11 @@ mergeable sola.
            comillas se sigue reconociendo tras prefijos, asignaciones, redirecciones, `{`/`if` y
            como subcomando de git.
          Deltas en SC-01 y en la fila «Regex evadibles» del README.
-- [ ] R9. 👤 Parche `sentinel-paths-7.patch`; banco en verde y mutantes muertos
+- [x] R9. 👤 Parche `sentinel-paths-7.patch` (aplicado por la persona, `7271b46`): el guard
+       relee como comando lo que va en `"$(…)"`, `` "`…`" ``, `-c` y `eval`, hasta 8 niveles;
+       `<<<` y el `<<` aritmético no abren heredoc; y entre comillas solo cuenta el programa de
+       cada tramo y el subcomando de git. En un clon con el parche, el banco pasa entero (hooks
+       31/31, githooks 16/16, install 18/18) y los 35 mutantes rompen algún caso de `sc-29`
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
