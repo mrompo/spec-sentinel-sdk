@@ -267,7 +267,10 @@ mergeable sola.
        bash -c`, `find -exec sh -c`); la marca de comillas, solo en lo que busca un lector
        (`grep`, `git log`/`git grep`) y en el valor de una asignación, porque marcar cualquier
        argumento dejaba pasar `git push origin '+main:main'`, `find -exec 'rm'` o `sudo -u root
-       'mv'`. Banco en verde y 43 mutantes muertos
+       'mv'`. Banco en verde y 43 mutantes muertos.
+       Segunda revisión, parche `sentinel-paths-7c.patch` (`78b5789`): un `)` en un comentario
+       ya no cierra `"$(…)"`, y tras un heredoc o un `case` dentro se lee como código el resto
+       entero del comando. Banco en verde y 51 mutantes muertos
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
