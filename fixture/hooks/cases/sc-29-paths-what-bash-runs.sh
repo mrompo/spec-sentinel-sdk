@@ -242,6 +242,10 @@ echo \"$(echo \"a`echo \")\"`b\") ; mv sentinel/githooks /tmp/x ; echo `true`\"
 echo \"$(echo ${x:-\"}\"}) ; mv sentinel/githooks /tmp/x ; echo `true`\"
 echo \"$(echo \"$(echo \")\")\") ; mv sentinel/githooks /tmp/x ; echo `true`\"
 EOF
+# El bloqueo de un case es el del cierre incierto, aunque detrás no se toque nada protegido
+guard "$(bash_payload 'echo "$(case x in a) true;; esac)" ; ls sentinel/githooks')"
+assert_exit 2 || { echo "    debería bloquearse: un case dentro de \"\$(…)\"" >&2; exit 1; }
+assert_err_contains "no sabe dónde cierra" || exit 1
 
 # ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
 # Si lo abrieran, una comilla de dos líneas escondería el comando que la sigue
