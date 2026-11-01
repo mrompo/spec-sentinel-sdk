@@ -1,0 +1,145 @@
+{
+ "lens": "adversary",
+ "votes": [
+  {
+   "id": "A1",
+   "agree": true,
+   "severity": "blocker",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'cp $E/config .git' → 2, pero con '2>/dev/null', '>/dev/null', '</dev/null' detrás y 'rsync -a $E/ .git/ --exclude=x' → 0; ejecutado el primero, core.hooksPath pasa a /dev/null. Desarma la Esclusa sin la llave con una forma habitual (2>/dev/null): bloqueante. Es la misma clase que mi V3 (into_dir no encuentra el destino real), por otra puerta; el arreglo de destino 'cualquier palabra no-opción que sea carpeta' cubre las dos.",
+   "dup": "V3"
+  },
+  {
+   "id": "A2",
+   "agree": true,
+   "severity": "blocker",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'mv .git /tmp/x' y 'mv .git .g && mkdir .git && cp -r .g/HEAD .g/objects .g/refs .git/' → 0, mientras 'mv .git/hooks /tmp/x' → 2. Rehacer el repo sin core.hooksPath desarma la Esclusa sin la llave: bloqueante. La madre .git falta en dir_re igual que faltaba sentinel/githooks/lib en el primer panel.",
+   "dup": null
+  },
+  {
+   "id": "A3",
+   "agree": true,
+   "severity": "blocker",
+   "note": "Es mi V4 (shell anidada). Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'bash -c \"mv sentinel/githooks /tmp/x\"' → 0. Junto con \"$(…)\" entre comillas dobles, que tampoco ve dir_re, deja mover la Esclusa sin la llave: para mí bloqueante.",
+   "dup": "V4"
+  },
+  {
+   "id": "A4",
+   "agree": true,
+   "severity": "major",
+   "note": "Es mi V9. Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out), en main: 'env git commit', 'X=1 git commit' y 'git -C . commit' → 0. Lo puse menor porque pre-push sigue parando el push, pero 'git -C <ruta> commit' es habitual en agentes e incumple SC-sentinel-guard-03: acepto grave.",
+   "dup": "V9"
+  },
+  {
+   "id": "A5",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'grep -rn \"chmod\" sentinel/hooks', 'grep -c \"cp\" .claude' y 'git log --grep \"mv\" -- sentinel' → 2. Sin comillas ('grep -rn chmod sentinel/hooks') ya bloqueaba (deuda P7); la regresión es que la comilla dejó de librar. Falso positivo fail-closed, no abre nada: menor. El arreglo que proponen (solo la primera palabra del tramo por su nombre) no debe perder los prefijos (sudo, env, X=1), que hoy sí se ven.",
+   "dup": null
+  },
+  {
+   "id": "A6",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): proyecto con '\"' en la ruta, cwd del payload en sentinel/ y el hook lanzado desde la raíz: 'mv hooks /tmp/x' → 0; lanzado desde sentinel/ → 2. Como Claude Code lanza el hook en la carpeta de la sesión, en la práctica el respaldo suele coincidir con el cwd, y el agente no elige la ruta del proyecto: menor. En Windows (cwd con '\\\\') sí deja la cláusula sin efecto siempre.",
+   "dup": "V5"
+  },
+  {
+   "id": "A7",
+   "agree": true,
+   "severity": "nit",
+   "note": "Lo vi igual (t6-tope-bitacora.sh: un heredoc de 600 líneas con docs/guia-uso.md → too-many-paths). Solo el texto del README; la llave lo salva.",
+   "dup": "P5"
+  },
+  {
+   "id": "A8",
+   "agree": true,
+   "severity": "nit",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'grep \">\" sentinel/policy.yaml' → 2. Fail-closed, no abre nada: retoque.",
+   "dup": null
+  },
+  {
+   "id": "A10",
+   "agree": true,
+   "severity": "minor",
+   "note": "Leído dk-alpine.out (sc-30 'salió con 127' sin perl, sc-18 falla con el tar de busybox) y dk-bench2.out (sc-28 como root falla en Debian). No lo he reejecutado. Un banco que no sale en verde donde lo correrá la Aduana es un problema real, sin efecto en la seguridad: menor.",
+   "dup": null
+  },
+  {
+   "id": "A9",
+   "agree": true,
+   "severity": "nit",
+   "note": "Leído en STATUS.md:7 y :14 de mi copia (9036d89): 'la 6, abierta'. Texto desfasado: retoque.",
+   "dup": "A10"
+  },
+  {
+   "id": "P1",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'grep -rni core.hookspath docs' y 'git log --oneline -Score.hookspath' → 2 [no-hook-disabling]. Desde mi lente, skip_read_only en no-hook-disabling es seguro: los lectores de la lista no pueden fijar config ni variables (git config, git -c y las asignaciones no son lectura). Menor.",
+   "dup": null
+  },
+  {
+   "id": "P2",
+   "agree": true,
+   "severity": "minor",
+   "note": "Leído perf-tree.out: 'cp -r pk/* dest/' con 200×150 entradas tarda 22,5 s y 'rsync -a pk/ dest/' se bloquea en 0,5 s. Desde mi lente hay un ángulo más: con un Claude Code anterior a v2.1.295 (sin onFailure), un comando hecho para tardar más que el timeout del hook (muchas carpetas de menos de 10000 entradas) pasa sin decisión. Está documentado que sin onFailure un timeout no bloquea, así que lo dejo en menor; el presupuesto por comando que proponen lo cierra.",
+   "dup": null
+  },
+  {
+   "id": "P3",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'wc -l src/a/*.js' con 520 ficheros → 2 [too-many-paths], aunque solo lee. Fail-closed; el motivo engaña. Menor.",
+   "dup": "P5"
+  },
+  {
+   "id": "P4",
+   "agree": true,
+   "severity": "minor",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): el bloque del aviso con 5 espacios delante, pasado a bash, no cierra el heredoc y la llave queda con '     LLAVE' dentro del motivo. Sin sangría funciona (mi t4-llave.sh, en bash, sh y zsh). Depende de cómo copie la persona: menor. No abre nada al agente.",
+   "dup": "P4"
+  },
+  {
+   "id": "P5",
+   "agree": true,
+   "severity": "nit",
+   "note": "Leído en el cableado: los remedios no dicen que los ejecuta una persona y 'git checkout HEAD -- sentinel/…' es relativo a la raíz. No abre nada; mensaje mejorable: retoque.",
+   "dup": "P3"
+  },
+  {
+   "id": "P6",
+   "agree": true,
+   "severity": "major",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): Write de 'sentinel\\\\policy.yaml' y '.claude\\\\settings.json' → 0. Si Claude Code en Windows envía file_path con barras invertidas (lo más probable: rutas nativas C:\\\\…), toda la protección por ruta de Edit/Write cae en una plataforma que el README declara soportada (Git Bash). Sin verificar en Windows lo dejo en grave, no en bloqueante; con mi V1 (caja en NTFS) Windows queda bastante descubierto.",
+   "dup": null
+  },
+  {
+   "id": "P7",
+   "agree": true,
+   "severity": "nit",
+   "note": "Lo he visto igual con el Centinela de la sesión: el motivo llega tras los 2 KB del cableado. Retoque.",
+   "dup": null
+  },
+  {
+   "id": "P8",
+   "agree": true,
+   "severity": "nit",
+   "note": "Leído uid.out: 'id: cannot find name for user ID 4321' delante de cada motivo. No cambia la decisión: retoque.",
+   "dup": null
+  },
+  {
+   "id": "P9",
+   "agree": true,
+   "severity": "nit",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'sed -n 1,20p sentinel/policy.yaml' → 2 con un motivo que habla de modificar. La lista cerrada es la de la spec (no incumple nada); el motivo podría decir cómo leer. No añadiría sed ni awk a la lista (sed -i, awk con system() escriben).",
+   "dup": null
+  },
+  {
+   "id": "P10",
+   "agree": true,
+   "severity": "nit",
+   "note": "Reproducido en $P/adversary/cr-votos.sh (salida en cr-votos.out): 'git commit -F - <<EOF … mv sentinel/hooks … EOF' → 2 [protect-enforcement-dirs]. Es la deuda P7; ojo al arreglo: el cuerpo del heredoc no debe dejar de leerse para las rutas, porque mi V6 muestra que el lector ya se equivoca sobre dónde empieza y acaba un cuerpo.",
+   "dup": "P7"
+  }
+ ]
+}

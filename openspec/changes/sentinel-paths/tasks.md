@@ -11,7 +11,8 @@ que toca el enforcement es un fichero protegido: lo entrega el agente como parch
 worktree, sin trackear, y una persona lo revisa, lo aplica con `git apply --index`, comprueba el
 banco y hace el commit.
 **Posición en el Loop**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` y la ronda
-2 de `apply` va por la PR 6 (las PRs 4 y 5 en `main` por la #15, la #16 y la #17).
+2 de `apply` está en `main` (PRs 4 a 6, de la #15 a la #18); el panel de confirmación dio `HOLD`
+y la ronda 3 (PRs 7 y 8) arregla sus bloqueantes.
 
 ## Engine · antes de teclear
 
@@ -181,7 +182,7 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        diecinueve mutantes (siete nuevos y los doce de la #16) rompen algún caso. Segunda pasada
        de la #17, en `sentinel-paths-5d.patch` (`0c5339e`): los enlaces del origen no se siguen,
        como `cp` sin `-L`, así que un enlace en bucle no deja el recorrido sin fin; veinte
-       mutantes muertos. Falta el `merge`
+       mutantes muertos. En `main` por la #17 (`3c68518`, 2026-10-29)
 
 **PR 6 · El cableado en el uso real y la llave** (temas 4, 5 y 7)
 
@@ -225,12 +226,46 @@ menor queda como deuda en `STATUS.md` y entra en el panel de confirmación (R7).
        los espacios del final (CWE-863); antes, la llave de una acción que acaba en espacio no la
        autorizaba nunca y, con `SENTINEL_OVERRIDE`, se conservaba para repetirla sin la sesión.
        Caso en `920612b` (`sc-27`), delta en `14897c4`; banco entero en verde y los treinta
-       mutantes rompen algún caso. Falta el `merge`
+       mutantes rompen algún caso. En `main` por la #18 (`9036d89`, 2026-10-31)
 
 **Tribunal**
 
-- [ ] R7. Panel de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 4 a 6 →
-       `disposition` 👤
-- [ ] R8. Lo que decida la persona; después, el 11 queda cerrado
+- [x] R7. Panel de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 4 a 6 →
+       `disposition` 👤. Panel hecho el 2026-10-31, en [review-2/](review-2/README.md): `HOLD`,
+       con 30 hallazgos validados (4 bloqueantes: A1 = V3, A2, V1 y V4 = A3). De los 21 que
+       había que arreglar, 15 están arreglados para las tres lentes y 6 a medias. Disposición
+       de la persona el mismo día: ronda 3 acotada (abajo); el resto, a deuda en `STATUS.md`
+
+### Ronda 3 · los bloqueantes del panel de confirmación (disposición del 2026-10-31)
+
+Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Dos PRs desde `main`, cada una
+mergeable sola.
+
+**PR 7 · Lo que ejecuta bash, otra vez** (tema 1 de `review-2`)
+
+- [ ] R8. Casos en rojo:
+       - V4 = A3: lo que ejecutan una sustitución entre comillas dobles (`"$(…)"`, `` "`…`" ``),
+         `bash -c`, `sh -c` y `eval`;
+       - V6: `<<<` y el `<<` aritmético no abren heredoc;
+       - A5: un argumento entrecomillado que se llama como un verbo no bloquea una lectura.
+       Delta de SC-sentinel-paths-01 si hace falta
+- [ ] R9. 👤 Parche `sentinel-paths-7.patch`; banco en verde y mutantes muertos
+
+**PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
+
+- [ ] R10. Casos en rojo:
+       - A1 = V3: el destino de `cp`/`mv` cuando no es la última palabra (redirecciones) y
+         `--target-directory` abreviado;
+       - A2: `mv .git`;
+       - V1: la caja en un disco que no la distingue;
+       - V2: `git commit -n`, `--no-verif`;
+       - A4 = V9: `protected-branches` con `git -C`, `git -c`, `env` y asignaciones delante;
+       - P1: `no-hook-disabling` deja leer
+- [ ] R11. 👤 Parche `sentinel-paths-8.patch`; banco en verde y mutantes muertos
+
+**Tribunal**
+
+- [ ] R12. Panel corto (tres lentes, contexto limpio): solo confirman lo arreglado en la ronda 3,
+       con variantes cercanas → `disposition` 👤; después, el 11 queda cerrado
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada

@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-10-30 · **`sentinel-paths` en la ronda 2 de `apply`**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` (V1, un escape del JSON delante del verbo, y 8 graves) y la persona decidió arreglarlo en este cambio con tres PRs más y un panel de confirmación. Las PRs 4 y 5 ya están en `main` (#15, #16 y su revisión en #17); la 6, abierta · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` archivado (PR #7): las seis specs vivas declaran su propósito y el banco impide dejarlo en «TBD» · siguientes: cerrar `sentinel-paths`, los gates Intención de `hook-coexistence` y `sdk-version`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
+**Última actualización**: 2026-10-31 · **`sentinel-paths` en la ronda 3 de `apply`**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` (V1, un escape del JSON delante del verbo, y 8 graves) y la persona decidió arreglarlo en este cambio con tres PRs más y un panel de confirmación. Las PRs 4 a 6 ya están en `main` (#15, #16 y su revisión en #17, y #18); el panel de confirmación dio `HOLD` (4 bloqueantes) y la persona decidió una ronda 3 acotada, de dos PRs, con el resto a deuda · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` archivado (PR #7): las seis specs vivas declaran su propósito y el banco impide dejarlo en «TBD» · siguientes: cerrar `sentinel-paths`, los gates Intención de `hook-coexistence` y `sdk-version`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
 | **Roadmap** | Fases 0, 1 y **2** ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · siguiente: fase 3 (`ci-gate`) |
-| **Loop** | [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md): Intención ✅ (2026-10-26), Claridad ✅ y Plan ✅ (2026-10-26, tres PRs) · PR 1/3 «Lo que se toca» en `main` (#9, y su revisión en #10 y #11); PR 2/3 «Sin falsos positivos y la llave» en `main` (#12); PR 3/3 «Cableado» en `main` (#13). [Primer panel](openspec/changes/sentinel-paths/review/README.md) (2026-10-28): `HOLD`, 26 hallazgos validados; ronda 2 de `apply`: PR 4 «Lo que ejecuta bash» en `main` (#15), PR 5 «Carpetas y ruta física» en `main` (#16, y su revisión en #17), PR 6 «El cableado en el uso real y la llave» abierta; después, panel de confirmación y `archive`. Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
+| **Loop** | [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md): Intención ✅ (2026-10-26), Claridad ✅ y Plan ✅ (2026-10-26, tres PRs) · PR 1/3 «Lo que se toca» en `main` (#9, y su revisión en #10 y #11); PR 2/3 «Sin falsos positivos y la llave» en `main` (#12); PR 3/3 «Cableado» en `main` (#13). [Primer panel](openspec/changes/sentinel-paths/review/README.md) (2026-10-28): `HOLD`, 26 hallazgos validados; ronda 2 de `apply`: PR 4 «Lo que ejecuta bash» en `main` (#15), PR 5 «Carpetas y ruta física» en `main` (#16, y su revisión en #17), PR 6 «El cableado en el uso real y la llave» en `main` (#18). [Panel de confirmación](openspec/changes/sentinel-paths/review-2/README.md) (2026-10-31): `HOLD`, 30 hallazgos validados; ronda 3: PR 7 «Lo que ejecuta bash, otra vez» y PR 8 «`.git`, la caja y la Esclusa»; después, un panel corto y `archive`. Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -124,6 +124,36 @@
   - el coste por llamada crece con cada palabra con `/` que existe, por los subshells de
     `phys_path` y `canon` (un heredoc de 60 líneas pasaba de 0,36 s a 1 s antes de contar solo
     las rutas que existen): faltan una caché por carpeta y un caso de rendimiento (P9).
+- **Deuda del panel de confirmación de `sentinel-paths`** (decisión del 2026-10-31, detalle en
+  [review-2/](openspec/changes/sentinel-paths/review-2/README.md)):
+  - `git restore sentinel`, `git checkout <rev> -- sentinel` y `git stash push -- sentinel`
+    pasan: borran las líneas de la bitácora que aún no están en un commit y traen una versión
+    antigua del enforcement. Bloquear `git restore .` sería un falso positivo enorme, así que
+    la bitácora necesita otra salida (V5);
+  - Write o Edit a `sentinel\policy.yaml`, con barras invertidas, pasa. Falta comprobar qué
+    ruta manda Claude Code en Windows (P6);
+  - el coste crece más que en P9:
+    - con el tope de 512 rutas y la copia a carpetas, el peor caso por llamada va de 8 a 24 s;
+    - el tope de 10000 entradas es por carpeta, no por comando (P2);
+  - menores y retoques:
+    - el `cwd` del payload no se decodifica (A6);
+    - el README dice que un heredoc no cuenta para el tope, y cuenta si nombra rutas que
+      existen (A7);
+    - en «solo lee», un `>` entre comillas cuenta como redirección (A8);
+    - en Alpine y como root, el banco no sale en verde: `sc-30` necesita perl, `sc-18` un
+      `tar --null`, y `sc-28` falla como root (A10);
+    - `too-many-paths` bloquea lecturas, y su motivo engaña (P3);
+    - la llave en heredoc no cierra si se pega con sangría (P4);
+    - los remedios del cableado hablan al agente, y fallan desde una subcarpeta (P5);
+    - el motivo llega detrás de los 2,2 KB del cableado (P7);
+    - `id -un` sin `2>/dev/null` escribe un error en cada llamada si el uid no tiene nombre
+      (P8);
+    - `sed -n`, `awk`, `rg` y `jq` no cuentan como lectura, y el motivo dice «modifica» (P9);
+    - el cuerpo de un heredoc cuenta como comandos, lo que amplía P7 (P10);
+    - `~+` y `~-` no se expanden (V7);
+    - con `SENTINEL_OVERRIDE`, más de 512 rutas tapan en la bitácora la regla que se saltó
+      (V8);
+    - la fila «Regex evadibles» no menciona `tar -x`, `git apply` ni `patch` (V10).
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.

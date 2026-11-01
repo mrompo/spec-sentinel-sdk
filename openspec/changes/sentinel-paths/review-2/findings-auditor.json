@@ -1,0 +1,126 @@
+{
+  "lens": "auditor",
+  "findings": [
+    {
+      "id": "A1",
+      "severity": "blocker",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 474,
+      "title": "Copiar a .git pasa en cuanto el destino deja de ser la última palabra del tramo: basta un '2>/dev/null' para sustituir .git/config y desenganchar la Esclusa",
+      "evidence": "repro-A1-redir.sh (salida en repro-A1-redir.out; igual en macOS con bash 3.2 y en Docker Debian 12/mawk y Alpine 3.22/busybox, ver dk-bench.out). 'cp /tmp/aud-evil/config .git' → exit 2 [self-protection]; pero 'cp /tmp/aud-evil/config .git 2>/dev/null', '… 2>&1', '… >/dev/null', '… </dev/null', '… <<< x', 'cp … .git --backup=numbered', 'rsync -a /tmp/aud-evil/ .git/ --exclude=x' y '… --exclude x' → exit 0 sin stderr. Ejecutado lo que el guard deja pasar: core.hooksPath local pasa de 'sentinel/githooks' a '/dev/null' (la Esclusa ya no corre). Causa: into_dir toma como destino la última palabra del tramo (líneas 474-478), y cmd_words solo parte las redirecciones como espacios (línea 331): en '2>/dev/null' las palabras son '2' y '/dev/null', y en '--exclude=x' el '=' parte 'x' como otra palabra; el destino pasa a ser '/dev/null', '2', 'x' o 'numbered', que no es una carpeta, y into_dir sale sin tocar nada (línea 481). '.git' no está en dir_re, así que nada más lo para (con sentinel/adapters o .claude lo para dir_re). Incumple SC-sentinel-paths-01 («copiar, mover o enlazar a una carpeta (cp x/config .git) toca, dentro de ella, un fichero con el nombre de cada origen») y SC-sentinel-paths-03; el banco (sc-30) solo prueba el destino en la última posición.",
+      "fix": "Que cmd_words marque las redirecciones: la palabra que sigue a '<', '>' (y '>>', '<<<', '&>') sale como objetivo de redirección (otra letra, p. ej. 'r', que add_word cuenta y into_dir ignora), y un número pegado delante del operador ('2>') no es un argumento. Además, fail-closed ante opciones con argumento tras los operandos: probar como destino cada palabra no-opción del tramo que sea una carpeta existente, no solo la última. Casos en sc-30: los ocho comandos de arriba con exit 2.",
+      "of": "A1"
+    },
+    {
+      "id": "A2",
+      "severity": "blocker",
+      "file": "sentinel/policy.default.yaml",
+      "line": 85,
+      "title": "Mover la carpeta común de git (.git), que contiene .git/hooks y .git/config, no se bloquea: en un comando se rehace el repo con su historia y sin core.hooksPath",
+      "evidence": "repro-mv-git.sh (salida en repro-mv-git.out). 'mv .git/hooks /tmp/x' → exit 2 [protect-enforcement-dirs], pero 'mv .git /tmp/x' → 0 y 'mv .git .g && mkdir .git && cp -r .g/HEAD .g/objects .g/refs .git/' → 0. Ejecutado: el repo sigue con su commit y su rama (feature/x) y core.hooksPath local pasa de 'sentinel/githooks' a vacío: la Esclusa no corre en el siguiente commit, y el cableado no se queja porque git responde. dir_re lista .git/hooks pero no su carpeta madre (la común de git, que canon() nombra '.git'), mientras que sentinel sí está como madre de sentinel/hooks. SC-sentinel-paths-01 pide denegar mover una carpeta protegida «como la de uno de sus ficheros», y SC-sentinel-paths-03 mover la configuración de git del repo; mover su carpeta madre las mueve a las dos. No es de la ronda 2, pero sigue contra la spec y la ronda 2 tocó dir_re (A1) sin cubrirlo.",
+      "fix": "Añadir '\\.git' (la carpeta común, tal como la nombra canon) y '\\.git/worktrees/[^/]+' a dir_re de protect-enforcement-dirs. 'rm -rf .git' pasaría de confirm a block y 'cp -r .git /tmp/bk' se bloquearía (la deuda P7). Caso en sc-21 o sc-23: 'mv .git /tmp/x' y el comando de arriba → 2.",
+      "of": null
+    },
+    {
+      "id": "A3",
+      "severity": "major",
+      "file": "sentinel/policy.default.yaml",
+      "line": 84,
+      "title": "Las reglas del comando no ven lo que ejecutan bash -c, sh -c o eval: 'bash -c \"mv sentinel/githooks /tmp/x\"' pasa",
+      "evidence": "t1.sh (salida en t1.out): 'bash -c \"mv sentinel/githooks /tmp/x\"', \"sh -c 'mv sentinel/githooks /tmp/x'\" y 'eval \"mv sentinel/githooks /tmp/x\"' → exit 0 (sin ask), mientras que '/bin/mv …', '\\\\mv …', 'exec mv …', 'nice mv …' → 2. En CMD_NORM la cadena entera es una palabra reducida a su nombre ('x'), y en CMD_TEXT el verbo va detrás de una comilla, que el ancla de command_re no admite; en TOUCHED la cadena no es una ruta. La spec (SC-sentinel-paths-01) promete que «las reglas del comando deciden sobre lo que ejecuta bash», y el README («Regex evadibles») enumera como límites las variables, las sustituciones y $'…', pero no bash -c ni eval. Es la misma clase que V2 (el programa por su nombre).",
+      "fix": "Tratar el argumento de 'bash|sh|zsh|dash -c' y de 'eval' como un comando más: pasarlo otra vez por cmd_words y añadir sus palabras y sus tramos a WORDS y CMD_NORM. Si no, decirlo en la fila «Regex evadibles» del README y en la spec. Caso en sc-29: los tres comandos → 2.",
+      "of": "V2"
+    },
+    {
+      "id": "A4",
+      "severity": "major",
+      "file": "sentinel/policy.default.yaml",
+      "line": 130,
+      "title": "protected-branches no reconoce git commit detrás de 'git -C <dir>', 'git -c k=v', 'env', 'command' o una asignación: en main el commit pasa",
+      "evidence": "t5.sh (salida en t5.out), en la rama main: 'git commit -m x', '/usr/bin/git commit', '\\\\git commit', '\"git\" commit' → 2; pero 'git -C . commit -m x', 'git -c user.name=x commit -m x', '/usr/bin/git -c user.name=x commit -m x', 'env git commit -m x', 'command git commit -m x', 'X=1 git commit -m x' y 'GIT_AUTHOR_NAME=x git commit -m x' → 0. El command_re exige que git vaya al principio del tramo y que cada opción global sea '-x' o 'clave=valor' en una sola palabra, así que '-C .' y '-c k=v' (y en CMD_NORM, donde el '=' parte la palabra) no casan. 'git -C <ruta> commit' es habitual en agentes. Incumple SC-sentinel-guard-03 (spec viva). Es previo a la ronda 2, pero la ronda 2 cambió la superficie del comando (CMD_NORM) para reconocer el programa por su nombre y añadió sc-31 para esta regla sin cubrirlo. La Esclusa (pre-push) sigue parando el push.",
+      "fix": "Admitir opciones globales con argumento ('-C <x>', '-c <k=v>', '--git-dir <x>', '--work-tree <x>') y prefijos de ejecución/asignaciones delante de git: p. ej. '(^|[;&|(]|&&)[[:space:]]*(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|env|command|sudo|nice|nohup|exec)[[:space:]]+)*git([[:space:]]+(-[Cc][[:space:]]+[^[:space:]]+|-[^[:space:]]+|[a-zA-Z-]+=[^[:space:]]+))*[[:space:]]+(commit|…)'. Casos en sc-03: los siete comandos de arriba en main → 2.",
+      "of": null
+    },
+    {
+      "id": "A5",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 256,
+      "title": "Regresión de la ronda 2: los tramos 'como los ve bash' quitan las comillas a todas las palabras, y un patrón o un mensaje que se llama como un verbo bloquea lecturas de carpetas protegidas",
+      "evidence": "repro-norm-fp.sh (salida en repro-norm-fp.out): con el guard de 9036d89, 'grep -rn \"chmod\" sentinel/hooks', 'grep -c \"cp\" .claude' y 'git log --oneline --grep \"mv\" -- sentinel' → exit 2 [protect-enforcement-dirs]; con el guard de antes de la ronda 2 (old.sh deshace ronda2.diff en una copia) los tres → 0. flush() mete en CMD_NORM cada palabra del tramo sin comillas, así que 'grep -rn chmod hooks' casa con command_re (verbo tras un espacio) y dir_re casa con la carpeta. Es la deuda P7 (se decide sobre el comando entero) agravada: antes una comilla delante del verbo lo dejaba fuera. Buscar 'chmod' o 'rm' en sentinel/ es un flujo realista en este repo y en cualquier consumidor que mantenga sus hooks.",
+      "fix": "En CMD_NORM, reducir a su nombre solo la palabra de programa de cada tramo (la primera, o la que sigue a prefijos y asignaciones) y sustituir por un marcador ('_') las demás palabras que iban entre comillas o escapadas; así el programa se reconoce se escriba como se escriba y un argumento entrecomillado no hace de verbo. Caso en sc-29 (permitidos): los tres comandos de arriba.",
+      "of": null
+    },
+    {
+      "id": "A6",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 63,
+      "title": "V5 a medias: el cwd del payload no se decodifica como JSON; con una comilla, una barra invertida o un \\u en la ruta, el guard vuelve en silencio a la carpeta del hook",
+      "evidence": "t3.sh (salida en t3.out): proyecto 'proj \"q\"' con cwd=<proyecto>/sentinel y 'mv hooks /tmp/x' → 0; proyecto 'proj\\\\b' → 0; proyecto con ñ escrita como \\u00f1 (jq -a) → 0; con la ñ en UTF-8 → 2. La línea 63 saca el valor tal cual va en el JSON ('\\\"', '\\\\\\\\'), '[ -d ]' falla y el guard sigue en la carpeta del hook sin decirlo. En Windows (Git Bash, que el cableado ya admite por /mingw64/bin) el cwd siempre lleva '\\\\' (C:\\\\Users\\\\…), así que la resolución desde el cwd del tool call no se aplica nunca allí. Incumple la cláusula añadida a SC-sentinel-paths-01 («las rutas relativas se resuelven desde la carpeta de la sesión (el cwd del tool call)»).",
+      "fix": "Decodificar el cwd con el mismo decodificador de json_text (y, en MSYS, cygpath -u si existe); si el payload trae un cwd que no es una carpeta, denegar (fail-closed) en vez de seguir desde la del hook. Caso en sc-30: un proyecto con comillas en la ruta y el cwd en sentinel.",
+      "of": "V5"
+    },
+    {
+      "id": "A7",
+      "severity": "nit",
+      "file": "sentinel/README.md",
+      "line": 51,
+      "title": "El README dice que el texto de un heredoc no cuenta para el tope de 512 rutas, y cuenta si sus palabras son rutas que existen",
+      "evidence": "t2.sh (salida en t2.out): un heredoc de 600 líneas '- docs/n/fN.md' (ficheros que existen) escrito a docs/lista.md → exit 2 [too-many-paths]. add_word cuenta toda palabra que existe o cuya carpeta existe, también en el cuerpo del heredoc. La llave lo salva, así que solo es el texto: «(las que existen o cuya carpeta existe: el texto de un heredoc no cuenta)» se lee como que el heredoc nunca cuenta.",
+      "fix": "Decir «el texto de un heredoc cuenta solo si nombra rutas que existen (una URL o una división, no)», o no contar las palabras del cuerpo del heredoc (cmd_words ya sabe dónde está) salvo para las reglas de texto.",
+      "of": "P5"
+    },
+    {
+      "id": "A8",
+      "severity": "nit",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 594,
+      "title": "«Solo lee» toma un '>' o '<' entre comillas por una redirección: 'grep \">\" sentinel/policy.yaml' se bloquea",
+      "evidence": "t2.sh (salida en t2.out): 'grep \">\" sentinel/policy.default.yaml' y 'grep -c \"<<\" sentinel/policy.default.yaml' → exit 2 [self-protection]. is_read_only busca '>' y '<' en el texto entero (línea 594), antes de partir con cmd_words, que sí respeta las comillas. Es fail-closed y la spec pide partir «como lo parte bash» (P8 se arregló para '|' y ';', no para '<' y '>').",
+      "fix": "Comprobar las redirecciones sobre las palabras de cmd_words (con la marca de redirección que pide A1), no sobre el texto. Caso en sc-26 (permitido): grep \">\" sentinel/policy.yaml.",
+      "of": "P8"
+    },
+    {
+      "id": "A10",
+      "severity": "minor",
+      "file": "fixture/hooks/cases/sc-30-paths-into-dirs.sh",
+      "line": 800,
+      "title": "Tres casos nuevos del banco no son portables: sc-30 necesita perl, sc-18 un tar con --null y sc-28 falla como root; el banco ya no sale en verde en Alpine ni en un contenedor como root",
+      "evidence": "dk-alpine.sh (salida en dk-alpine.out), Alpine 3.22 como usuario normal: hooks 30/31 (sc-30: «con enlaces en bucle … salió con 127», no hay perl para 'perl -e alarm 30') e install 17/18 (sc-18: el tar de busybox no tiene --null, 'tar: short read', y la copia del SDK sale vacía). dk-bench2.sh (salida en dk-bench2.out): en Debian 12 como usuario normal todo en verde (31/16/18), pero sc-28 como root falla en Debian y Alpine («el PATH del cableado lleva una carpeta que se puede escribir: /usr/bin»): la comprobación '-w' es cierta para root en cualquier carpeta. En macOS (bash 3.2) el banco sale entero en verde (verify.out). El primer panel lo corrió en verde en Debian y Alpine; la Aduana (fase 3) lo correrá en CI, a menudo como root.",
+      "fix": "sc-30: un límite de tiempo sin perl (p. ej. lanzar el guard en segundo plano y matarlo con un bucle de 'kill -0', o 'timeout' si existe, y saltar con aviso si no hay ninguno); sc-18: 'git archive HEAD | tar -x' o 'git ls-files | while read …; cp' en vez de 'tar --null -T -'; sc-28: saltar la comprobación de escritura como root (como ya hace el caso del Centinela ilegible) o comprobar el dueño de la carpeta.",
+      "of": null
+    },
+    {
+      "id": "A9",
+      "severity": "nit",
+      "file": "STATUS.md",
+      "line": 7,
+      "title": "STATUS.md dice que la PR 6 sigue abierta, y en 9036d89 ya está fusionada (#18)",
+      "evidence": "Lectura: la línea 7 dice «Las PRs 4 y 5 ya están en `main` …; la 6, abierta» y la 14 «PR 6 … abierta», en el commit que fusiona la #18. Sin script: es texto. Puede que un commit de documentación posterior lo corrija; no lo he comprobado (solo veo 9036d89).",
+      "fix": "Al día: las PRs 4, 5 y 6 en main (#15 a #18), pendiente el panel de confirmación y el archive.",
+      "of": "A10"
+    }
+  ],
+  "confirmations": [
+    {"id": "V1", "status": "fixed", "evidence": "sc-29 en verde (macOS bash 3.2; Debian/mawk y Alpine/busybox, dk-bench2.out). Variantes en t6.sh/t6.out, todas exit 2: separador escrito como \\u000a, \\u0009, \\u003b y \\r\\n delante de 'mv sentinel/githooks', 'core\\u002ehooksPath', '\\u0063ore.hooksPath', y un heredoc cerrado delante del mv. CMD_SURFACE incluye el texto decodificado (json_text) y los tramos (CMD_NORM)."},
+    {"id": "V2", "status": "partial", "evidence": "'/bin/mv', '\\\\mv', \"'mv'\", 'm\\\\v', 'exec mv', 'time mv', 'nice mv', 'busybox mv', '{ mv …; }', 'if …; then mv …; fi' → 2 (t1.out). Pero 'bash -c \"mv sentinel/githooks /tmp/x\"', \"sh -c '…'\" y 'eval \"…\"' → 0: hallazgo A3."},
+    {"id": "P8", "status": "partial", "evidence": "'grep -E \\'a|b\\'', 'grep -n \"a;b\"' y la tubería a 'grep -E' pasan como lectura (sc-26); lo que escribe sigue bloqueado (tee, '2>/dev/null>…'). Variante cercana: un '>' o '<' entre comillas aún cuenta como redirección ('grep \">\" sentinel/policy.yaml' → 2): hallazgo A8 (nit)."},
+    {"id": "A5", "status": "fixed", "evidence": "sc-26 en verde; en t2.out 'cat … &>/dev/null' y 'git diff … 2>/dev/null | head -5' → 0, y '>/dev/null >sentinel/…', '2>/dev/null>>sentinel/.override' → 2. La sed en bucle conserva el separador."},
+    {"id": "V6", "status": "fixed", "evidence": "'printf -v PATH x; cat …' (sc-26) y 'printf -vPATH x; cat sentinel/policy.default.yaml' (t2.out) → 2: ro_segment rechaza -v* en printf."},
+    {"id": "A2", "status": "fixed", "evidence": "t1.out, todas exit 2: 'git config remove-section \"core\"', 'remove-section co\\\\re', 'remove-section \"co\"re', '--remove-section=core', 'rename-section core.x y', '--local --rename-section core x', 'git config edit --local', '--local edit', 'git -C . config edit'; 'git config user.email a@b' → 0."},
+    {"id": "A3", "status": "fixed", "evidence": "t1.out, todas exit 2: 'core.hookspath', 'core.hooks\\\\Path', '\"core\".hooksPath', 'core.\"hooksPath\"', 'include.PATH', 'incl\\\\ude.path', 'includeIf.\"gitdir:~/\".path', GIT_CONFIG_PARAMETERS con core.hooksPath, '--unset'/'unset'/'set' de core.hooksPath; sc-23 cubre --config-env y GIT_CONFIG_KEY_0. Queda el falso positivo previo 'grep -rn include.path docs' → 2 (no-hook-disabling no tiene skip_read_only), que no es de esta ronda."},
+    {"id": "A1", "status": "partial", "evidence": "El ejemplo original y el destino en última posición se bloquean (sc-30), pero con una redirección o una opción detrás del destino pasa y sustituye .git/config: hallazgo A1 (blocker), repro-A1-redir.sh en macOS, Debian y Alpine."},
+    {"id": "P2", "status": "fixed", "evidence": "t3.out, worktree dentro del repo bare: 'mv ../hooks /tmp/x', 'cp /tmp/aud-e/config ..', Write de '../hooks/pre-commit' y de '../worktrees/wt/config.worktree', 'echo x > ../config' y 'mv .claude' → 2; Write de docs/config → 0. canon() se queda con el prefijo más largo."},
+    {"id": "A4", "status": "fixed", "evidence": "sc-23 lanza el guard con RH_CWD=/ y CLAUDE_PROJECT_DIR en el worktree: el Write de <bare>/config y de <bare>/hooks/pre-commit → 2. GIT_COMMON_PHYS sale de 'git -C \"$REPO_ROOT_DIR\"' (línea 134)."},
+    {"id": "A7", "status": "fixed", "evidence": "sc-22 y t3.out: MultiEdit 'h/../policy.default.yaml', Write 'docs/x/gh/../hooks/sentinel-guard.sh' (enlace relativo dos niveles abajo), Write 'h/./../.override', 'echo x > h/../policy.default.yaml' y 'cp … h/..' → 2. Se añade como objetivo también la ruta sin normalizar."},
+    {"id": "V5", "status": "partial", "evidence": "sc-30 (cwd en sentinel, 'mv hooks') → 2 y con cwd en docs → 0. Pero el cwd no se decodifica como JSON: con '\"', '\\\\' o \\u en la ruta el guard vuelve a la carpeta del hook (t3.out): hallazgo A6."},
+    {"id": "P1", "status": "fixed", "evidence": "El PATH fijo lleva /mingw64/bin, /nix/var/nix/profiles/default/bin y /etc/profiles/per-user/<persona>/bin (sc-28 lo comprueba); setup lanza la prueba de humo con el cableado y sc-18 (install) termina con 3 y dice que es el cableado. dk-wiring.out (Debian): con git solo en ~/.nix-profile/bin el cableado sale con 2 y dice el PATH y 'git: command not found'."},
+    {"id": "P3", "status": "fixed", "evidence": "sc-28: sin el script con el SDK versionado → 'git checkout HEAD -- sentinel/hooks/sentinel-guard.sh' (y funciona también tras 'git rm'); en una rama huérfana sin el SDK → 'no tiene el SDK … git checkout -'; con el SDK sin versionar → reinstalar con setup. Leído en el cableado de .claude/settings.json."},
+    {"id": "P6", "status": "fixed", "evidence": "El cableado imprime el stderr de 'git rev-parse' ('Lo que dice: …') y ya no 'Instala git'; sc-28 lo comprueba con 'not a git repository'; dk-wiring.out muestra 'git: command not found' con el PATH usado. La spec delta (SC-sentinel-paths-09) recoge el bloqueo sin git (A9). No pude reproducir 'dubious ownership' en el contenedor (la imagen confía en el repo), así que lo confirmo por lectura."},
+    {"id": "P4", "status": "fixed", "evidence": "t4.sh/t4.out: la llave del aviso del Centinela, extraída tal cual, pegada en zsh, bash y sh desde src/sub de un proyecto llamado \"la 'llave' $x \\\"q\\\"\" escribe la llave en la raíz y autoriza la acción (exit 0), también con comillas y $HOME en el comando y para Write con ruta relativa y absoluta. sc-11 lo prueba en la Esclusa (bash y sh)."},
+    {"id": "V4", "status": "fixed", "evidence": "sc-27 y sc-13 en verde: con SENTINEL_OVERRIDE la llave de otra acción se conserva y la de esta se gasta (también con espacios al final). Leído: log_override y esclusa_reject solo borran si no hay SENTINEL_OVERRIDE o si el para: es el de esta acción/hook."},
+    {"id": "P5", "status": "fixed", "evidence": "sc-30: un heredoc de 200 líneas con '/' y un 'git add' de 200 ficheros → 0; 600 rutas → too-many-paths, y la llave de esa acción lo salva. El README exagera que el heredoc nunca cuenta: hallazgo A7 (nit)."},
+    {"id": "A10", "status": "partial", "evidence": "STATUS ya no dice «en la Aduana» y el comentario de sc-28 remite a «La shell que lanza el cableado», que existe en el README. Pero en 9036d89 STATUS dice que la PR 6 sigue abierta: hallazgo A9 (nit)."}
+  ]
+}

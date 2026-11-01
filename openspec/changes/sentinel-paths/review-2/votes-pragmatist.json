@@ -1,0 +1,145 @@
+{
+  "lens": "pragmatist",
+  "votes": [
+    {
+      "id": "A1",
+      "agree": true,
+      "severity": "blocker",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'cp …/config .git 2>/dev/null', '… >/dev/null' y 'rsync -a …/ .git/ --exclude=x' → 0. Para mi lente es el peor: un '2>/dev/null' es lo que un agente añade sin pensar, así que la Esclusa se desengancha incluso sin intención. La reapertura de A1 es cierta.",
+      "dup": null
+    },
+    {
+      "id": "A2",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'mv .git /tmp/x' → 0. Mover .git solo deja el repo sin git y el cableado bloquea todo lo siguiente (falla cerrado). El daño real exige rehacer el repo en el mismo comando, algo que solo hace quien lo busca. Añadir .git a dir_re apenas cuesta en falsos positivos: 'rm -rf .git' ya pide confirmación.",
+      "dup": null
+    },
+    {
+      "id": "A3",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'bash -c \"mv sentinel/githooks …\"' y 'eval …' → 0. En un agente, bash -c y eval son menos habituales que \"$(…)\", que es lo que hace bloqueante a V4.",
+      "dup": "V4"
+    },
+    {
+      "id": "A4",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out) en main: 'git -C . commit', 'env git commit' y 'X=1 git commit' → 0. 'git -C <ruta> commit' es una forma habitual en agentes, también en Claude Code. El pre-push sigue parando la publicación.",
+      "dup": "V9"
+    },
+    {
+      "id": "A5",
+      "agree": true,
+      "severity": "minor",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'grep -rn \"chmod\" sentinel/hooks' y 'git log --grep \"mv\" -- sentinel' → 2. Es un falso positivo de lectura introducido por CMD_NORM; lo sufriría quien mantiene sus hooks.",
+      "dup": null
+    },
+    {
+      "id": "A6",
+      "agree": true,
+      "severity": "minor",
+      "note": "No lo he repetido. La salida de t3.out es coherente con el código (l.63 no decodifica) y con mi P6: en Windows el cwd siempre lleva barras invertidas, así que allí V5 no se aplicaría nunca. Si Windows se confirma, sube.",
+      "dup": null
+    },
+    {
+      "id": "A7",
+      "agree": true,
+      "severity": "nit",
+      "note": "Lo veo en t2.out (600 líneas de rutas que existen → 2) y en el código de add_word. La llave lo salva; es solo el texto del README.",
+      "dup": null
+    },
+    {
+      "id": "A8",
+      "agree": true,
+      "severity": "nit",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'grep \">\" sentinel/policy.yaml' → 2. Falla cerrado y el falso positivo es raro.",
+      "dup": null
+    },
+    {
+      "id": "A9",
+      "agree": true,
+      "severity": "nit",
+      "note": "Es cierto en 9036d89; en mi confirmación de A10 lo dejé como fixed con esa nota.",
+      "dup": null
+    },
+    {
+      "id": "A10",
+      "agree": true,
+      "severity": "minor",
+      "note": "En dk-alpine.out fallan sc-30 (perl) y sc-18 (tar --null) en Alpine, y en dk-bench2.out sc-28 falla como root. En macOS el banco me sale en verde. La Aduana lo correrá en CI, a menudo como root: es mantenibilidad real.",
+      "dup": null
+    },
+    {
+      "id": "V1",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'mv Sentinel/githooks' y 'mv .Claude' → 0 en APFS. Es cierto y es la configuración por defecto de macOS, pero solo lo provoca quien cambia la caja a propósito; un agente no lo escribe así por error. Las herramientas de edición siguen protegidas (path_re usa -i).",
+      "dup": null
+    },
+    {
+      "id": "V2",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'git commit -n -m x' y '--no-verif' → 0. Salta pre-commit (secretos) y commit-msg sin la llave; pre-push sigue. El arreglo no debe tocar 'git merge -n'.",
+      "dup": null
+    },
+    {
+      "id": "V3",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'cp --target=.git …' e 'install --target=sentinel/adapters …' → 0. Una abreviatura así solo la escribe quien busca el hueco, por eso grave y no bloqueante. Reabre A1 a medias.",
+      "dup": null
+    },
+    {
+      "id": "V4",
+      "agree": true,
+      "severity": "blocker",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'echo \"$(mv sentinel/githooks /tmp/g)\"' y 'x=\"$(rm -rf sentinel)\"' → 0, sin la confirmación de destructive. \"$(…)\" es la forma normal de escribir una sustitución (Claude Code la usa para el mensaje de commit), así que el hueco está en la sintaxis cotidiana. Incluye A3.",
+      "dup": "A3"
+    },
+    {
+      "id": "V5",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'git restore sentinel' y 'git checkout HEAD~0 -- sentinel' → 0. Ojo con el arreglo: 'git checkout -- .' y 'git restore .' son lo normal para descartar cambios y también borran las líneas de la bitácora sin versionar; bloquearlos sería un falso positivo enorme. La bitácora necesita otra salida (una copia fuera del árbol de trabajo), no más verbos en la regex.",
+      "dup": null
+    },
+    {
+      "id": "V6",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): '<<<' en la primera línea y la comilla de dos líneas después → 0. Lo introdujo la lectura de heredocs de la ronda 2, pero hace falta montar el comando a propósito.",
+      "dup": null
+    },
+    {
+      "id": "V7",
+      "agree": true,
+      "severity": "minor",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'mv ~+/sentinel/githooks …' → 0. Es deliberado y fácil de arreglar en tilde().",
+      "dup": null
+    },
+    {
+      "id": "V8",
+      "agree": true,
+      "severity": "minor",
+      "note": "reproducido en mi copia con cr.sh (cr.out): con SENTINEL_OVERRIDE, 'rm -rf sentinel/hooks; ls' + 520 rutas → 0 y la bitácora dice too-many-paths. La bitácora engaña sobre qué regla se saltó.",
+      "dup": null
+    },
+    {
+      "id": "V9",
+      "agree": true,
+      "severity": "major",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'git -c user.name=x commit' en main → 0. Es el mismo defecto que A4; lo subo a grave porque 'git -C' es habitual.",
+      "dup": "A4"
+    },
+    {
+      "id": "V10",
+      "agree": true,
+      "severity": "nit",
+      "note": "reproducido en mi copia con cr.sh (cr.out): 'tar -xf … -C sentinel' → 0. Es la clase «regex evadibles»: hay que documentarlo.",
+      "dup": null
+    }
+  ]
+}
