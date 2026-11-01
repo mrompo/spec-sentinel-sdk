@@ -236,13 +236,23 @@ json_text() {
 # o escapado se escapa con '\', como lo vería la shell. Cada separador sale como 's', y cada
 # tramo, como 'n<tramo>': sus palabras separadas por un espacio, cada una por su nombre (lo
 # que sigue a su última '/') y con sus espacios cambiados por '_', para que las reglas del
-# comando reconozcan el programa se escriba como se escriba (/bin/mv, \mv, 'mv'). Lo que bash
-# no lee como palabras no abre comillas que se coman las líneas siguientes (revisión de la
-# #15): un comentario (# al principio de una palabra) se salta hasta el final de la línea; en
-# $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de un heredoc
-# (<<FIN, <<-FIN, <<'FIN') se lee línea a línea, sin comillas que pasen de una a otra ni
-# comentarios, hasta la línea que lo cierra: sus palabras siguen contando, así que un << que
-# no abre un heredoc (el de una expresión aritmética) no esconde nada
+# comando reconozcan el programa se escriba como se escriba (/bin/mv, \mv, 'mv'). Solo el
+# programa del tramo (tras sus prefijos, sus asignaciones y sus redirecciones) y el subcomando
+# de git salen así; lo que busca un lector (grep, git log, git grep) y el valor de una
+# asignación, si iban entre comillas o escapados, salvo una opción, salen con '"' delante, para
+# que no hagan de programa: grep "chmod" busca, no cambia permisos (panel de confirmación, A5).
+# Los argumentos de cualquier otro programa salen como sin comillas: uno puede ser un programa
+# (find -exec 'rm', sudo -u root 'mv') y las reglas leen otros (el refspec de git push, la rama
+# de git checkout) (revisión de la #20). Lo que bash ejecuta dentro de otra cosa sale como
+# 'c<código>', para leerlo como un comando más (V4 = A3): una sustitución entre comillas dobles
+# ("$(…)", "`…`"; sin comillas ya se lee en su sitio), lo que sigue a -c en una shell (el
+# código, con sus opciones delante, y sus argumentos) y los argumentos de eval.
+# Lo que bash no lee como palabras no abre comillas que se coman las líneas siguientes
+# (revisión de la #15): un comentario (# al principio de una palabra) se salta hasta el final
+# de la línea; en $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de
+# un heredoc (<<FIN, <<-FIN, <<'FIN') se lee línea a línea, sin comillas que pasen de una a
+# otra ni comentarios, hasta la línea que lo cierra: sus palabras siguen contando. «<<<» y el
+# «<<» de una expresión aritmética ((…)), $((…)) no abren un heredoc (V6)
 cmd_words() {
   printf '%s' "$1" | LC_ALL=C awk '
     function esc(x,   r, k, ch) {
@@ -253,18 +263,92 @@ cmd_words() {
       }
       return r
     }
-    function flush(   b) {
+    # role → 1 si la palabra se queda con su nombre en el tramo: el programa y lo que va delante
+    # (prefijos de ejecución, sus opciones y números, el nombre de una asignación) y el
+    # subcomando de git con sus opciones; 2 si es el valor de una asignación; 0 si es otro
+    # argumento. De paso, el código que ejecutan una shell con -c (también como argumento: sudo
+    # -u root bash, find -exec sh) o eval
+    function role(b) {
+      if (!pseen) {
+        if (aval) { aval = eqf ? eqv : 0; return 2 }
+        if (eqf && !qw && w ~ /^[A-Za-z_][A-Za-z0-9_]*$/) { aval = eqv; return 1 }
+        if (b ~ /^-/ || (pre && b ~ /^[0-9.]+[smhd]?$/)) return 1
+        if (b ~ /^(sudo|doas|env|command|builtin|exec|nice|nohup|time|timeout|xargs|stdbuf|ionice|!|\{|if|then|else|elif|do|while|until)$/) { pre = 1; return 1 }
+        pseen = 1; prog = b
+        if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
+        else if (b == "eval") ev = 1
+        else if (b == "git") gs = 1
+        return 1
+      }
+      if (sh == 2) print "c" esc(w)
+      else if (sh == 1 && w ~ /^-[a-zA-Z]*c[a-zA-Z]*$/) sh = 2
+      else if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
+      if (ev) evc = evc (evc == "" ? "" : " ") w
+      if (gs == 1) { if (b !~ /^-/) { gs = 0; gsc = b; return 1 }; if (eqf || b ~ /^-[Cc]$/) gs = 2; return 1 }
+      if (gs == 2) { if (!eqf) gs = 1; return 1 }
+      return 0
+    }
+    function flush(   b, keep) {
       if (has) {
         if (g) print "g" esc(pw)
         print "l" esc(w)
         b = w
         if (b ~ /\/./) { sub(/\/+$/, "", b); sub(/^.*\//, "", b) }
         gsub(/[ \t\n\r]/, "_", b)
+        keep = 0
+        if (fd) ; else if (rd) rd = 0; else keep = role(b)
+        if (qw && b !~ /^-/ && (keep == 2 || (!keep && (prog ~ /^(grep|egrep|fgrep)$/ || (prog == "git" && gsc ~ /^(log|grep)$/))))) b = "\"" b
         seg = seg (seg == "" ? "" : " ") b
       }
-      w = ""; pw = ""; has = 0; g = 0
+      w = ""; pw = ""; has = 0; g = 0; qw = 0; eqf = 0; fd = 0
     }
-    function sep() { flush(); if (seg != "") print "n" seg; seg = ""; print "s" }
+    function sep() {
+      flush()
+      if (ev && evc != "") print "c" esc(evc)
+      if (seg != "") print "n" seg
+      seg = ""; print "s"
+      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; rd = 0
+    }
+    # subend, dqend, bqend <desde> → dónde acaba lo que empieza en <desde> (el paréntesis que
+    # cierra $(…), la comilla que cierra "…", el acento que cierra `…`), con sus comillas y las
+    # sustituciones que lleva dentro; n + 1 si no se cierra. En $(…), un comentario llega hasta
+    # el final de la línea; tras un heredoc o un case no se sabe dónde cierra (bash lee el
+    # cuerpo y los patrones con sus propios paréntesis), así que también n + 1: el resto entero
+    # se lee como código (revisión de la #20)
+    function subend(p,   k, ch, d, j) {
+      d = 1
+      for (k = p; k <= n; k++) {
+        ch = substr(t, k, 1)
+        if (ch == "\\") k++
+        else if (ch == "\047") { j = index(substr(t, k + 1), "\047"); if (!j) return n + 1; k += j }
+        else if (ch == "\"") k = dqend(k + 1)
+        else if (ch == "#" && (k == p || index(" \t\n;|&()", substr(t, k - 1, 1)))) {
+          while (k < n && substr(t, k + 1, 1) != "\n") k++
+        }
+        else if (ch == "<" && substr(t, k + 1, 1) == "<") { if (substr(t, k + 2, 1) != "<") return n + 1; k += 2 }
+        else if (substr(t, k, 4) == "case" && (k == p || index(" \t\n;|&()", substr(t, k - 1, 1))) && index(" \t\n", substr(t, k + 4, 1))) return n + 1
+        else if (ch == "(") d++
+        else if (ch == ")" && --d == 0) return k
+      }
+      return n + 1
+    }
+    function dqend(p,   k, ch) {
+      for (k = p; k <= n; k++) {
+        ch = substr(t, k, 1)
+        if (ch == "\\") k++
+        else if (ch == "\"") return k
+        else if (ch == "$" && substr(t, k + 1, 1) == "(") k = subend(k + 2)
+      }
+      return n + 1
+    }
+    function bqend(p,   k, ch) {
+      for (k = p; k <= n; k++) {
+        ch = substr(t, k, 1)
+        if (ch == "\\") k++
+        else if (ch == "`") return k
+      }
+      return n + 1
+    }
     function lit(ch) { w = w ch; pw = pw (index("*?[]\\", ch) ? "\\" ch : ch) }
     # hend → tras un salto de línea dentro de un heredoc: si la línea siguiente lo cierra, la
     # salta y pasa al siguiente heredoc pendiente de la misma línea, o sale del cuerpo
@@ -281,7 +365,7 @@ cmd_words() {
     { t = (NR > 1 ? t "\n" : "") $0 }
     END {
       n = length(t); q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""
-      hb = 0; hn = 0; hq = 1
+      hb = 0; hn = 0; hq = 1; ar = 0
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
         if (hb && c == "\n") q = ""
@@ -298,17 +382,29 @@ cmd_words() {
             d = substr(t, ++i, 1)
             if (d != "\n") { if (index("$`\"\\", d)) lit(d); else { lit(c); lit(d) } }
           }
+          else if ((c == "$" && substr(t, i + 1, 1) == "(") || c == "`") {
+            # Su código sale aparte, para leerlo como un comando más
+            if (c == "`") { k = bqend(i + 1); code = substr(t, i + 1, k - i - 1) }
+            else { k = subend(i + 2); code = substr(t, i + 2, k - i - 2) }
+            print "c" esc(code)
+            for (j = i; j <= k && j <= n; j++) lit(substr(t, j, 1))
+            i = k
+          }
           else lit(c)
           continue
         }
-        if (c == "$" && substr(t, i + 1, 1) == "\047") { q = "$"; i++; has = 1; continue }
-        if (c == "\047" || c == "\"") { q = c; has = 1; continue }
-        if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { lit(d); has = 1 }; continue }
+        if (c == "$" && substr(t, i + 1, 1) == "\047") { q = "$"; i++; has = 1; qw = 1; continue }
+        if (c == "\047" || c == "\"") { q = c; has = 1; qw = 1; continue }
+        if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { lit(d); has = 1; qw = 1 }; continue }
         if (!hb && c == "#" && !has && (i == 1 || index(" \t\n;|&()`", substr(t, i - 1, 1)))) {
           while (i < n && substr(t, i + 1, 1) != "\n") i++
           continue
         }
-        if (!hb && c == "<" && substr(t, i + 1, 1) == "<") {
+        # «<<<» es una redirección (here-string) y dentro de ((…)) el << es un desplazamiento
+        if (!hb && !ar && c == "<" && substr(t, i + 1, 1) == "<" && substr(t, i + 2, 1) == "<") {
+          flush(); rd = 1; i += 2; continue
+        }
+        if (!hb && !ar && c == "<" && substr(t, i + 1, 1) == "<") {
           flush(); i += 2; st = 0
           if (substr(t, i, 1) == "-") { st = 1; i++ }
           while (i <= n && index(" \t", substr(t, i, 1))) i++
@@ -327,8 +423,14 @@ cmd_words() {
           continue
         }
         if (c == "\n") { sep(); if (hq <= hn) { hb = 1; hend() }; continue }
+        if (c == "(" && (ar || substr(t, i + 1, 1) == "(")) { if (!ar) { ar = 1; i++ }; ar++; sep(); continue }
+        if (c == ")" && ar) { ar--; sep(); continue }
         if (index(";|&()`", c)) { sep(); continue }
-        if (index(" \t<>=", c)) { flush(); continue }
+        # Tras «=» sigue el valor de una asignación si no viene un espacio; tras «<» o «>», su
+        # destino, y un número delante es el descriptor (2>x): ninguno es el programa
+        if (c == "=") { eqf = 1; eqv = i < n && !index(" \t\n;|&()<>", substr(t, i + 1, 1)); flush(); continue }
+        if (c == "<" || c == ">") { if (!qw && w ~ /^[0-9]+$/) fd = 1; flush(); rd = 1; continue }
+        if (index(" \t", c)) { flush(); continue }
         w = w c; pw = pw c; has = 1; if (index("*?[", c)) g = 1
       }
       sep()
@@ -496,6 +598,26 @@ CMD_TEXT=""; WORDS=""; CMD_NORM=""
 if [ -n "$COMMAND" ]; then
   CMD_TEXT="$(json_text)"
   WORDS="$(cmd_words "$CMD_TEXT")"
+  # Lo que bash ejecuta dentro de otra cosa ("$(…)", una shell con -c, eval) es un comando más:
+  # sus palabras y sus tramos se añaden, tras un separador, y se mira también lo que lleva dentro,
+  # hasta MAX_NEST niveles; más allá no se sabe qué ejecuta (panel de confirmación, V4 = A3)
+  MAX_NEST=8
+  _code="$WORDS"; _lvl=0
+  while _code="$(printf '%s\n' "$_code" | sed -n 's/^c//p')"; [ -n "$_code" ]; do
+    [ "$_lvl" -lt "$MAX_NEST" ] || {
+      TOO_MANY="el comando anida código en más de $MAX_NEST niveles (sustituciones, shells con -c, eval) y el Centinela no puede leerlos todos — sácalo a un script"
+      break
+    }
+    _new=""
+    while IFS= read -r w; do
+      printf -v w '%b' "$w"
+      _new="$_new
+$(cmd_words "$w")"
+    done <<EOF
+$_code
+EOF
+    WORDS="$WORDS$_new"; _code="$_new"; _lvl=$((_lvl+1))
+  done
   CMD_NORM="$(printf '%s\n' "$WORDS" | sed -n 's/^n//p')"
 fi
 
@@ -541,7 +663,8 @@ $FILE_PATH
 $COMMAND
 $CMD_TEXT$TOUCHED$PHYS_ALL"
 # Superficie del comando: tal como llega, con los escapes del JSON deshechos y sus tramos como
-# los ve bash (sin comillas ni escapes, cada programa por su nombre). Cada forma solo puede
+# los ve bash, también los del código que ejecuta dentro (sin comillas ni escapes, cada programa
+# por su nombre; un argumento que iba entre comillas, con '"' delante). Cada forma solo puede
 # hacer que una regla case más, nunca menos
 CMD_SURFACE="$COMMAND
 $CMD_TEXT

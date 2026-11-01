@@ -32,7 +32,20 @@ solo por el texto de la ruta.
   línea o un tabulador escritos como escape del JSON: las reglas del comando deciden sobre lo
   que ejecuta bash
 - **AND** una comilla dentro de un comentario, escapada dentro de `$'…'` o suelta en el cuerpo
-  de un heredoc no esconde las líneas que le siguen
+  de un heredoc no esconde las líneas que le siguen, y `<<<` o el `<<` de una expresión
+  aritmética no abren un heredoc
+- **AND** también lo que bash ejecuta dentro de otra cosa: una sustitución entre comillas dobles
+  (`"$(…)"`, `` "`…`" ``), con sus propias comillas y anidada (un `)` en un comentario no la
+  cierra, y tras un heredoc o un `case` dentro se lee como código el resto entero del
+  comando), lo que sigue a `-c` en una shell
+  (`bash`, `sh`, `zsh`, `dash`, `ksh`), también con opciones delante del código o con la shell
+  como argumento (`sudo -u root bash -c`, `find -exec sh -c`), y los argumentos de `eval`; con
+  más de 8 niveles de código anidado, el hook no sabe qué se ejecuta y bloquea, y la llave de
+  esa acción lo salva
+- **AND** lo que busca un lector entre comillas (el patrón de `grep` o de `git log`/`git grep`)
+  y el valor de una asignación no hacen de programa: buscar un verbo en una carpeta protegida
+  (`grep -rn "chmod" sentinel/hooks`) es leerla; los argumentos de cualquier otro programa
+  cuentan como sin comillas (`find -exec 'rm'`, el refspec `'+main:main'` de `git push`)
 - **AND** las subcarpetas que no son enforcement siguen libres (p. ej. `mv .claude/skills/a
   .claude/skills/b` o `rm -r sentinel/.backup`)
 - **AND** entrar antes en la carpeta (`cd sentinel && rm -r hooks`) es el límite documentado

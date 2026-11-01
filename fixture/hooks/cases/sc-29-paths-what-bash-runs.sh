@@ -3,7 +3,11 @@
 #   cómo viene escrito en el JSON (revisión de sentinel-paths, V1 y V2). Un salto de línea o un
 #   tabulador escritos como escape del JSON separan igual que escritos tal cual, y el programa
 #   se reconoce por su nombre aunque se escriba con su ruta, con una barra delante o entre
-#   comillas.
+#   comillas. Panel de confirmación (V4 = A3, V6, A5): lo que bash ejecuta dentro de "$(…)",
+#   de una shell con -c o de eval también cuenta; «<<<» y el «<<» aritmético no abren un
+#   heredoc; y lo que busca un lector, entre comillas, no es el programa. Revisiones de la #20
+#   (CodeRabbit): lo que sigue a -c, la shell como argumento, los argumentos que leen las
+#   reglas y un ")" que bash no lee como cierre de "$(…)".
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -105,4 +109,183 @@ echo x\nls sentinel/githooks
 echo 'mv sentinel/githooks x'
 git log --oneline -3\ngit status
 EOF
+
+# ── Panel de confirmación, V4 = A3: lo que bash ejecuta dentro de otra cosa ──────────────
+# Una sustitución entre comillas dobles ("$(…)", "`…`") se lee como código, también anidada y
+# con sus propias comillas; y el argumento de una shell con -c o de eval es un comando más. La
+# shell se reconoce también como argumento (sudo -u root, find -exec), y tras -c cuenta lo que
+# venga, con más opciones delante del código (revisión de la #20, CodeRabbit)
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo "$(mv sentinel/githooks /tmp/x)"
+x="$(rm -rf sentinel)"
+echo "`mv sentinel/githooks /tmp/x`"
+echo "$(echo "a"; mv sentinel/githooks /tmp/x; echo "b")"
+echo "a $(echo "$(mv sentinel/githooks /tmp/x)") b"
+echo "$( (mv sentinel/githooks /tmp/x) )"
+echo "$( (true); mv sentinel/githooks /tmp/x)"
+echo "$(echo ')'; mv sentinel/githooks /tmp/x)"
+echo "$(echo ")"; mv sentinel/githooks /tmp/x)"
+echo "$(echo "$(echo ")")"; mv sentinel/githooks /tmp/x)"
+bash -c 'mv sentinel/githooks /tmp/x'
+sh -c "chmod -R 000 sentinel/hooks"
+eval 'mv sentinel/githooks /tmp/x'
+eval "x=1; mv sentinel/githooks /tmp/x"
+zsh -c 'rm -rf .claude'
+/bin/bash -lc 'mv sentinel/githooks /tmp/x'
+sudo bash -c 'mv sentinel/githooks /tmp/x'
+bash -c 'bash -c "mv sentinel/githooks /tmp/x"'
+bash -c "echo \"\$(mv sentinel/githooks /tmp/x)\""
+bash -c -x 'mv sentinel/githooks /tmp/x'
+bash -c -- 'mv sentinel/githooks /tmp/x'
+bash -c -o pipefail 'mv sentinel/githooks /tmp/x'
+sudo -u root bash -c 'mv sentinel/githooks /tmp/x'
+env -u X sh -c 'mv sentinel/githooks /tmp/x'
+find . -name x -exec sh -c 'mv sentinel/githooks /tmp/x' \;
+EOF
+# Lo que el código de dentro no ejecuta sobre una carpeta protegida sigue libre
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo "$(ls sentinel/githooks)"
+bash -c 'ls -la sentinel/githooks'
+bash -c -x 'ls -la sentinel/githooks' _ sentinel
+sh -c 'echo hola'
+eval "echo 'mv sentinel/githooks x'"
+echo "$(echo "(") mv sentinel/githooks /tmp/x"
+EOF
+
+# Un ")" que bash no lee como cierre no termina la sustitución: el de un comentario llega hasta
+# el final de la línea, y tras un heredoc o un case no se sabe dónde cierra, así que se lee el
+# resto entero como código (segunda revisión de la #20, CodeRabbit). Cada línea es el valor de
+# "command" en el JSON: \n va escrito como escape
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo \"$(echo ok # )\n'mv' sentinel/githooks /tmp/x)\"
+echo \"$(echo ok # )\nmv sentinel/githooks /tmp/x)\"
+echo \"$(echo \"$(echo ok # )\nmv sentinel/githooks /tmp/x)\")\"
+echo \"$(cat <<E\n)\nE\nmv sentinel/githooks /tmp/x)\"
+echo \"$(cat <<'E'\n)\nE\nmv sentinel/githooks /tmp/x)\"
+echo \"$(case x in a) mv sentinel/githooks /tmp/x;; esac)\"
+echo \"$(true; case x in (a) true;; b) mv sentinel/githooks /tmp/x;; esac)\"
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo \"$(echo a#b) mv sentinel/githooks /tmp/x\"
+echo \"$(echo ${#HOME}) mv sentinel/githooks /tmp/x\"
+echo \"$(echo ok # c\n) mv sentinel/githooks /tmp/x\"
+echo \"$(echo showcase x) mv sentinel/githooks /tmp/x\"
+echo \"$(echo cases) mv sentinel/githooks /tmp/x\"
+echo \"$(cat <<< x) mv sentinel/githooks /tmp/x\"
+EOF
+
+# ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
+# Si lo abrieran, una comilla de dos líneas escondería el comando que la sigue
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cat <<< x\necho 'a\nb'; mv sentinel/githooks /tmp/x
+cat <<<x\necho 'a\nb'; mv sentinel/githooks /tmp/x
+echo $((1<<2))\necho 'a\nb'; mv sentinel/githooks /tmp/x
+x=$(( 1 << 2 ))\necho 'a\nb'; mv sentinel/githooks /tmp/x
+(( a <<= 1 ))\necho 'a\nb'; mv sentinel/githooks /tmp/x
+EOF
+
+# ── A5: lo que busca un lector, entre comillas, no es el programa ────────────────────────
+# El patrón de grep o de git log/grep y el valor de una asignación no hacen de programa aunque
+# se llamen como un verbo: buscar «chmod» en una carpeta protegida es leerla, también con el
+# lector detrás de sus prefijos, asignaciones y redirecciones, y git log tras sus opciones
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+grep -rn "chmod" sentinel/hooks
+grep -c "cp" .claude
+git log --oneline --grep "mv" -- sentinel
+grep -rln 'rm' sentinel
+grep -rn \chmod sentinel/hooks
+X="mv" ls sentinel/githooks
+sudo grep -rn "chmod" sentinel/hooks
+sudo -E grep -rn "chmod" sentinel/hooks
+timeout 5 grep -rn "chmod" sentinel/hooks
+X=1 grep -rn "chmod" sentinel/hooks
+2>/dev/null grep -rn "chmod" sentinel/hooks
+>/dev/null grep -rn "chmod" sentinel/hooks
+{ grep -rn "chmod" sentinel/hooks; }
+git -C . log --grep "mv" -- sentinel
+git --git-dir=.git log --grep "mv" -- sentinel
+git -c x.y=z log --grep "mv" -- sentinel
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+sudo 'mv' sentinel/githooks /tmp/x
+X=1 'mv' sentinel/githooks /tmp/x
+X= 'mv' sentinel/githooks /tmp/x
+nohup "rm" -rf sentinel
+git "mv" sentinel/githooks /tmp/x
+git -C . 'rm' -r sentinel/githooks
+2>/dev/null 'mv' sentinel/githooks /tmp/x
+>/dev/null "mv" sentinel/githooks /tmp/x
+timeout 5 'mv' sentinel/githooks /tmp/x
+sudo -E 'mv' sentinel/githooks /tmp/x
+{ 'mv' sentinel/githooks /tmp/x; }
+if 'mv' sentinel/githooks /tmp/x; then :; fi
+git --git-dir=.git 'mv' sentinel/githooks /tmp/x
+git -c x.y=z 'rm' -r sentinel/githooks
+bash -o pipefail -c 'mv sentinel/githooks /tmp/x'
+bash -e -c 'mv sentinel/githooks /tmp/x'
+find . -name x -exec 'rm' -rf sentinel \;
+timeout -s KILL 5 'mv' sentinel/githooks /tmp/x
+sudo -u root 'mv' sentinel/githooks /tmp/x
+EOF
+
+# Los argumentos de cualquier otro programa siguen contando entre comillas: las reglas que los
+# leen (un refspec con + o :, la rama a la que se cambia) los ven como sin ellas (revisión de la
+# #20, CodeRabbit)
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+git push origin '+main:main'
+git push origin "+main:main"
+git push origin ':rama'
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    ($cmd)" >&2; exit 1; }
+  case "$RH_OUT" in
+    *'"permissionDecision":"ask"'*) ;;
+    *) echo "    debería pedir confirmación: $cmd" >&2; exit 1 ;;
+  esac
+done <<'EOF'
+git checkout "main"
+git switch 'main'
+EOF
+
+# Código anidado: hasta 8 niveles se lee entero; con más, no se sabe qué ejecuta y se bloquea
+nest() { local c="$2" k; for ((k = 0; k < $1; k++)); do c="echo \"\$($c)\""; done; printf '%s' "$c"; }
+guard "$(bash_payload "$(nest 8 true)")"
+assert_exit 0 || { echo "    debería permitirse: 8 sustituciones anidadas" >&2; exit 1; }
+guard "$(bash_payload "$(nest 9 true)")"
+assert_exit 2 || { echo "    debería bloquearse: 9 sustituciones anidadas" >&2; exit 1; }
+assert_err_contains "anida código" || exit 1
 exit 0

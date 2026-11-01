@@ -153,7 +153,10 @@
     - `~+` y `~-` no se expanden (V7);
     - con `SENTINEL_OVERRIDE`, más de 512 rutas tapan en la bitácora la regla que se saltó
       (V8);
-    - la fila «Regex evadibles» no menciona `tar -x`, `git apply` ni `patch` (V10).
+    - la fila «Regex evadibles» no menciona `tar -x`, `git apply` ni `patch` (V10);
+    - el patrón de un `case` cuenta como un comodín de ruta: `case "$s" in *x*|"") …` se
+      bloquea con `protect-agents-md`, porque `*x*` casa con `codex.md` (visto en la #20; ya
+      pasaba en `main`).
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.

@@ -243,13 +243,34 @@ mergeable sola.
 
 **PR 7 · Lo que ejecuta bash, otra vez** (tema 1 de `review-2`)
 
-- [ ] R8. Casos en rojo:
+- [x] R8. Casos en rojo:
        - V4 = A3: lo que ejecutan una sustitución entre comillas dobles (`"$(…)"`, `` "`…`" ``),
          `bash -c`, `sh -c` y `eval`;
        - V6: `<<<` y el `<<` aritmético no abren heredoc;
        - A5: un argumento entrecomillado que se llama como un verbo no bloquea una lectura.
        Delta de SC-sentinel-paths-01 si hace falta
-- [ ] R9. 👤 Parche `sentinel-paths-7.patch`; banco en verde y mutantes muertos
+       → En `sc-29`:
+         - V4 = A3: la sustitución entre comillas, con sus comillas, sus paréntesis y anidada;
+           `bash|sh|zsh -c` con opciones y detrás de `sudo`; `eval`; y el tope de 8 niveles;
+         - V6: `<<<`, `$((…))` y `((…))`;
+         - A5: `grep "chmod"`, `grep \chmod` y `X="mv" ls` se permiten, y el programa entre
+           comillas se sigue reconociendo tras prefijos, asignaciones, redirecciones, `{`/`if` y
+           como subcomando de git.
+         Deltas en SC-01 y en la fila «Regex evadibles» del README.
+- [x] R9. 👤 Parche `sentinel-paths-7.patch` (aplicado por la persona, `7271b46`): el guard
+       relee como comando lo que va en `"$(…)"`, `` "`…`" ``, `-c` y `eval`, hasta 8 niveles;
+       `<<<` y el `<<` aritmético no abren heredoc; y entre comillas solo cuenta el programa de
+       cada tramo y el subcomando de git. En un clon con el parche, el banco pasa entero (hooks
+       31/31, githooks 16/16, install 18/18) y los 35 mutantes rompen algún caso de `sc-29`.
+       Revisión de la #20 (CodeRabbit), parche `sentinel-paths-7b.patch` (`8beed59`): tras `-c`
+       cuenta todo lo que venga y la shell se reconoce también como argumento (`sudo -u root
+       bash -c`, `find -exec sh -c`); la marca de comillas, solo en lo que busca un lector
+       (`grep`, `git log`/`git grep`) y en el valor de una asignación, porque marcar cualquier
+       argumento dejaba pasar `git push origin '+main:main'`, `find -exec 'rm'` o `sudo -u root
+       'mv'`. Banco en verde y 43 mutantes muertos.
+       Segunda revisión, parche `sentinel-paths-7c.patch` (`78b5789`): un `)` en un comentario
+       ya no cierra `"$(…)"`, y tras un heredoc o un `case` dentro se lee como código el resto
+       entero del comando. Banco en verde y 51 mutantes muertos
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
