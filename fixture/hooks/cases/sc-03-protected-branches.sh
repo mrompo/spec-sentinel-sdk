@@ -28,6 +28,7 @@ env git commit -m x
 command git commit -m x
 X=1 git commit -m x
 GIT_AUTHOR_NAME=x git commit -m x
+2>/dev/null git commit -m x
 git --git-dir .git commit -m x
 git --work-tree . commit -m x
 nice -n 5 git commit -m x

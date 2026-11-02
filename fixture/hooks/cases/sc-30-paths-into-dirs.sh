@@ -113,7 +113,7 @@ mkdir -p "$WS/docs/l" "$WS/docs/s/g"
 : >"$WS/docs/s/g/config"
 ln -s ../../sentinel/policy.yaml "$WS/docs/l/config"
 ln -s ../../.git "$WS/docs/l/g"
-for cmd in "cp -r docs/e/. docs/l" "cp -r docs/s/. docs/l"; do
+for cmd in "cp -r docs/e/. docs/l" "cp -r docs/s/. docs/l" "echo x > docs/l/config"; do
   guard "$(bash_payload "$cmd")"
   assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
 done
@@ -140,12 +140,18 @@ r=$?
 # redirección (2>/dev/null, <<< x) no es el destino, el valor pegado a una opción
 # (--backup=numbered) no es un operando, una opción con argumento detrás de los operandos
 # (--exclude x) no lo desplaza, y --target-directory y --no-target-directory valen abreviadas,
-# como las acepta GNU ─────────────────────────────────────────────────────────────────────
+# como las acepta GNU. Con una carpeta «2» y una «docs», que serían el destino si lo fueran el
+# descriptor, lo que lee <<< o el valor de --suffix= ─────────────────────────────────────────
+mkdir -p "$WS/2"
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
   guard "$(bash_payload "$cmd")"
   assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
 done <<'EOF'
+cp /tmp/e/.gitconfig ~ <<< docs
+cp /tmp/e/.gitconfig ~ --suffix=docs
+cp -r --t ~ /tmp/e/.gitconfig docs/b
+true --x=y;cp /tmp/e/.gitconfig ~
 cp /tmp/e/.gitconfig ~ 2>/dev/null
 cp /tmp/e/.gitconfig ~ 2>&1
 cp /tmp/e/.gitconfig ~ >/dev/null
@@ -178,6 +184,7 @@ rsync -a docs/e/ docs/c/ --exclude x
 cp -r --no-t docs/e docs/c
 cp --targ docs/b docs/a.md
 cp -r docs/e docs/nueva
+du --block-size=cp /tmp/e/.gitconfig ~
 EOF
 
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────

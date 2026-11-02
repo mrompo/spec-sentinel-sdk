@@ -176,5 +176,10 @@ EOF
     RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
     assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
   done
+  # La configuración de Claude Code de la persona, con CLAUDE_CONFIG_DIR, escrita en mayúsculas
+  mkdir -p "$WS/cfg"
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$WSU/CFG/settings.json\",\"content\":\"{}\"}}" \
+    -u CLAUDE_PROJECT_DIR CLAUDE_CONFIG_DIR="$WS/cfg" SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: escribir $WSU/CFG/settings.json" >&2; exit 1; }
 fi
 exit 0
