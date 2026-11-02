@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SC-sentinel-paths-01, 03: copiar o mover a la carpeta que contiene un fichero protegido toca
-#   ese fichero, aunque el comando solo nombre la carpeta (revisión de sentinel-paths, A1); las
+#   ese fichero, aunque el comando solo nombre la carpeta (revisión de sentinel-paths, A1), y
+#   aunque no sea la última palabra del comando (panel de confirmación, A1 = V3); las
 #   rutas relativas se resuelven desde la carpeta de la sesión, el cwd del tool call (V5); y el
 #   tope de rutas solo cuenta las que pueden tocar algo, y la llave lo salva (P5 = A8).
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
@@ -134,6 +135,50 @@ for n in a b; do ln -s . "$WS/docs/s2/$n"; ln -s . "$WS/docs/l2/$n"; done
     perl -e 'alarm 30; exec @ARGV' bash "$GUARD_HOOK" ) >/dev/null 2>&1
 r=$?
 [ "$r" = 0 ] || { echo "    con enlaces en bucle, el Centinela debería decidir y permitirlo (salió con $r)" >&2; exit 1; }
+
+# ── Panel de confirmación, A1 = V3: el destino no es siempre la última palabra. Una
+# redirección (2>/dev/null, <<< x) no es el destino, el valor pegado a una opción
+# (--backup=numbered) no es un operando, una opción con argumento detrás de los operandos
+# (--exclude x) no lo desplaza, y --target-directory y --no-target-directory valen abreviadas,
+# como las acepta GNU ─────────────────────────────────────────────────────────────────────
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cp /tmp/e/.gitconfig ~ 2>/dev/null
+cp /tmp/e/.gitconfig ~ 2>&1
+cp /tmp/e/.gitconfig ~ >/dev/null
+cp /tmp/e/.gitconfig ~ </dev/null
+cp /tmp/e/.gitconfig ~ <<< x
+cp /tmp/e/.gitconfig ~>>/tmp/log
+cp /tmp/e/.gitconfig ~ --backup=numbered
+cp /tmp/e/.gitconfig ~ --suffix .bak
+rsync -a docs/cfg/ ~ --exclude=x
+rsync -a docs/cfg/ ~ --exclude x
+cp /tmp/e/config .git 2>/dev/null
+cp --target=$HOME /tmp/e/.gitconfig
+cp --targ ~ /tmp/e/.gitconfig
+mv --t ~ /tmp/e/.gitconfig
+cp --target=.git /tmp/e/config
+install --target=sentinel/adapters /tmp/e/stack.sh
+install --t sentinel/adapters /tmp/e/stack.sh
+cp -r --no-target docs/cfg ~
+cp -r --no-t docs/cfg ~
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cp docs/a.md docs/b 2>/dev/null
+cp docs/a.md docs/b >/dev/null 2>&1
+cp docs/e/config docs/b --backup=numbered
+rsync -a docs/e/ docs/c/ --exclude x
+cp -r --no-t docs/e docs/c
+cp --targ docs/b docs/a.md
+cp -r docs/e docs/nueva
+EOF
 
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────
 guard "{\"cwd\":\"$WS/sentinel\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"mv hooks /tmp/x\"}}"
