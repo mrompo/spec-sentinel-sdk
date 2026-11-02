@@ -246,7 +246,8 @@ json_text() {
 # de git checkout) (revisión de la #20). Lo que bash ejecuta dentro de otra cosa sale como
 # 'c<código>', para leerlo como un comando más (V4 = A3): una sustitución entre comillas dobles
 # ("$(…)", "`…`"; sin comillas ya se lee en su sitio), lo que sigue a -c en una shell (el
-# código, con sus opciones delante, y sus argumentos) y los argumentos de eval.
+# código, con sus opciones delante, y sus argumentos) y los argumentos de eval. Una
+# sustitución entre comillas que no se sabe dónde cierra sale como 'u': el comando se bloquea.
 # Lo que bash no lee como palabras no abre comillas que se coman las líneas siguientes
 # (revisión de la #15): un comentario (# al principio de una palabra) se salta hasta el final
 # de la línea; en $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de
@@ -309,26 +310,41 @@ cmd_words() {
       seg = ""; print "s"
       pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; rd = 0
     }
-    # subend, dqend, bqend <desde> → dónde acaba lo que empieza en <desde> (el paréntesis que
-    # cierra $(…), la comilla que cierra "…", el acento que cierra `…`), con sus comillas y las
-    # sustituciones que lleva dentro; n + 1 si no se cierra. En $(…), un comentario llega hasta
-    # el final de la línea; tras un heredoc o un case no se sabe dónde cierra (bash lee el
-    # cuerpo y los patrones con sus propios paréntesis), así que también n + 1: el resto entero
-    # se lee como código (revisión de la #20)
-    function subend(p,   k, ch, d, j) {
-      d = 1
+    # subend, dqend, bqend, aqend, brend <desde> → dónde acaba lo que empieza en <desde> (el
+    # paréntesis que cierra $(…), la comilla que cierra "…", el acento que cierra `…`, la comilla
+    # que cierra $'…', la llave que cierra ${…}), con sus comillas y las sustituciones que lleva
+    # dentro; n + 1 si no se cierra. Bash 3.2 cierra $(…) contando paréntesis; bash 5 y zsh
+    # saltan además ${…}, los comentarios (hasta el final de la línea) y el cuerpo de un heredoc
+    # (hasta su línea de cierre). md dice cómo se lee: "b" como bash 5, "a" como bash 3.2; con
+    # algo de eso dentro, amb pide leer el comando también como bash 3.2. Bash 5 no se sabe
+    # dónde cierra tras un case (sus patrones llevan su propio paréntesis), una llave suelta en
+    # ${…} (zsh la cuenta, bash 5 no) o un salto de línea escapado: n + 1 (revisión de la #20)
+    function subend(p,   k, ch, d, j, am, hl, b) {
+      d = 1; am = 0; hl = ""
       for (k = p; k <= n; k++) {
         ch = substr(t, k, 1)
-        if (ch == "\\") k++
+        b = k == p || index(" \t\n;|&()", substr(t, k - 1, 1))
+        if (ch == "\\") { if (md == "b" && substr(t, k + 1, 1) == "\n") return n + 1; k++ }
         else if (ch == "\047") { j = index(substr(t, k + 1), "\047"); if (!j) return n + 1; k += j }
+        else if (ch == "$" && substr(t, k + 1, 1) == "\047") k = aqend(k + 2)
         else if (ch == "\"") k = dqend(k + 1)
-        else if (ch == "#" && (k == p || index(" \t\n;|&()", substr(t, k - 1, 1)))) {
-          while (k < n && substr(t, k + 1, 1) != "\n") k++
+        else if (ch == "`") k = bqend(k + 1)
+        # $((…)) y ((…)): aritmética, donde << es un desplazamiento y # no es un comentario, si
+        # cierra con «))»; si no, bash 5 la relee como subshell y no se sabe dónde cierra
+        else if (ch == "(") { d++; if (!am && substr(t, k - 1, 1) == "(") am = d }
+        else if (ch == ")") {
+          if (am == d) { if (md == "b" && substr(t, k + 1, 1) != ")") return n + 1; am = 0 }
+          if (--d == 0) return k
         }
-        else if (ch == "<" && substr(t, k + 1, 1) == "<") { if (substr(t, k + 2, 1) != "<") return n + 1; k += 2 }
-        else if (substr(t, k, 4) == "case" && (k == p || index(" \t\n;|&()", substr(t, k - 1, 1))) && index(" \t\n", substr(t, k + 4, 1))) return n + 1
-        else if (ch == "(") d++
-        else if (ch == ")" && --d == 0) return k
+        else if (md == "a" || am) continue
+        else if (ch == "$" && substr(t, k + 1, 1) == "{") { amb = 1; k = brend(k + 2) }
+        else if (ch == "#" && b) { amb = 1; while (k < n && substr(t, k + 1, 1) != "\n") k++ }
+        else if (ch == "<" && substr(t, k + 1, 1) == "<") {
+          if (substr(t, k + 2, 1) == "<") k += 2
+          else { amb = 1; k = hdoc(k + 2); hl = hl hdl SUBSEP }
+        }
+        else if (ch == "\n" && hl != "") { k = hbody(k, hl); hl = "" }
+        else if (b && substr(t, k, 4) == "case" && index(" \t\n", substr(t, k + 4, 1))) return n + 1
       }
       return n + 1
     }
@@ -337,9 +353,66 @@ cmd_words() {
         ch = substr(t, k, 1)
         if (ch == "\\") k++
         else if (ch == "\"") return k
+        else if (ch == "`") k = bqend(k + 1)
         else if (ch == "$" && substr(t, k + 1, 1) == "(") k = subend(k + 2)
+        else if (md == "b" && ch == "$" && substr(t, k + 1, 1) == "{") { amb = 1; k = brend(k + 2) }
       }
       return n + 1
+    }
+    function aqend(p,   k, ch) {
+      for (k = p; k <= n; k++) {
+        ch = substr(t, k, 1)
+        if (ch == "\\") k++
+        else if (ch == "\047") return k
+      }
+      return n + 1
+    }
+    function brend(p,   k, ch, j) {
+      for (k = p; k <= n; k++) {
+        ch = substr(t, k, 1)
+        if (ch == "\\") k++
+        else if (ch == "\047") { j = index(substr(t, k + 1), "\047"); if (!j) return n + 1; k += j }
+        else if (ch == "\"") k = dqend(k + 1)
+        else if (ch == "`") k = bqend(k + 1)
+        else if (ch == "$" && substr(t, k + 1, 1) == "(") k = subend(k + 2)
+        else if (ch == "$" && substr(t, k + 1, 1) == "{") k = brend(k + 2)
+        else if (ch == "{") return n + 1
+        else if (ch == "}") return k
+      }
+      return n + 1
+    }
+    # hdoc <desde> → tras «<<» en $(…), dónde acaba la palabra que cierra el heredoc; la deja en
+    # hdl, con un tabulador delante si es <<- (la línea de cierre puede llevar tabuladores)
+    function hdoc(p,   k, ch, j) {
+      hdl = ""; k = p
+      if (substr(t, k, 1) == "-") { hdl = "\t"; k++ }
+      while (k <= n && index(" \t", substr(t, k, 1))) k++
+      while (k <= n && !index(" \t\n;|&()<>", (ch = substr(t, k, 1)))) {
+        if (ch == "\047" || ch == "\"") {
+          j = index(substr(t, k + 1), ch)
+          if (!j) return n + 1
+          hdl = hdl substr(t, k + 1, j - 1); k += j + 1; continue
+        }
+        if (ch == "\\" && k < n) { hdl = hdl substr(t, k + 1, 1); k += 2; continue }
+        hdl = hdl ch; k++
+      }
+      return k - 1
+    }
+    # hbody <salto> <cierres> → tras el salto de línea que abre los cuerpos de los heredocs
+    # pendientes, el final de la línea que cierra el último; n + 1 si alguno no se cierra
+    function hbody(k, hl,   j, e, s, line) {
+      while (hl != "") {
+        j = index(hl, SUBSEP); e = substr(hl, 1, j - 1); hl = substr(hl, j + 1)
+        s = substr(e, 1, 1) == "\t"; if (s) e = substr(e, 2)
+        do {
+          if (k >= n) return n + 1
+          j = index(substr(t, k + 1), "\n")
+          line = j ? substr(t, k + 1, j - 1) : substr(t, k + 1)
+          k = j ? k + j : n
+          if (s) sub(/^\t+/, "", line)
+        } while (line != e)
+      }
+      return k
     }
     function bqend(p,   k, ch) {
       for (k = p; k <= n; k++) {
@@ -362,9 +435,8 @@ cmd_words() {
         if (++hq > hn) { hb = 0; hn = 0; hq = 1 }
       }
     }
-    { t = (NR > 1 ? t "\n" : "") $0 }
-    END {
-      n = length(t); q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""
+    function scan() {
+      q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""
       hb = 0; hn = 0; hq = 1; ar = 0
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
@@ -386,6 +458,7 @@ cmd_words() {
             # Su código sale aparte, para leerlo como un comando más
             if (c == "`") { k = bqend(i + 1); code = substr(t, i + 1, k - i - 1) }
             else { k = subend(i + 2); code = substr(t, i + 2, k - i - 2) }
+            if (k > n && md == "b") print "u"
             print "c" esc(code)
             for (j = i; j <= k && j <= n; j++) lit(substr(t, j, 1))
             i = k
@@ -434,6 +507,12 @@ cmd_words() {
         w = w c; pw = pw c; has = 1; if (index("*?[", c)) g = 1
       }
       sep()
+    }
+    { t = (NR > 1 ? t "\n" : "") $0 }
+    END {
+      n = length(t)
+      md = "b"; amb = 0; scan()
+      if (amb) { md = "a"; scan() }
     }'
 }
 
@@ -618,6 +697,10 @@ $_code
 EOF
     WORDS="$WORDS$_new"; _code="$_new"; _lvl=$((_lvl+1))
   done
+  # Una sustitución entre comillas que bash 5 no se sabe dónde cierra: no se sabe qué ejecuta
+  case "
+$WORDS" in *"
+u"*) TOO_MANY="el comando lleva una sustitución entre comillas (\"\$(…)\", \"\`…\`\") que el Centinela no sabe dónde cierra (un case, un heredoc o unas comillas sin cerrar, una llave suelta en \${…}, un salto de línea escapado) y no puede leer qué ejecuta — sácalo a un script" ;; esac
   CMD_NORM="$(printf '%s\n' "$WORDS" | sed -n 's/^n//p')"
 fi
 

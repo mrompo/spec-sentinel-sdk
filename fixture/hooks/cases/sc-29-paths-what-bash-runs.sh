@@ -7,7 +7,8 @@
 #   de una shell con -c o de eval también cuenta; «<<<» y el «<<» aritmético no abren un
 #   heredoc; y lo que busca un lector, entre comillas, no es el programa. Revisiones de la #20
 #   (CodeRabbit): lo que sigue a -c, la shell como argumento, los argumentos que leen las
-#   reglas y un ")" que bash no lee como cierre de "$(…)".
+#   reglas, un ")" que bash no lee como cierre de "$(…)" y lo que va detrás de "$(…)", que se
+#   lee donde la cierran bash 5, zsh y bash 3.2.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -161,9 +162,9 @@ echo "$(echo "(") mv sentinel/githooks /tmp/x"
 EOF
 
 # Un ")" que bash no lee como cierre no termina la sustitución: el de un comentario llega hasta
-# el final de la línea, y tras un heredoc o un case no se sabe dónde cierra, así que se lee el
-# resto entero como código (segunda revisión de la #20, CodeRabbit). Cada línea es el valor de
-# "command" en el JSON: \n va escrito como escape
+# el final de la línea y el del cuerpo de un heredoc no cuenta; tras un case no se sabe dónde
+# cierra y se bloquea (segunda y tercera revisión de la #20, CodeRabbit). Cada línea es el
+# valor de "command" en el JSON: \n va escrito como escape
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
   guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
@@ -189,6 +190,62 @@ echo \"$(echo showcase x) mv sentinel/githooks /tmp/x\"
 echo \"$(echo cases) mv sentinel/githooks /tmp/x\"
 echo \"$(cat <<< x) mv sentinel/githooks /tmp/x\"
 EOF
+
+# Lo que va detrás de la sustitución se lee en su sitio, que es donde la cierran bash 5 y zsh
+# y, si no es el mismo, donde la cierra bash 3.2, que cuenta paréntesis sin saltar comentarios,
+# heredocs ni ${…}. Si bash 5 no se sabe dónde la cierra (un case, una llave suelta en ${…},
+# un salto de línea escapado, una aritmética que no cierra con «))»), se bloquea (tercera
+# revisión de la #20, CodeRabbit)
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo \"$(case x in a) true;; esac)\" ; '/bin/mv' sentinel/githooks /tmp/x
+echo \"$(case x in a) true;; esac)\" ; mv sentinel/githooks /tmp/x
+echo \"$(echo case x in a)\" ; mv sentinel/githooks /tmp/x
+echo \"$(cat <<E\n)\nE\n)\" ; mv sentinel/githooks /tmp/x
+x=\"$(cat <<E\nhola\nE\n)\"; mv sentinel/githooks /tmp/x
+echo \"$((1<<2))\" ; mv sentinel/githooks /tmp/x
+echo \"$(cat <<E\n)\"; mv sentinel/githooks /tmp/x; echo \"\nE\n)\"
+echo \"$(echo ok # )\"; mv sentinel/githooks /tmp/x; echo \"\n)\"
+echo \"$(echo $'\\')' ; mv sentinel/githooks /tmp/x)\"
+echo \"$(echo ${x/)/} ; mv sentinel/githooks /tmp/x)\"
+echo \"$(echo ${x:-)} ; mv sentinel/githooks /tmp/x)\"
+echo \"$(echo \"${x:-\")\"}\" ; mv sentinel/githooks /tmp/x)\"
+echo \"$(echo ${x:-{} ) } ; mv sentinel/githooks /tmp/x)\"
+echo \"$(echo `echo )` ; mv sentinel/githooks /tmp/x)\"
+echo \"$(echo \"a`echo \")\"`b\" ; mv sentinel/githooks /tmp/x)\"
+echo \"$(( ( echo a # )\nmv sentinel/githooks /tmp/x\n) ) )\"
+echo \"$(ca\\\nse x in a) mv sentinel/githooks /tmp/x;; esac)\"
+echo \"$((cat <<E\n)\nE\n) ; mv sentinel/githooks /tmp/x ; echo )\"
+echo \"$( ((x=1))\necho a # )\nmv sentinel/githooks /tmp/x)\"
+echo \"$(echo ${x:-)}\"; mv sentinel/githooks /tmp/x; echo \"\n)\"
+echo \"$(cat <<A <<B\nB\nA\n)\nB\nmv sentinel/githooks /tmp/x\n)\"
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$cmd\"}}"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+echo \"$(cat <<'EOF'\nfix(x): no rompe (nada)\n\nIt's fine\nEOF\n)\"
+echo \"$(cat <<-E\n\thola )\n\tE\n)\" ; ls sentinel/githooks
+echo \"$((1<<2))\" ; ls sentinel/githooks
+echo \"$(( (1+2)<<3 ))\" ; ls sentinel/githooks
+echo \"$(echo ${x:-a} ${#x} $'a\\'b')\" ; ls sentinel/githooks
+x=\"$(cat <<E\nhola\nE\n)\"; echo \"$x\"
+echo \"$(echo $((1<<2))\necho a)\" ; echo b
+echo \"$(cat <<< x\necho a)\" ; echo b
+echo \"$(cat << E\nhola )\nE\n)\" ; echo b
+echo \"$(echo `echo )`) ; mv sentinel/githooks /tmp/x ; echo `true`\"
+echo \"$(echo \"a`echo \")\"`b\") ; mv sentinel/githooks /tmp/x ; echo `true`\"
+echo \"$(echo ${x:-\"}\"}) ; mv sentinel/githooks /tmp/x ; echo `true`\"
+echo \"$(echo \"$(echo \")\")\") ; mv sentinel/githooks /tmp/x ; echo `true`\"
+EOF
+# El bloqueo de un case es el del cierre incierto, aunque detrás no se toque nada protegido
+guard "$(bash_payload 'echo "$(case x in a) true;; esac)" ; ls sentinel/githooks')"
+assert_exit 2 || { echo "    debería bloquearse: un case dentro de \"\$(…)\"" >&2; exit 1; }
+assert_err_contains "no sabe dónde cierra" || exit 1
 
 # ── V6: «<<<» y el «<<» aritmético no abren un heredoc ──────────────────────────────────
 # Si lo abrieran, una comilla de dos líneas escondería el comando que la sigue
