@@ -280,7 +280,7 @@ mergeable sola.
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
-- [ ] R10. Casos en rojo:
+- [x] R10. Casos en rojo:
        - A1 = V3: el destino de `cp`/`mv` cuando no es la última palabra (redirecciones) y
          `--target-directory` abreviado;
        - A2: `mv .git`;
@@ -288,6 +288,18 @@ mergeable sola.
        - V2: `git commit -n`, `--no-verif`;
        - A4 = V9: `protected-branches` con `git -C`, `git -c`, `env` y asignaciones delante;
        - P1: `no-hook-disabling` deja leer
+       → 60 comandos que deben bloquearse y 4 lecturas que deben permitirse, que con el guard de
+         `main` dan lo contrario:
+         - A1 = V3, en `sc-30`: redirecciones detrás del destino, el valor pegado a una opción,
+           una opción con argumento detrás de los operandos y las abreviaturas de
+           `--target-directory` y `--no-target-directory`;
+         - A2 y V1, en `sc-21`: `.git` y la carpeta de un worktree; la caja, solo donde el disco
+           no la distingue;
+         - V2, en `sc-16`: `-n` en `git commit` y `--no-verify` abreviado, en una rama feature;
+         - A4 = V9, en `sc-03`: opciones globales de git, prefijos y asignaciones delante;
+         - P1, en `sc-26`: buscar `core.hookspath` y `--no-verify`.
+         Con cada grupo, sus controles que se siguen permitiendo. Deltas en SC-01, SC-08 y
+         SC-sentinel-paths-11 (nuevo) y en la fila «Regex evadibles» del README
 - [ ] R11. 👤 Parche `sentinel-paths-8.patch`; banco en verde y mutantes muertos
 
 **Tribunal**

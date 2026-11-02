@@ -12,12 +12,21 @@ solo por el texto de la ruta.
 
 - **WHEN** el agente mueve, renombra, copia encima, enlaza, cambia los permisos o borra desde la
   shell una carpeta protegida entera (`sentinel`, `sentinel/hooks`, `sentinel/githooks`,
-  `sentinel/githooks/lib`, `sentinel/adapters`, `.claude`, `.git/hooks`, `.husky`), con `mv`, `cp`, `rsync`, `ln`, `rm`, `rmdir`, `unlink`, `chmod`,
+  `sentinel/githooks/lib`, `sentinel/adapters`, `.claude`, `.git`, `.git/hooks`, la de cada
+  worktree, `.git/worktrees/<nombre>`, y `.husky`), con `mv`, `cp`, `rsync`, `ln`, `rm`, `rmdir`, `unlink`, `chmod`,
   `chown`, `git mv` o `git rm`, se escriba como `sentinel`, `sentinel/` o `./sentinel`
 - **THEN** el hook deniega la acción, como la de uno de sus ficheros
+- **AND** en un disco que no distingue mayúsculas (APFS por defecto en macOS, NTFS), la carpeta
+  escrita con otra caja (`Sentinel/githooks`, `.GIT`, la raíz del repo en mayúsculas) es la
+  misma y se deniega igual
 - **AND** copiar, mover o enlazar a una carpeta (`cp x/config .git`, `cp -t .git x/config`)
   toca, dentro de ella, un fichero con el nombre de cada origen, y se decide como si el
   comando lo nombrara
+- **AND** el destino es un operando: una redirección (`2>/dev/null`, `<<< x`) o el valor pegado
+  a una opción (`--backup=numbered`) no lo son, una opción con su argumento detrás de los
+  operandos (`--exclude x`) no lo desplaza (el destino es el último operando que es una
+  carpeta), y `--target-directory` y `--no-target-directory` valen abreviadas, como las acepta
+  GNU (`--target=.git`, `--t .git`, `--no-t`)
 - **AND** lo mismo con el programa detrás de un prefijo de ejecución o de una asignación
   (`sudo cp`, `env -i cp`, `X=1 cp`), con los orígenes de un comodín (`cp docs/* .git/`), con
   el contenido de una carpeta (`rsync -a x/ .git/`, `cp -r x/. .git/`, `cp -rT x .git`), con
@@ -126,6 +135,9 @@ comando solo lee. Ante la duda, el comando SHALL evaluarse como hasta ahora (fai
   `tail log | tee sentinel/.override`, `cat $(…)`), sigue bloqueado
 - **AND** solo lo aplican las reglas que lo declaran (`skip_read_only: true`): leer un entorno
   productivo sigue bloqueado (`isolation-env`)
+- **AND** buscar lo que vigila `no-hook-disabling` (`grep -rni core.hookspath docs`, `git log
+  -Score.hookspath`) también es leer: esa regla lo declara, y cambiarlo
+  (`git config core.hookspath …`) sigue bloqueado
 
 ### Requirement: El cableado no depende del entorno de la sesión
 
@@ -184,6 +196,28 @@ repo sin commits.
   `HEAD` y el primer commit en `main` pasaba)
 - **AND** en una rama feature sin commits pasa, y con `HEAD` desligado no hay rama y las reglas
   de rama no se aplican
+
+### Requirement: Las ramas y los gates no se saltan con otra grafía
+
+Las reglas que protegen las ramas y los gates de la Esclusa SHALL reconocer el comando como lo
+ejecuta git, con sus opciones globales y lo que vaya delante.
+
+#### Scenario: El commit y el salto de los hooks, se escriban como se escriban (SC-sentinel-paths-11)
+
+- **WHEN** el agente intenta `git commit` (o `merge`, `cherry-pick`, `rebase`, `revert`, `am`,
+  `apply`) en una rama protegida detrás de opciones globales de git con su argumento
+  (`git -C . commit`, `git -c user.name=x commit`, `git --git-dir .git commit`), de un prefijo
+  de ejecución (`env`, `command`, `nice -n 5`, `timeout 60`) o de una asignación
+  (`X=1 git commit`)
+- **THEN** el hook deniega por `protected-branches`, como con `git commit`; en una rama feature
+  pasa
+- **AND** saltarse los hooks se deniega también con `-n`, la forma corta de `--no-verify` en
+  `git commit`, sola o en un grupo de opciones (`-nm`, `-anm`), y con las abreviaturas que
+  acepta git (`--no-veri`, `--no-verif`); `-n` dentro del mensaje o tras una opción que lleva
+  valor (`-mno` es el mensaje «no», `-uno` deja fuera los no seguidos) no lo es
+- **AND** las reglas del comando ven cada tramo también desde su programa: sin lo que va delante
+  (prefijos de ejecución, asignaciones, redirecciones) ni las opciones globales de git con su
+  argumento
 
 ## MODIFIED Requirements
 
