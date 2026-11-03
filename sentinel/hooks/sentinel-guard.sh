@@ -658,9 +658,13 @@ EOF
 # confirmación (A1 = V3): --target-directory y --no-target-directory valen abreviadas, como las
 # acepta GNU (--target=, --t, --no-t), y si el último operando no es una carpeta, una opción con
 # su argumento detrás de los operandos (--exclude x) lo ha desplazado: el destino es el último
-# operando que es una carpeta
+# operando que es una carpeta. Revisión de la #22: el argumento separado de una opción que lo
+# lleva (--suffix docs, -S docs, --exclude docs) tampoco es un operando; como no todos los
+# sistemas tienen las mismas (-S es el sufijo en GNU install y en BSD no lleva nada), el destino
+# se busca con esos argumentos y sin ellos, y cuentan los dos. En un grupo de letras, la que lleva
+# argumento se queda con el resto (-Stx es el sufijo «tx», no -t x)
 into_dir() {
-  local v="" dest="" w k i b t=0 opts=1 tdir=0 srcs=()
+  local v="" dest="" w k i b c so="" lo="" t=0 a=0 o1 opts=1 tdir=0 srcs=() srcs1=()
   while [ "$#" -gt 0 ]; do
     w="${1:1}"
     case "${1:0:1}:${w##*/}" in l:cp|l:mv|l:ln|l:install|l:rsync) v="${w##*/}"; break ;; esac
@@ -668,10 +672,29 @@ into_dir() {
   done
   [ -n "$v" ] || return 0
   shift
+  # Las opciones que llevan argumento: las letras y los nombres largos (GNU y BSD)
+  case "$v" in
+    cp) so=S; lo="--suffix --sparse --no-preserve" ;;
+    mv|ln) so=S; lo="--suffix" ;;
+    install) so=SgmoBDfhlMNT; lo="--suffix --group --mode --owner --strip-program" ;;
+    rsync)
+      so='efTBM@'
+      lo="--exclude --include --filter --exclude-from --include-from --files-from --rsh
+        --rsync-path --remote-option --suffix --backup-dir --temp-dir --compare-dest --copy-dest
+        --link-dest --partial-dir --log-file --log-file-format --out-format --log-format
+        --password-file --early-input --bwlimit --timeout --contimeout --port --sockopts
+        --address --max-size --min-size --max-delete --max-alloc --block-size --chmod --chown
+        --usermap --groupmap --copy-as --iconv --info --debug --skip-compress --modify-window
+        --compress-choice --zc --compress-level --zl --checksum-choice --cc --checksum-seed
+        --write-batch --only-write-batch --read-batch --protocol --stop-after --stop-at
+        --time-limit --outbuf" ;;
+  esac
   for w in "$@"; do
     k="${w:0:1}"; w="${w:1}"
     if [ "$t" = 1 ]; then dest="$w"; t=0; continue; fi
-    [ "$k" = v ] && continue
+    # El valor pegado (--suffix=docs) ya es el argumento de la opción
+    [ "$k" = v ] && { a=0; continue; }
+    o1=1; [ "$a" = 1 ] && { a=0; o1=0; }
     if [ "$opts" = 1 ]; then
       case "$w" in
         --) opts=0; continue ;;
@@ -681,20 +704,38 @@ into_dir() {
           if [ "$v" != rsync ]; then
             case --target-directory in "$w"*) [ "${#w}" -ge 3 ] && t=1 ;; esac
             case --no-target-directory in "$w"*) [ "${#w}" -ge 6 ] && tdir=1 ;; esac
+            # GNU acepta el nombre abreviado; rsync, solo entero
+            for c in $lo; do case "$c" in "$w"*) a=1 ;; esac; done
+          else
+            for c in $lo; do [ "$c" = "$w" ] && a=1; done
           fi
           continue ;;
         -*)
           # rsync -t conserva las fechas; en los demás, -t lleva la carpeta de destino, también
           # dentro de un grupo (-rt carpeta, -tcarpeta)
-          if [ "$v" != rsync ]; then
-            case "$w" in *T*) tdir=1 ;; esac
-            case "$w" in *t*) b="${w#*t}"; if [ -n "$b" ]; then dest="$b"; else t=1; fi ;; esac
-          fi
+          for ((i = 1; i < ${#w}; i++)); do
+            c="${w:i:1}"; b="${w:i+1}"
+            if [ "$v" != rsync ]; then
+              [ "$c" = T ] && tdir=1
+              if [ "$c" = t ]; then if [ -n "$b" ]; then dest="$b"; else t=1; fi; break; fi
+            fi
+            case "$so" in *"$c"*) [ -n "$b" ] || a=1; break ;; esac
+          done
           continue ;;
       esac
     fi
     srcs+=("$w")
+    [ "$o1" = 0 ] || srcs1+=("$w")
   done
+  into_dest "$dest" "$tdir" "$v" ${srcs[@]+"${srcs[@]}"}
+  [ "${#srcs1[@]}" = "${#srcs[@]}" ] || into_dest "$dest" "$tdir" "$v" ${srcs1[@]+"${srcs1[@]}"}
+}
+
+# into_dest <destino, o vacío> <tdir> <programa> <operandos…> → lo que into_dir deja en el destino
+into_dest() {
+  local dest="$1" tdir="$2" v="$3" w b i srcs=()
+  shift 3
+  srcs=("$@")
   if [ -z "$dest" ]; then
     [ "${#srcs[@]}" -ge 2 ] || return 0
     for ((i = ${#srcs[@]} - 1; i >= 0; i--)); do
