@@ -312,7 +312,13 @@ mergeable sola.
          ni opciones globales de git.
        En un clon con el parche, el banco pasa entero (hooks 31/31, githooks 16/16, install
        18/18), los 40 mutantes rompen algún caso y en Debian 12 (bash 5, GNU, disco que
-       distingue la caja) pasan `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30`
+       distingue la caja) pasan `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30`.
+       Revisión de la #22 (CodeRabbit), parche `sentinel-paths-8b.patch` (`6e2ea2c`): el
+       argumento separado de una opción (`--suffix docs`, `-S docs`, `--exclude docs`, `-o docs`
+       en `install`) no es el destino; como cada sistema tiene sus opciones, el destino se busca
+       con esos argumentos y sin ellos, y cuentan los dos; en un grupo de letras, la que lleva
+       argumento se queda con el resto (`-Stx`). Banco en verde, 21 mutantes muertos y Debian 12
+       en verde
 
 **Tribunal**
 
