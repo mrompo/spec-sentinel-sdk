@@ -141,7 +141,9 @@ r=$?
 # (--backup=numbered) no es un operando, una opción con argumento detrás de los operandos
 # (--exclude x) no lo desplaza, y --target-directory y --no-target-directory valen abreviadas,
 # como las acepta GNU. Con una carpeta «2» y una «docs», que serían el destino si lo fueran el
-# descriptor, lo que lee <<< o el valor de --suffix= ─────────────────────────────────────────
+# descriptor, lo que lee <<< o el valor de --suffix=. Revisión de la #22: el argumento separado
+# de una opción (--suffix docs, -S docs, --exclude docs) tampoco lo es, y en un grupo de letras
+# la que lleva argumento se queda con el resto (-Stx es el sufijo «tx», no -t x) ──────────────
 mkdir -p "$WS/2"
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
@@ -171,6 +173,19 @@ install --target=sentinel/adapters /tmp/e/stack.sh
 install --t sentinel/adapters /tmp/e/stack.sh
 cp -r --no-target docs/cfg ~
 cp -r --no-t docs/cfg ~
+cp /tmp/e/.gitconfig ~ --suffix docs
+cp /tmp/e/.gitconfig ~ --suf docs
+cp /tmp/e/.gitconfig ~ -S docs
+cp /tmp/e/.gitconfig ~ -aS docs
+cp -Stx /tmp/e/.gitconfig ~
+cp /tmp/e/.gitconfig ~ --sparse docs
+mv /tmp/e/.gitconfig ~ --suffix docs
+ln -s /tmp/e/.gitconfig ~ -S docs
+install /tmp/e/stack.sh sentinel/adapters -o docs
+install /tmp/e/stack.sh sentinel/adapters --mode docs
+rsync -a docs/cfg/ ~ --exclude docs
+rsync -a docs/cfg/ ~ -e docs
+rsync -a docs/cfg/ ~ --backup-dir docs
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
@@ -185,6 +200,10 @@ cp -r --no-t docs/e docs/c
 cp --targ docs/b docs/a.md
 cp -r docs/e docs/nueva
 du --block-size=cp /tmp/e/.gitconfig ~
+cp docs/a.md docs/b --suffix docs
+cp -S docs/c docs/a.md docs/b
+cp -rt docs/b docs/a.md
+rsync -a docs/e/ docs/c/ --exclude docs
 EOF
 
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────
