@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SC-sentinel-paths-01: las carpetas protegidas (sentinel, sentinel/hooks, sentinel/githooks,
-#   .claude, .git/hooks) no se mueven, copian encima, enlazan, cambian de permisos ni se borran
-#   enteras desde la shell; sus subcarpetas que no son enforcement siguen libres.
+#   .claude, .git, .git/hooks, la de cada worktree) no se mueven, copian encima, enlazan, cambian
+#   de permisos ni se borran enteras desde la shell, tampoco escritas con otra caja en un disco
+#   que no la distingue; sus subcarpetas que no son enforcement siguen libres.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -136,4 +137,49 @@ assert_exit 0 || { echo "    sin un fichero '-f', la opción -f no debería cont
 # Una ruta con espacios que no es protegida sigue libre
 RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "mv \"a b\" c")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
 assert_exit 0 || { echo "    debería permitirse: mv \"a b\" c" >&2; exit 1; }
+
+# ── Panel de confirmación, A2: la carpeta común de git (.git), que contiene .git/hooks y la
+# configuración, y la de cada worktree, tampoco se mueven ni se borran enteras ─────────────
+mkdir -p "$WS/.git/worktrees/x"
+for cmd in "mv .git /tmp/x" "mv .git .g" "mv ./.git/ /tmp/x" "chmod -R 000 .git" "rm -rf .git" \
+  "mv .git/worktrees/x /tmp/x" "rm -rf .git/worktrees/x"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done
+for cmd in "mv .gitignore .gitignore.bak" "ls .git" "mv docs/f1.md docs/.git-notas.md"; do
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done
+
+# ── Panel de confirmación, V1: en un disco que no distingue mayúsculas (APFS por defecto, NTFS),
+# la carpeta escrita con otra caja es la misma, también la raíz del repo. Donde el disco las
+# distingue (Linux), Sentinel es otra carpeta y estos casos se saltan ──────────────────────
+mkdir -p "$WS/sentinel/githooks/lib" "$WS/sentinel/hooks" "$WS/.claude"
+if [ "$WS/sentinel" -ef "$WS/SENTINEL" ]; then
+  WSU="$(printf '%s' "$WS" | tr '[:lower:]' '[:upper:]')"
+  while IFS= read -r cmd; do
+    [ -n "$cmd" ] || continue
+    RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+    assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+  done <<EOF
+mv Sentinel/githooks /tmp/g
+mv sentinel/GITHOOKS /tmp/g
+mv SENTINEL /tmp/s
+chmod -R 000 Sentinel/hooks
+mv sentinel/githooks/LIB /tmp/l
+mv .Claude /tmp/c
+mv .GIT /tmp/x
+mv .Git/hooks /tmp/h
+mv $WSU/sentinel/githooks /tmp/g
+EOF
+  for cmd in "ls Sentinel/githooks" "mv Docs/f1.md docs/f2.md"; do
+    RH_CWD="$WS" run_hook "$GUARD_HOOK" "$(bash_payload "$cmd")" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+    assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+  done
+  # La configuración de Claude Code de la persona, con CLAUDE_CONFIG_DIR, escrita en mayúsculas
+  mkdir -p "$WS/cfg"
+  RH_CWD="$WS" run_hook "$GUARD_HOOK" "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$WSU/CFG/settings.json\",\"content\":\"{}\"}}" \
+    -u CLAUDE_PROJECT_DIR CLAUDE_CONFIG_DIR="$WS/cfg" SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"
+  assert_exit 2 || { echo "    debería bloquearse: escribir $WSU/CFG/settings.json" >&2; exit 1; }
+fi
 exit 0

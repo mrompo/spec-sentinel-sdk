@@ -280,7 +280,7 @@ mergeable sola.
 
 **PR 8 · `.git`, la caja y la Esclusa** (temas 2 y 3 de `review-2`)
 
-- [ ] R10. Casos en rojo:
+- [x] R10. Casos en rojo:
        - A1 = V3: el destino de `cp`/`mv` cuando no es la última palabra (redirecciones) y
          `--target-directory` abreviado;
        - A2: `mv .git`;
@@ -288,7 +288,40 @@ mergeable sola.
        - V2: `git commit -n`, `--no-verif`;
        - A4 = V9: `protected-branches` con `git -C`, `git -c`, `env` y asignaciones delante;
        - P1: `no-hook-disabling` deja leer
-- [ ] R11. 👤 Parche `sentinel-paths-8.patch`; banco en verde y mutantes muertos
+       → 60 comandos que deben bloquearse y 4 lecturas que deben permitirse, que con el guard de
+         `main` dan lo contrario:
+         - A1 = V3, en `sc-30`: redirecciones detrás del destino, el valor pegado a una opción,
+           una opción con argumento detrás de los operandos y las abreviaturas de
+           `--target-directory` y `--no-target-directory`;
+         - A2 y V1, en `sc-21`: `.git` y la carpeta de un worktree; la caja, solo donde el disco
+           no la distingue;
+         - V2, en `sc-16`: `-n` en `git commit` y `--no-verify` abreviado, en una rama feature;
+         - A4 = V9, en `sc-03`: opciones globales de git, prefijos y asignaciones delante;
+         - P1, en `sc-26`: buscar `core.hookspath` y `--no-verify`.
+         Con cada grupo, sus controles que se siguen permitiendo. Deltas en SC-01, SC-08 y
+         SC-sentinel-paths-11 (nuevo) y en la fila «Regex evadibles» del README
+- [x] R11. 👤 Parche `sentinel-paths-8.patch` (aplicado por la persona, `dddf17b`):
+       - el destino de `cp`/`mv` no es una redirección ni el valor de una opción, y si el
+         último operando no es carpeta, cuenta el último que sí lo es; `--target-directory` y
+         `--no-target-directory` también abreviados;
+       - `.git` y `.git/worktrees/<nombre>` son carpetas protegidas;
+       - en un disco que no distingue la caja, las rutas se comparan sin ella;
+       - `no-hook-disabling` bloquea `git commit -n` (también agrupado, `-nm`) y `--no-veri…`,
+         y deja pasar lo que solo lee;
+       - cada tramo se ve también desde su programa, sin prefijos, asignaciones, redirecciones
+         ni opciones globales de git.
+       En un clon con el parche, el banco pasa entero (hooks 31/31, githooks 16/16, install
+       18/18), los 40 mutantes rompen algún caso y en Debian 12 (bash 5, GNU, disco que
+       distingue la caja) pasan `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30`.
+       Revisión de la #22 (CodeRabbit), parche `sentinel-paths-8b.patch` (`6e2ea2c`): el
+       argumento separado de una opción (`--suffix docs`, `-S docs`, `--exclude docs`, `-o docs`
+       en `install`) no es el destino; como cada sistema tiene sus opciones, el destino se busca
+       con esos argumentos y sin ellos, y cuentan los dos; en un grupo de letras, la que lleva
+       argumento se queda con el resto (`-Stx`). Banco en verde, 21 mutantes muertos y Debian 12
+       en verde.
+       A deuda (`STATUS.md`), porque ya pasaba en `main` y solo bloquea de más: un rsync que nombra
+       `.git`, también como argumento de una opción (`rsync -a --exclude .git src/ dst/`), se
+       bloquea; que el destino no fuera el argumento de `--exclude` no cambiaría la decisión
 
 **Tribunal**
 

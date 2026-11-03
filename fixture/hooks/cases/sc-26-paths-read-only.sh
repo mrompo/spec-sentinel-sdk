@@ -5,6 +5,8 @@
 #   leyendo, sigue bloqueado, e isolation-env sigue bloqueando la lectura. Un separador entre
 #   comillas no parte el comando, una redirección a /dev/null junto a un separador sigue
 #   siendo lectura, y printf -v, que asigna, no lo es (revisión de sentinel-paths, P8, A5, V6).
+#   Buscar core.hooksPath o --no-verify tampoco se bloquea: no-hook-disabling no aplica a lo que
+#   solo lee (panel de confirmación, P1).
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -34,6 +36,10 @@ git diff main -- sentinel/policy.yaml | grep -E '^(a|b)'
 cat sentinel/policy.yaml 2>/dev/null; echo x
 tail -3 sentinel/overrides.log 2>&1|head -1
 cat sentinel/policy.yaml >/dev/null 2>/dev/null
+grep -rni core.hookspath docs
+git log --oneline -Score.hookspath
+grep -rn 'GIT_CONFIG_KEY_0=include.path' docs
+grep -rn -- --no-verify docs
 EOF
 
 while IFS= read -r cmd; do
@@ -58,6 +64,7 @@ cat .env.production
 grep -n x openspec/specs/a/spec.md > openspec/specs/a/spec.md
 cp -r sentinel /tmp/copia
 git diff '--output=sentinel/hooks/sentinel-guard.sh'
+grep -rn x docs; git config core.hookspath /dev/null
 git diff "--output=sentinel/policy.yaml"
 git log -1 --out""put=sentinel/policy.yaml
 git show \--output sentinel/policy.yaml

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SC-sentinel-paths-01, 03: copiar o mover a la carpeta que contiene un fichero protegido toca
-#   ese fichero, aunque el comando solo nombre la carpeta (revisión de sentinel-paths, A1); las
+#   ese fichero, aunque el comando solo nombre la carpeta (revisión de sentinel-paths, A1), y
+#   aunque no sea la última palabra del comando (panel de confirmación, A1 = V3); las
 #   rutas relativas se resuelven desde la carpeta de la sesión, el cwd del tool call (V5); y el
 #   tope de rutas solo cuenta las que pueden tocar algo, y la llave lo salva (P5 = A8).
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
@@ -112,7 +113,7 @@ mkdir -p "$WS/docs/l" "$WS/docs/s/g"
 : >"$WS/docs/s/g/config"
 ln -s ../../sentinel/policy.yaml "$WS/docs/l/config"
 ln -s ../../.git "$WS/docs/l/g"
-for cmd in "cp -r docs/e/. docs/l" "cp -r docs/s/. docs/l"; do
+for cmd in "cp -r docs/e/. docs/l" "cp -r docs/s/. docs/l" "echo x > docs/l/config"; do
   guard "$(bash_payload "$cmd")"
   assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
 done
@@ -134,6 +135,79 @@ for n in a b; do ln -s . "$WS/docs/s2/$n"; ln -s . "$WS/docs/l2/$n"; done
     perl -e 'alarm 30; exec @ARGV' bash "$GUARD_HOOK" ) >/dev/null 2>&1
 r=$?
 [ "$r" = 0 ] || { echo "    con enlaces en bucle, el Centinela debería decidir y permitirlo (salió con $r)" >&2; exit 1; }
+
+# ── Panel de confirmación, A1 = V3: el destino no es siempre la última palabra. Una
+# redirección (2>/dev/null, <<< x) no es el destino, el valor pegado a una opción
+# (--backup=numbered) no es un operando, una opción con argumento detrás de los operandos
+# (--exclude x) no lo desplaza, y --target-directory y --no-target-directory valen abreviadas,
+# como las acepta GNU. Con una carpeta «2» y una «docs», que serían el destino si lo fueran el
+# descriptor, lo que lee <<< o el valor de --suffix=. Revisión de la #22: el argumento separado
+# de una opción (--suffix docs, -S docs, --exclude docs) tampoco lo es, y en un grupo de letras
+# la que lleva argumento se queda con el resto (-Stx es el sufijo «tx», no -t x) ──────────────
+mkdir -p "$WS/2"
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cp /tmp/e/.gitconfig ~ <<< docs
+cp /tmp/e/.gitconfig ~ --suffix=docs
+cp -r --t ~ /tmp/e/.gitconfig docs/b
+true --x=y;cp /tmp/e/.gitconfig ~
+cp /tmp/e/.gitconfig ~ 2>/dev/null
+cp /tmp/e/.gitconfig ~ 2>&1
+cp /tmp/e/.gitconfig ~ >/dev/null
+cp /tmp/e/.gitconfig ~ </dev/null
+cp /tmp/e/.gitconfig ~ <<< x
+cp /tmp/e/.gitconfig ~>>/tmp/log
+cp /tmp/e/.gitconfig ~ --backup=numbered
+cp /tmp/e/.gitconfig ~ --suffix .bak
+rsync -a docs/cfg/ ~ --exclude=x
+rsync -a docs/cfg/ ~ --exclude x
+cp /tmp/e/config .git 2>/dev/null
+cp --target=$HOME /tmp/e/.gitconfig
+cp --targ ~ /tmp/e/.gitconfig
+mv --t ~ /tmp/e/.gitconfig
+cp --target=.git /tmp/e/config
+install --target=sentinel/adapters /tmp/e/stack.sh
+install --t sentinel/adapters /tmp/e/stack.sh
+cp -r --no-target docs/cfg ~
+cp -r --no-t docs/cfg ~
+cp /tmp/e/.gitconfig ~ --suffix docs
+cp /tmp/e/.gitconfig ~ --suf docs
+cp /tmp/e/.gitconfig ~ -S docs
+cp /tmp/e/.gitconfig ~ -aS docs
+cp -Stx /tmp/e/.gitconfig ~
+cp /tmp/e/.gitconfig ~ --sparse docs
+mv /tmp/e/.gitconfig ~ --suffix docs
+ln -s /tmp/e/.gitconfig ~ -S docs
+install /tmp/e/stack.sh sentinel/adapters -o docs
+install /tmp/e/stack.sh sentinel/adapters --mode docs
+rsync -a docs/cfg/ ~ --exclude docs
+rsync -a docs/cfg/ ~ -e docs
+rsync -a docs/cfg/ ~ --backup-dir docs
+cp -rt ~ /tmp/e/.gitconfig docs/b
+cp -rT docs/cfg ~
+rsync -at docs/cfg/ ~
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  guard "$(bash_payload "$cmd")"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cp docs/a.md docs/b 2>/dev/null
+cp docs/a.md docs/b >/dev/null 2>&1
+cp docs/e/config docs/b --backup=numbered
+rsync -a docs/e/ docs/c/ --exclude x
+cp -r --no-t docs/e docs/c
+cp --targ docs/b docs/a.md
+cp -r docs/e docs/nueva
+du --block-size=cp /tmp/e/.gitconfig ~
+cp docs/a.md docs/b --suffix docs
+cp -S docs/c docs/a.md docs/b
+cp -rt docs/b docs/a.md
+rsync -a docs/e/ docs/c/ --exclude docs
+EOF
 
 # ── V5: la carpeta de la sesión es el cwd del tool call ──────────────────────────────────
 guard "{\"cwd\":\"$WS/sentinel\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"mv hooks /tmp/x\"}}"

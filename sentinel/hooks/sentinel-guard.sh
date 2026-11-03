@@ -135,19 +135,28 @@ GIT_COMMON_PHYS="$(git_common "$REPO_ROOT_DIR")"
 CLAUDE_CFG="${CLAUDE_CONFIG_DIR:-${HOME:-/nonexistent}/.claude}"
 CLAUDE_CFG_PHYS="$(phys_dir "$CLAUDE_CFG")"
 
+# En un disco que no distingue mayúsculas (APFS por defecto en macOS, NTFS), Sentinel/githooks es
+# sentinel/githooks y la ruta física sale con la caja escrita: las raíces se comparan sin caja y
+# dir_re se aplica sin caja (panel de confirmación, V1). Lo dice el propio repo: sentinel y
+# SENTINEL son la misma carpeta
+NOCASE=""
+[ "$REPO_ROOT_DIR/sentinel" -ef "$REPO_ROOT_DIR/SENTINEL" ] && NOCASE=1
+
 # canon <ruta física> → cómo la nombra la política. Si cae dentro de varias raíces, gana la más
 # cercana, la más larga: un worktree que vive dentro de su repo bare es el repo, no su
-# configuración de git (revisión de sentinel-paths, P2)
+# configuración de git (revisión de sentinel-paths, P2). Se llama dentro de $(…), así que la
+# comparación sin caja no sale de aquí
 canon() {
   local p="$1" out="$1" best=0
+  [ -n "$NOCASE" ] && shopt -s nocasematch
   if [ -n "$GIT_COMMON_PHYS" ]; then
-    case "$p" in "$GIT_COMMON_PHYS"|"$GIT_COMMON_PHYS"/*) out=".git${p#"$GIT_COMMON_PHYS"}"; best=${#GIT_COMMON_PHYS} ;; esac
+    case "$p" in "$GIT_COMMON_PHYS"|"$GIT_COMMON_PHYS"/*) out=".git${p:${#GIT_COMMON_PHYS}}"; best=${#GIT_COMMON_PHYS} ;; esac
   fi
   if [ -n "$CLAUDE_CFG_PHYS" ] && [ "${#CLAUDE_CFG_PHYS}" -gt "$best" ]; then
-    case "$p" in "$CLAUDE_CFG_PHYS"|"$CLAUDE_CFG_PHYS"/*) out=".claude${p#"$CLAUDE_CFG_PHYS"}"; best=${#CLAUDE_CFG_PHYS} ;; esac
+    case "$p" in "$CLAUDE_CFG_PHYS"|"$CLAUDE_CFG_PHYS"/*) out=".claude${p:${#CLAUDE_CFG_PHYS}}"; best=${#CLAUDE_CFG_PHYS} ;; esac
   fi
   if [ "${#REPO_PHYS}" -gt "$best" ]; then
-    case "$p" in "$REPO_PHYS") out=. ;; "$REPO_PHYS"/*) out="${p#"$REPO_PHYS"/}" ;; esac
+    case "$p" in "$REPO_PHYS") out=. ;; "$REPO_PHYS"/*) out="${p:${#REPO_PHYS}+1}" ;; esac
   fi
   printf '%s' "$out"
 }
@@ -253,7 +262,12 @@ json_text() {
 # de la línea; en $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de
 # un heredoc (<<FIN, <<-FIN, <<'FIN') se lee línea a línea, sin comillas que pasen de una a
 # otra ni comentarios, hasta la línea que lo cierra: sus palabras siguen contando. «<<<» y el
-# «<<» de una expresión aritmética ((…)), $((…)) no abren un heredoc (V6)
+# «<<» de una expresión aritmética ((…)), $((…)) no abren un heredoc (V6). Lo que redirige una
+# redirección (y el número de su descriptor, 2>) sale como 'r<palabra>', y el valor pegado a una
+# opción tras '=' (--backup=numbered), como 'v<valor>': cuentan como rutas, pero no son operandos
+# de cp ni de mv (panel de confirmación, A1 = V3). Y cada tramo sale también desde su programa,
+# como otro 'n<tramo>' si cambia: sin lo que va delante (prefijos, asignaciones, redirecciones) ni
+# las opciones globales de git con sus argumentos, así que git -C . commit es git commit (A4 = V9)
 cmd_words() {
   printf '%s' "$1" | LC_ALL=C awk '
     function esc(x,   r, k, ch) {
@@ -268,38 +282,47 @@ cmd_words() {
     # (prefijos de ejecución, sus opciones y números, el nombre de una asignación) y el
     # subcomando de git con sus opciones; 2 si es el valor de una asignación; 0 si es otro
     # argumento. De paso, el código que ejecutan una shell con -c (también como argumento: sudo
-    # -u root bash, find -exec sh) o eval
+    # -u root bash, find -exec sh) o eval. Deja drop en 1 si la palabra no va en el tramo desde
+    # su programa: lo que va delante del programa y las opciones globales de git con su argumento
     function role(b) {
+      drop = 1
       if (!pseen) {
         if (aval) { aval = eqf ? eqv : 0; return 2 }
         if (eqf && !qw && w ~ /^[A-Za-z_][A-Za-z0-9_]*$/) { aval = eqv; return 1 }
         if (b ~ /^-/ || (pre && b ~ /^[0-9.]+[smhd]?$/)) return 1
         if (b ~ /^(sudo|doas|env|command|builtin|exec|nice|nohup|time|timeout|xargs|stdbuf|ionice|!|\{|if|then|else|elif|do|while|until)$/) { pre = 1; return 1 }
-        pseen = 1; prog = b
+        pseen = 1; prog = b; drop = 0
         if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
         else if (b == "eval") ev = 1
         else if (b == "git") gs = 1
         return 1
       }
+      drop = 0
       if (sh == 2) print "c" esc(w)
       else if (sh == 1 && w ~ /^-[a-zA-Z]*c[a-zA-Z]*$/) sh = 2
       else if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
       if (ev) evc = evc (evc == "" ? "" : " ") w
-      if (gs == 1) { if (b !~ /^-/) { gs = 0; gsc = b; return 1 }; if (eqf || b ~ /^-[Cc]$/) gs = 2; return 1 }
-      if (gs == 2) { if (!eqf) gs = 1; return 1 }
+      if (gs == 1) {
+        if (b !~ /^-/) { gs = 0; gsc = b; return 1 }
+        drop = 1
+        if (eqf || b ~ /^(-[Cc]|--(git-dir|work-tree|namespace|config-env|super-prefix|attr-source))$/) gs = 2
+        return 1
+      }
+      if (gs == 2) { drop = 1; if (!eqf) gs = 1; return 1 }
       return 0
     }
     function flush(   b, keep) {
       if (has) {
         if (g) print "g" esc(pw)
-        print "l" esc(w)
+        print (fd || rd ? "r" : ov ? "v" : "l") esc(w)
         b = w
         if (b ~ /\/./) { sub(/\/+$/, "", b); sub(/^.*\//, "", b) }
         gsub(/[ \t\n\r]/, "_", b)
-        keep = 0
+        keep = 0; drop = 1
         if (fd) ; else if (rd) rd = 0; else keep = role(b)
         if (qw && b !~ /^-/ && (keep == 2 || (!keep && (prog ~ /^(grep|egrep|fgrep)$/ || (prog == "git" && gsc ~ /^(log|grep)$/))))) b = "\"" b
         seg = seg (seg == "" ? "" : " ") b
+        if (!drop) pseg = pseg (pseg == "" ? "" : " ") b
       }
       w = ""; pw = ""; has = 0; g = 0; qw = 0; eqf = 0; fd = 0
     }
@@ -307,8 +330,9 @@ cmd_words() {
       flush()
       if (ev && evc != "") print "c" esc(evc)
       if (seg != "") print "n" seg
-      seg = ""; print "s"
-      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; rd = 0
+      if (pseg != "" && pseg != seg) print "n" pseg
+      seg = ""; pseg = ""; print "s"
+      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; rd = 0; ov = 0
     }
     # subend, dqend, bqend, aqend, brend <desde> → dónde acaba lo que empieza en <desde> (el
     # paréntesis que cierra $(…), la comilla que cierra "…", el acento que cierra `…`, la comilla
@@ -436,7 +460,7 @@ cmd_words() {
       }
     }
     function scan() {
-      q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""
+      q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""; pseg = ""; ov = 0
       hb = 0; hn = 0; hq = 1; ar = 0
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
@@ -499,11 +523,17 @@ cmd_words() {
         if (c == "(" && (ar || substr(t, i + 1, 1) == "(")) { if (!ar) { ar = 1; i++ }; ar++; sep(); continue }
         if (c == ")" && ar) { ar--; sep(); continue }
         if (index(";|&()`", c)) { sep(); continue }
-        # Tras «=» sigue el valor de una asignación si no viene un espacio; tras «<» o «>», su
-        # destino, y un número delante es el descriptor (2>x): ninguno es el programa
-        if (c == "=") { eqf = 1; eqv = i < n && !index(" \t\n;|&()<>", substr(t, i + 1, 1)); flush(); continue }
+        # Tras «=» sigue el valor de una asignación si no viene un espacio, o el de una opción
+        # (hasta el siguiente espacio); tras «<» o «>», su destino, y un número delante es el
+        # descriptor (2>x): ninguno es el programa
+        if (c == "=") {
+          eqf = 1; eqv = i < n && !index(" \t\n;|&()<>", substr(t, i + 1, 1))
+          j = w ~ /^-/
+          flush(); if (j) ov = 1
+          continue
+        }
         if (c == "<" || c == ">") { if (!qw && w ~ /^[0-9]+$/) fd = 1; flush(); rd = 1; continue }
-        if (index(" \t", c)) { flush(); continue }
+        if (index(" \t", c)) { flush(); ov = 0; continue }
         w = w c; pw = pw c; has = 1; if (index("*?[", c)) g = 1
       }
       sep()
@@ -623,39 +653,99 @@ EOF
 # ejecución (sudo, env, command…) o de una asignación (que el lector parte por el '='); esa
 # palabra entre los argumentos de otro programa solo puede añadir rutas. El contenido de una
 # carpeta (rsync con '/' al final, -T; 'carpeta/.' ya lo es) va directamente al destino, y lo
-# que hay dentro de una carpeta copiada o enlazada también se toca
+# que hay dentro de una carpeta copiada o enlazada también se toca. Cada palabra llega con su clase
+# delante (l, o v si es el valor pegado a una opción); las redirecciones no llegan. Panel de
+# confirmación (A1 = V3): --target-directory y --no-target-directory valen abreviadas, como las
+# acepta GNU (--target=, --t, --no-t), y si el último operando no es una carpeta, una opción con
+# su argumento detrás de los operandos (--exclude x) lo ha desplazado: el destino es el último
+# operando que es una carpeta. Revisión de la #22: el argumento separado de una opción que lo
+# lleva (--suffix docs, -S docs, --exclude docs) tampoco es un operando; como no todos los
+# sistemas tienen las mismas (-S es el sufijo en GNU install y en BSD no lleva nada), el destino
+# se busca con esos argumentos y sin ellos, y cuentan los dos. En un grupo de letras, la que lleva
+# argumento se queda con el resto (-Stx es el sufijo «tx», no -t x)
 into_dir() {
-  local v="" dest="" w b t=0 opts=1 tdir=0 srcs=()
+  local v="" dest="" w k i b c so="" lo="" t=0 a=0 o1 opts=1 tdir=0 srcs=() srcs1=()
   while [ "$#" -gt 0 ]; do
-    case "${1##*/}" in cp|mv|ln|install|rsync) v="${1##*/}"; break ;; esac
+    w="${1:1}"
+    case "${1:0:1}:${w##*/}" in l:cp|l:mv|l:ln|l:install|l:rsync) v="${w##*/}"; break ;; esac
     shift
   done
   [ -n "$v" ] || return 0
   shift
+  # Las opciones que llevan argumento: las letras y los nombres largos (GNU y BSD)
+  case "$v" in
+    cp) so=S; lo="--suffix --sparse --no-preserve" ;;
+    mv|ln) so=S; lo="--suffix" ;;
+    install) so=SgmoBDfhlMNT; lo="--suffix --group --mode --owner --strip-program" ;;
+    rsync)
+      so='efTBM@'
+      lo="--exclude --include --filter --exclude-from --include-from --files-from --rsh
+        --rsync-path --remote-option --suffix --backup-dir --temp-dir --compare-dest --copy-dest
+        --link-dest --partial-dir --log-file --log-file-format --out-format --log-format
+        --password-file --early-input --bwlimit --timeout --contimeout --port --sockopts
+        --address --max-size --min-size --max-delete --max-alloc --block-size --chmod --chown
+        --usermap --groupmap --copy-as --iconv --info --debug --skip-compress --modify-window
+        --compress-choice --zc --compress-level --zl --checksum-choice --cc --checksum-seed
+        --write-batch --only-write-batch --read-batch --protocol --stop-after --stop-at
+        --time-limit --outbuf" ;;
+  esac
   for w in "$@"; do
+    k="${w:0:1}"; w="${w:1}"
     if [ "$t" = 1 ]; then dest="$w"; t=0; continue; fi
+    # El valor pegado (--suffix=docs) ya es el argumento de la opción
+    [ "$k" = v ] && { a=0; continue; }
+    o1=1; [ "$a" = 1 ] && { a=0; o1=0; }
     if [ "$opts" = 1 ]; then
       case "$w" in
         --) opts=0; continue ;;
         --target-directory) t=1; continue ;;
         --no-target-directory) tdir=1; continue ;;
-        --*) continue ;;
+        --*)
+          if [ "$v" != rsync ]; then
+            case --target-directory in "$w"*) [ "${#w}" -ge 3 ] && t=1 ;; esac
+            case --no-target-directory in "$w"*) [ "${#w}" -ge 6 ] && tdir=1 ;; esac
+            # GNU acepta el nombre abreviado; rsync, solo entero
+            for c in $lo; do case "$c" in "$w"*) a=1 ;; esac; done
+          else
+            for c in $lo; do [ "$c" = "$w" ] && a=1; done
+          fi
+          continue ;;
         -*)
           # rsync -t conserva las fechas; en los demás, -t lleva la carpeta de destino, también
           # dentro de un grupo (-rt carpeta, -tcarpeta)
-          if [ "$v" != rsync ]; then
-            case "$w" in *T*) tdir=1 ;; esac
-            case "$w" in *t*) b="${w#*t}"; if [ -n "$b" ]; then dest="$b"; else t=1; fi ;; esac
-          fi
+          for ((i = 1; i < ${#w}; i++)); do
+            c="${w:i:1}"; b="${w:i+1}"
+            if [ "$v" != rsync ]; then
+              [ "$c" = T ] && tdir=1
+              if [ "$c" = t ]; then if [ -n "$b" ]; then dest="$b"; else t=1; fi; break; fi
+            fi
+            case "$so" in *"$c"*) [ -n "$b" ] || a=1; break ;; esac
+          done
           continue ;;
       esac
     fi
     srcs+=("$w")
+    [ "$o1" = 0 ] || srcs1+=("$w")
   done
+  into_dest "$dest" "$tdir" "$v" ${srcs[@]+"${srcs[@]}"}
+  [ "${#srcs1[@]}" = "${#srcs[@]}" ] || into_dest "$dest" "$tdir" "$v" ${srcs1[@]+"${srcs1[@]}"}
+}
+
+# into_dest <destino, o vacío> <tdir> <programa> <operandos…> → lo que into_dir deja en el destino
+into_dest() {
+  local dest="$1" tdir="$2" v="$3" w b i srcs=()
+  shift 3
+  srcs=("$@")
   if [ -z "$dest" ]; then
     [ "${#srcs[@]}" -ge 2 ] || return 0
-    dest="${srcs[${#srcs[@]}-1]}"
-    unset "srcs[${#srcs[@]}-1]"
+    for ((i = ${#srcs[@]} - 1; i >= 0; i--)); do
+      tilde "${srcs[i]}"; b="$_w"
+      case "$b" in /*) ;; *) b="$PWD/$b" ;; esac
+      [ -d "$b" ] && break
+    done
+    [ "$i" -ge 0 ] || return 0
+    dest="${srcs[i]}"
+    unset "srcs[i]"
   fi
   tilde "$dest"; dest="$_w"
   case "$dest" in /*) ;; *) dest="$PWD/$dest" ;; esac
@@ -709,7 +799,7 @@ if [ -n "$COMMAND" ]; then
   _globbed=0
   while IFS= read -r w; do
     _k="${w:0:1}"
-    case "$_k" in g|l) ;; *) continue ;; esac
+    case "$_k" in g|l|r|v) ;; *) continue ;; esac
     printf -v w '%b' "${w:1}"
     if [ "$_k" = g ]; then
       tilde "$w"; _globbed=0
@@ -721,16 +811,23 @@ if [ -n "$COMMAND" ]; then
   done <<EOF
 $WORDS
 EOF
-  # Lo que cada tramo copia, mueve o enlaza a una carpeta, con los comodines ya expandidos
-  _seg=(); _globbed=0
+  # Lo que cada tramo copia, mueve o enlaza a una carpeta, con los comodines ya expandidos y sin
+  # las redirecciones
+  _seg=(); _gm=(); _globbed=0
   while IFS= read -r w; do
-    case "${w:0:1}" in
+    _k="${w:0:1}"
+    case "$_k" in
       g)
-        printf -v w '%b' "${w:1}"; tilde "$w"; _globbed=0
-        while IFS= read -r -d '' f; do _globbed=1; _seg+=("$f"); done < <(glob_matches "$_w") ;;
-      l)
-        [ "$_globbed" = 1 ] && { _globbed=0; continue; }
-        printf -v w '%b' "${w:1}"; _seg+=("$w") ;;
+        printf -v w '%b' "${w:1}"; tilde "$w"; _gm=(); _globbed=0
+        while IFS= read -r -d '' f; do _globbed=1; _gm+=("$f"); done < <(glob_matches "$_w") ;;
+      l|v|r)
+        if [ "$_globbed" = 1 ]; then
+          _globbed=0
+          [ "$_k" = r ] || for f in "${_gm[@]}"; do _seg+=("$_k$f"); done
+          continue
+        fi
+        [ "$_k" = r ] && continue
+        printf -v w '%b' "${w:1}"; _seg+=("$_k$w") ;;
       s) [ "${#_seg[@]}" -gt 0 ] && into_dir "${_seg[@]}"; _seg=(); _globbed=0 ;;
     esac
   done <<EOF
@@ -930,7 +1027,7 @@ apply_rule() {
   fi
   if [ -n "$r_dir_re" ]; then
     # una línea por cosa tocada: la regex se ancla a la ruta entera (^…$)
-    match "$TOUCHED" "$r_dir_re" || return 1
+    match "$TOUCHED" "$r_dir_re" ${NOCASE:+-i} || return 1
   fi
   if [ -n "$r_content_re" ]; then
     # solo contra lo que se escribe (+ comando en Bash), nunca contra old_string
