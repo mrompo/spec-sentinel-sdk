@@ -27,6 +27,11 @@ solo por el texto de la ruta.
   operandos (`--exclude x`) no lo desplaza (el destino es el último operando que es una
   carpeta), y `--target-directory` y `--no-target-directory` valen abreviadas, como las acepta
   GNU (`--target=.git`, `--t .git`, `--no-t`)
+- **AND** el argumento separado de una opción que lo lleva (`--suffix docs`, `-S docs`,
+  `--exclude docs`) tampoco es el destino aunque sea una carpeta; como no todos los sistemas
+  tienen las mismas opciones, el destino se busca con esos argumentos y sin ellos, y cuentan los
+  dos; en un grupo de letras, la que lleva argumento se queda con el resto (`-Stx` es el sufijo
+  «tx», no `-t x`) (revisión de la #22)
 - **AND** lo mismo con el programa detrás de un prefijo de ejecución o de una asignación
   (`sudo cp`, `env -i cp`, `X=1 cp`), con los orígenes de un comodín (`cp docs/* .git/`), con
   el contenido de una carpeta (`rsync -a x/ .git/`, `cp -r x/. .git/`, `cp -rT x .git`), con
