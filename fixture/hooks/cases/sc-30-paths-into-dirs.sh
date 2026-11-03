@@ -186,6 +186,9 @@ install /tmp/e/stack.sh sentinel/adapters --mode docs
 rsync -a docs/cfg/ ~ --exclude docs
 rsync -a docs/cfg/ ~ -e docs
 rsync -a docs/cfg/ ~ --backup-dir docs
+cp -rt ~ /tmp/e/.gitconfig docs/b
+cp -rT docs/cfg ~
+rsync -at docs/cfg/ ~
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
