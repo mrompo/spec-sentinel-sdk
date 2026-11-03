@@ -83,12 +83,16 @@ rules:
   # Revisión de sentinel-paths (A1): también las carpetas de la librería de la Esclusa, del
   # adaptador y de husky, que contienen ficheros protegidos; copiar a una carpeta lo resuelve el
   # guard con el nombre del origen.
+  # Panel de confirmación (A2): también la carpeta común de git (.git), que contiene .git/hooks y
+  # la configuración (moverla y rehacerla deja el repo sin core.hooksPath), y la de cada worktree
+  # (.git/worktrees/<nombre>, con su config.worktree). Y (V1) en un disco que no distingue
+  # mayúsculas, sin caja: allí Sentinel/githooks es sentinel/githooks.
   - id: protect-enforcement-dirs
     tool: Bash
     command_re: (^|[;&|(`[:space:]])(mv|cp|rsync|ln|rm|rmdir|unlink|chmod|chown|chflags|git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(rm|mv))[[:space:]]
-    dir_re: ^(sentinel|sentinel/hooks|sentinel/githooks|sentinel/githooks/lib|sentinel/adapters|\.claude|\.git/hooks|\.husky)$
+    dir_re: ^(sentinel|sentinel/hooks|sentinel/githooks|sentinel/githooks/lib|sentinel/adapters|\.claude|\.git|\.git/hooks|\.git/worktrees/[^/]+|\.husky)$
     mode: block
-    reason: No se mueve, enlaza ni borra una carpeta del enforcement (sentinel, sus hooks, la Esclusa y su librería, el adaptador, .claude, .git/hooks, .husky) — hazlo en un cambio OpenSpec revisado por un humano
+    reason: No se mueve, enlaza ni borra una carpeta del enforcement (sentinel, sus hooks, la Esclusa y su librería, el adaptador, .claude, .git, sus hooks y sus worktrees, .husky) — hazlo en un cambio OpenSpec revisado por un humano
 
   # El instalador es lo que ejecuta la aprobación humana de instalar: con las herramientas de
   # edición no se toca (SC-sentinel-guard-13). Por sus dos rutas: la copia del SDK a la que
@@ -113,7 +117,13 @@ rules:
     # distingue mayúsculas en la sección ni en la clave; y include.path tras un '='
     # (--config-env=include.path=…, GIT_CONFIG_KEY_0=include.path). Entre el subcomando y la
     # sección pueden ir opciones (remove-section --local core, revisión de la #15)
-    command_re: (--no-verify|[Cc][Oo][Rr][Ee]\.[Hh][Oo][Oo][Kk][Ss][Pp][Aa][Tt][Hh]|HUSKY=0|SENTINEL_[A-Z_]+=|(--|[[:space:]])(remove|rename)-section([[:space:]]+[^[:space:];&|]+)*[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[^[:alnum:]_.-])[Ii][Nn][Cc][Ll][Uu][Dd][Ee]([Ii][Ff]\.[^[:space:]=]*)?\.[Pp][Aa][Tt][Hh]|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$)|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+(-[^[:space:]]+[[:space:]]+)*edit([[:space:];&|]|$))
+    # Panel de confirmación (V2): también las abreviaturas que acepta git (--no-veri, --no-verif)
+    # y -n, la forma corta de --no-verify en git commit, sola o en un grupo de opciones (-nm,
+    # -anm), pero no tras una que lleva valor (-mno es el mensaje «no»; -uno, sin los no
+    # seguidos), ni dentro del mensaje. Y (P1) no aplica a un comando que solo lee: buscar
+    # core.hooksPath en la documentación no lo cambia (skip_read_only)
+    command_re: (--no-veri|(^|[;&|(])[[:space:]]*git[[:space:]]+commit([[:space:]]+([^[:space:]"'\;&|]|[^[:space:]"'\][^[:space:]]*[^[:space:];&|]))*[[:space:]]+-[aeiopqsvz]*n|[Cc][Oo][Rr][Ee]\.[Hh][Oo][Oo][Kk][Ss][Pp][Aa][Tt][Hh]|HUSKY=0|SENTINEL_[A-Z_]+=|(--|[[:space:]])(remove|rename)-section([[:space:]]+[^[:space:];&|]+)*[[:space:]]+["']?[Cc][Oo][Rr][Ee]([[:space:]"'.]|$)|(^|[^[:alnum:]_.-])[Ii][Nn][Cc][Ll][Uu][Dd][Ee]([Ii][Ff]\.[^[:space:]=]*)?\.[Pp][Aa][Tt][Hh]|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+([^;&|]*[[:space:]])?(-e|--edit)([[:space:];&|]|$)|git[[:space:]]+([^;&|]*[[:space:]])?config[[:space:]]+(-[^[:space:]]+[[:space:]]+)*edit([[:space:];&|]|$))
+    skip_read_only: true
     mode: block
     reason: No se desactivan los gates ni se auto-conceden overrides desde un comando — el break-glass lo aplica un humano en su propio entorno
 
@@ -129,6 +139,9 @@ rules:
     reason: El comando ejecuta o toca el instalador del SDK, que reescribe el enforcement y el cableado — lo aprueba una persona
 
   # ── gitflow ────────────────────────────────────────────────────────────────
+  # Panel de confirmación (A4 = V9): el commit se reconoce también detrás de git -C <carpeta>,
+  # git -c <clave>=<valor>, env, command o una asignación, porque command_re ve cada tramo
+  # también desde su programa, sin lo que va delante ni las opciones globales de git.
   - id: protected-branches
     tool: Bash
     command_re: (^|[;&|(]|&&)[[:space:]]*git([[:space:]]+(-[^[:space:]]+|[a-zA-Z-]+=[^[:space:]]+))*[[:space:]]+(commit|merge|cherry-pick|rebase|revert|am|apply)([[:space:]]|$)
