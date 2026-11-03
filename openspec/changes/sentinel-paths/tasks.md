@@ -300,7 +300,19 @@ mergeable sola.
          - P1, en `sc-26`: buscar `core.hookspath` y `--no-verify`.
          Con cada grupo, sus controles que se siguen permitiendo. Deltas en SC-01, SC-08 y
          SC-sentinel-paths-11 (nuevo) y en la fila «Regex evadibles» del README
-- [ ] R11. 👤 Parche `sentinel-paths-8.patch`; banco en verde y mutantes muertos
+- [x] R11. 👤 Parche `sentinel-paths-8.patch` (aplicado por la persona, `dddf17b`):
+       - el destino de `cp`/`mv` no es una redirección ni el valor de una opción, y si el
+         último operando no es carpeta, cuenta el último que sí lo es; `--target-directory` y
+         `--no-target-directory` también abreviados;
+       - `.git` y `.git/worktrees/<nombre>` son carpetas protegidas;
+       - en un disco que no distingue la caja, las rutas se comparan sin ella;
+       - `no-hook-disabling` bloquea `git commit -n` (también agrupado, `-nm`) y `--no-veri…`,
+         y deja pasar lo que solo lee;
+       - cada tramo se ve también desde su programa, sin prefijos, asignaciones, redirecciones
+         ni opciones globales de git.
+       En un clon con el parche, el banco pasa entero (hooks 31/31, githooks 16/16, install
+       18/18), los 40 mutantes rompen algún caso y en Debian 12 (bash 5, GNU, disco que
+       distingue la caja) pasan `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30`
 
 **Tribunal**
 
