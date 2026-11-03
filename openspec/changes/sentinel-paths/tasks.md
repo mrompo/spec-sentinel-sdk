@@ -318,7 +318,10 @@ mergeable sola.
        en `install`) no es el destino; como cada sistema tiene sus opciones, el destino se busca
        con esos argumentos y sin ellos, y cuentan los dos; en un grupo de letras, la que lleva
        argumento se queda con el resto (`-Stx`). Banco en verde, 21 mutantes muertos y Debian 12
-       en verde
+       en verde.
+       A deuda (`STATUS.md`), porque ya pasaba en `main` y solo bloquea de más: un rsync que nombra
+       `.git`, también como argumento de una opción (`rsync -a --exclude .git src/ dst/`), se
+       bloquea; que el destino no fuera el argumento de `--exclude` no cambiaría la decisión
 
 **Tribunal**
 
