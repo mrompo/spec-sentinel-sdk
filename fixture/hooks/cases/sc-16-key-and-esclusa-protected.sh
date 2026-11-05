@@ -42,7 +42,8 @@ EOF
 # Panel de confirmación, V2: -n, la forma corta de --no-verify en git commit (sola o en un grupo
 # de opciones), y las abreviaturas que acepta git (--no-veri, --no-verif) también se saltan los
 # hooks. En una rama feature, donde el commit se permite; -n no cuenta dentro del mensaje ni
-# tras una opción que lleva valor (-mno es el mensaje «no»; -uno, sin los no seguidos)
+# tras una opción que lleva valor (-mno es el mensaje «no»; -uno, sin los no seguidos). Panel
+# corto, A1: también detrás de un mensaje que acaba en ;, & o |
 esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
 bash_payload() { printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$(esc "$1")"; }
 trap cleanup_workspace EXIT
@@ -67,6 +68,11 @@ git commit --no-veri -m x
 git push --no-verif origin feature/x
 git merge --no-verif feature/y
 git -C . commit -n -m x
+git commit -m 'x;' -n
+git commit -m "fix: a;" -n
+git commit -m 'R&' -n
+git commit -m 'a|' -n
+git commit --message 'x;' -n
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
@@ -82,5 +88,7 @@ git log -n 3
 git merge -n feature/y
 git push -n origin feature/x
 git commit --amend --no-edit
+git commit -m 'a; -n'
+git commit -m 'x;' && ls -n
 EOF
 exit 0
