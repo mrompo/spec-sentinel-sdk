@@ -325,7 +325,31 @@ mergeable sola.
 
 **Tribunal**
 
-- [ ] R12. Panel corto (tres lentes, contexto limpio): solo confirman lo arreglado en la ronda 3,
-       con variantes cercanas → `disposition` 👤; después, el 11 queda cerrado
+- [x] R12. Panel corto (tres lentes, contexto limpio): solo confirman lo arreglado en la ronda 3,
+       con variantes cercanas → `disposition` 👤; después, el 11 queda cerrado.
+       Panel hecho el 2026-11-03, en [review-3/](review-3/README.md): `CONDITIONAL`, con 18
+       hallazgos validados por las tres lentes (11 defectos distintos): ningún bloqueante y dos
+       graves en el cuerpo de un heredoc (P1, una regresión de la ronda 3, y V4). Para las tres
+       lentes están arreglados A1 = V3, V1 y P1; los otros seis, a medias para alguna.
+       Disposición de la persona el mismo día: ronda 4 mínima (abajo); el resto, a deuda en
+       `STATUS.md`, y después se archiva sin otro panel
+
+### Ronda 4 · los graves del panel corto (disposición del 2026-11-03)
+
+Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde `main`.
+
+- [ ] R13. Casos en rojo:
+       - P1: el commit y la PR con el mensaje en un heredoc entre comillas dentro de `"$(…)"`
+         (`git commit -m "$(cat <<'EOF' …)"`) pasan en una rama feature aunque el mensaje
+         nombre `mv .git` o `chmod sentinel/hooks`;
+       - V4: en un heredoc sin comillas en el delimitador, un `$(…)` entre comillas simples o
+         detrás de un apóstrofo se lee como código;
+       - A1: `git commit -m 'x;' -n` (y con `&` o `|`) se bloquea;
+       - A8: los tres casos de `sc-30` que matan los mutantes del destino de `cp`/`mv`
+- [ ] R14. 👤 Parche `sentinel-paths-9.patch`: el cuerpo de un heredoc con el delimitador entre
+       comillas no cuenta como comandos ni rutas, y en uno sin comillas no abre comillas y cada
+       sustitución sale como código; en el tramo, `;`, `&` y `|` dentro de una palabra no cortan
+       la regla de `-n`. Después, el 11 queda cerrado
+
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada

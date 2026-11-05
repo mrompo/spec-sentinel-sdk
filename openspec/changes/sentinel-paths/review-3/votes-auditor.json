@@ -1,0 +1,75 @@
+{
+  "lens": "auditor",
+  "votes": [
+    {
+      "id": "V1",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido en mi copia (cr-votos.tsv → cr-votos.out, ronda 3 y base): tcsh -c, csh -c, env -S '…', env --split-string='…', trap '…' EXIT y git -c 'alias.x=!mv …' x → exit 0, igual que en la base. Es cierto y la fila «Regex evadibles» solo deja fuera source, un script y una tubería a bash. env -S (env ya es un prefijo conocido) y trap (guarda código como eval) son las variantes más cercanas a V4 y piden arreglo. Pero hay que construirlas a propósito, y V4 era bloqueante porque se tropezaba con él sin buscarlo: lo dejo en minor. En parte es mi A7 (nit: su -c, script -c, watch, flock -c, el alias '!' de git), que aquí subo a minor por env -S y trap.",
+      "dup": "A7"
+    },
+    {
+      "id": "V2",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: «echo ${x:1<<1}» y «a[1<<2]=x» en la primera línea, una comilla de dos líneas y luego el mv → exit 0, también en la base. El caso de $[1<<2] es mi A4 y el P5 del Pragmatist (bash 3.2/5.0/5.2 lo ejecutan: bash-dparen.out). Es el mecanismo de V6 con otra grafía de la aritmética, pero las tres grafías hay que escribirlas a propósito para esconder algo: minor. El arreglo de fondo es el fail-closed que propone: un heredoc que no cierra antes del final del comando no se trata como heredoc.",
+      "dup": "A4"
+    },
+    {
+      "id": "V3",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido en main: sudo -u root, env -u X, timeout -s KILL 60, timeout --signal=KILL 60 y stdbuf -o L delante de git commit → 0 (mi repro-A2-prefijos-main.out). exec -a g git commit y git -c alias.ci=commit ci → 0 (cr-votos-main.out). En feature, exec -a g git commit -n y git -c alias.ci='commit -n' ci → 0 (cr-votos.out). La parte de los prefijos es mi A2 y el P3 del Pragmatist; la del alias es nueva y cierta. Lo dejo en minor: nadie escribe así un commit sin querer saltarse algo, y el pre-push sigue parando la publicación en main.",
+      "dup": "A2"
+    },
+    {
+      "id": "V4",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido: «cat <<E\\n'$(mv sentinel/githooks /tmp/x)'\\nE», «cat <<E\\nit's done $(rm -rf sentinel)\\nE», dentro de x=$(cat <<E …) y dentro de \"$(cat <<E …)\" → exit 0; con <<'E' el cuerpo no se expande y pasa, como debe. Igual en la base: no es regresión, pero contradice dos frases del delta («una comilla … suelta en el cuerpo de un heredoc no esconde las líneas que le siguen» y lo que bash ejecuta dentro de otra cosa). Un apóstrofo en un cuerpo de heredoc sin comillas es corriente (it's, l'agent), así que la puerta es más natural que $[…]: major. No es dup de nada mío.",
+      "dup": null
+    },
+    {
+      "id": "V5",
+      "agree": true,
+      "severity": "minor",
+      "note": "Es mi A5 (repro-A5-worktrees.out). rm -rf/rm -r .git/worktrees solo piden la confirmación genérica, y chmod 000 y chmod -R 000 pasan; mv sí se bloquea. El efecto es dejar el worktree sin git (el cableado falla cerrado) y perder su config.worktree, no un salto silencioso de la Esclusa: minor.",
+      "dup": "A5"
+    },
+    {
+      "id": "P1",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido en feature/x (cr-votos.tsv): git commit -m \"$(cat <<'EOF' …)\" con «cp x/config .git 2>/dev/null ya se bloquea», «mv .git ya se bloquea» o «rm -rf .claude se bloquea» en el mensaje → exit 2 [protect-enforcement-dirs], y gh pr create --body con «`mv .git /tmp/x`» → 2. En la base, los cuatro → 0. El mismo texto con -m \"…\" sin heredoc pasa. Es una regresión de la ronda 3 en la forma de commit por defecto de Claude Code. En este repo, cuyos mensajes describen justo esos comandos, salta casi en cada commit de una ronda de arreglos. Con <<'EOF' bash no ejecuta nada del cuerpo, así que no hay nada que leer como código. Incumple SC-sentinel-guard-03 en rama feature. No lo vi: mi caso de mensaje no llevaba verbo. Major y no blocker, porque solo afecta a mensajes que nombran un verbo y una carpeta protegida.",
+      "dup": null
+    },
+    {
+      "id": "P2",
+      "agree": true,
+      "severity": "minor",
+      "note": "Es mi A3 (repro-A3-patron-alternativas.out): 'cp|mv', \"chmod|chown\", 'mv\\|cp' y git grep -nE 'rm|mv' → 2, igual que en la base. Coincide en la causa (la marca '\"' solo va delante de la palabra) y en el arreglo (cambiar ; & | ( por '_' en la palabra marcada). Añado que con un espacio delante del verbo (\" rm \", \"&& rm \") también casa la superficie cruda. rg queda fuera de lo que promete la spec: no lo cuento como defecto.",
+      "dup": "A3"
+    },
+    {
+      "id": "P3",
+      "agree": true,
+      "severity": "minor",
+      "note": "Es mi A2: sudo -u root, env -u X, timeout -s KILL, --signal=KILL y stdbuf -o L delante de git commit, en main → 0 (repro-A2-prefijos-main.out). Coincide en causa y arreglo (role(), las opciones con argumento de cada prefijo). Además, en feature tapan -n, y delante de grep devuelven el falso positivo de A5.",
+      "dup": "A2"
+    },
+    {
+      "id": "P4",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido (cr-p4.sh → cr-p4.out). Con la sesión en main y un worktree en feature/wt: «git -C <wt> commit -m x» y «git -C <wt> merge --no-ff main» → 2 «Rama protegida — crea una rama feature/fix/hotfix». En la base → 0. Es un efecto del arreglo de A4: ahora ve el commit detrás de -C, pero decide con la rama de la sesión. El caso contrario (de feature a main con -C) ya pasaba antes y es de la familia del límite del cd previo. El flujo es poco frecuente y el bloqueo es de más, no un salto, pero el motivo engaña: minor. Me basta con documentarlo junto al cd y que el motivo diga que se decide con la rama de la sesión.",
+      "dup": null
+    },
+    {
+      "id": "P5",
+      "agree": true,
+      "severity": "minor",
+      "note": "Es mi A4 y la parte de $[…] del V2 del Adversary. Lo reproduje y lo ejecuté: bash 3.2.57, 5.0.18 y 5.2.37 imprimen 4 y mueven la carpeta (bash-dparen.out). Es un caso raro, de evasión: minor.",
+      "dup": "A4"
+    }
+  ]
+}

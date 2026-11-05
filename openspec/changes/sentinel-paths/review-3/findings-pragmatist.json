@@ -1,0 +1,102 @@
+{
+  "lens": "pragmatist",
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "major",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 486,
+      "title": "Regresión del arreglo de V4: el commit o la PR con el mensaje en un heredoc dentro de \"$(…)\", la forma que usa Claude Code, se bloquea en una rama feature en cuanto el texto menciona un verbo y una carpeta protegida",
+      "evidence": "repro.sh p1-mensajes.txt (salida en p1-mensajes.out), en un clon en feature/x. Con la ronda 3: «git commit -m \"$(cat <<'EOF'\\nfix(sentinel): cp x/config .git 2>/dev/null ya se bloquea\\nEOF\\n)\"» exit 2 [protect-enforcement-dirs]; lo mismo con «mv .git ya se bloquea», «explica por qué rm -rf .claude se bloquea», «Revisado con grep -rn \"chmod\" sentinel/hooks» y con «gh pr create --body \"$(cat <<'EOF' … `mv .git /tmp/x` ya se bloquea …)\"»; «Ya no pasa git commit -n ni --no-veri» exit 2 [no-hook-disabling]. Con la base (ronda3.diff deshecho) los seis pasan (exit 0). Controles: el mismo texto en «git commit -m \"…\"» sin heredoc pasa, y un heredoc con «1) …», «it's» o paréntesis sin cerrar también. Igual en Debian 12 (mawk) y Alpine 3.20 (busybox awk): linux-debian.out, linux-alpine.out. Causa: el código de \"$(…)\" sale como 'c' (l. 486) y se relee con cmd_words (l. 773-787), que cuenta las palabras del cuerpo del heredoc como comandos y rutas; con <<'EOF' bash no ejecuta nada de ese cuerpo, es el texto que lee cat. El motivo que ve el agente («No se mueve, enlaza ni borra una carpeta del enforcement») no dice que es el mensaje lo que bloquea. En este repo, cuyos commits y PRs describen justo esos comandos, pasa en casi cada commit de una ronda de arreglos; en un consumidor, con mensajes que nombran .git o .claude. Incumple SC-sentinel-guard-03 («en rama feature → pasa») en el flujo de commit por defecto. El banco no lo detecta: sc-29 solo prueba un heredoc sin verbos («fix(x): no rompe (nada)»).",
+      "fix": "Al leer como código lo que hay dentro de \"$(…)\" (y, de paso, en el nivel de arriba), no contar como comandos ni rutas el cuerpo de un heredoc con el delimitador entre comillas (<<'EOF', <<\"EOF\", <<\\EOF): bash no lo expande. Con el delimitador sin comillas, sacar solo las sustituciones del cuerpo como 'c'. Añadir a sc-29 el commit con un mensaje que nombra «mv .git» y «chmod sentinel/hooks» como caso que debe pasar.",
+      "of": "V4"
+    },
+    {
+      "id": "P2",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 323,
+      "title": "A5 a medias: un patrón de grep entre comillas con una alternativa («chmod|chown», «chmod\\|chown») sigue haciendo de programa y bloquea la lectura de una carpeta protegida",
+      "evidence": "repro.sh p2-a5-alternativas.txt (salida en p2-a5-alternativas.out). Con la ronda 3, «grep -rn \"chmod\" sentinel/hooks» ya pasa (0), pero «grep -rnE \"chmod|chown\" sentinel», «grep -rnE 'mv|cp' sentinel/githooks», «grep -E \"rm -rf|chmod\" -rn .claude», «grep -rn \"chmod\\|chown\" sentinel/hooks», «git grep -nE \"chmod|chown\" -- sentinel/hooks» y «git log --oneline -G\"chmod|chown\" -- sentinel» salen con 2 [protect-enforcement-dirs] (igual que en la base). La marca '\"' de l. 323 solo va delante de la palabra: en CMD_NORM queda «\"chmod|chown», y el '|' de dentro casa con el ancla (^|[;&|(`[:space:]]) de command_re, seguido de «chown » y la carpeta. La búsqueda con alternativas es la forma más corriente de grep -E. Además, con otro buscador el patrón entre comillas no se protege: «rg -n \"chmod\" sentinel/hooks» y «find sentinel -name '*.sh' -exec grep -l \"chmod\" {} +» salen con 2; la spec limita la regla a grep y git log/grep, así que esto último es una decisión, pero rg es el buscador que más usan los agentes. El escenario de la spec dice que buscar un verbo en una carpeta protegida es leerla; el motivo dice que se mueve o borra una carpeta. Igual en Debian y Alpine.",
+      "fix": "En las palabras que se marcan con '\"' (l. 323), cambiar también ; & | ( ` por '_' (como se hace con los espacios), para que nada de dentro del patrón haga de separador en command_re. Opcional: añadir rg (y ag) a la lista de lectores de la marca.",
+      "of": "A5"
+    },
+    {
+      "id": "P3",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 293,
+      "title": "A4 a medias: un prefijo con una opción que lleva argumento aparte (sudo -u root, doas -u, env -u VAR, timeout -s KILL) esconde el git commit en main",
+      "evidence": "repro.sh p3-a4-main.txt <ws-main> (salida en p3-a4-main.out), en un clon en main. Con la ronda 3: «sudo -E git commit -m x», «timeout -k 5 60 git commit -m x» y «git -C . commit -m x» exit 2 [protected-branches] (en la base, 0: el arreglo funciona), pero «sudo -u root git commit -m x», «doas -u root git commit -m x», «env -u HOME git commit -m x», «timeout -s KILL 60 git commit -m x» y «timeout --signal=KILL 60 git commit -m x» exit 0. En role() (l. 293) tras un prefijo solo se saltan las opciones y los números: «root», «HOME» o «KILL» pasan por ser el programa, y el tramo desde su programa empieza por ellos, no por git. El mismo prefijo con mv sí se bloquea (sc-29, «sudo -u root 'mv'»), porque protect-enforcement-dirs no ancla el verbo. Es raro que un agente lo escriba así, y el pre-push de la Esclusa lo para, pero es la clase que la spec nombra («detrás de un prefijo de ejecución»). Igual en Debian y Alpine.",
+      "fix": "En role(), tras sudo/doas/env/timeout/ionice/stdbuf, que las opciones que llevan argumento (sudo -u -g -C -D -h -p -r -t -U, doas -u -C, env -u -C -S, timeout -s -k, ionice -c -n -p) se queden con la palabra siguiente, como ya se hace con las opciones globales de git (gs = 2). Añadir esas formas a sc-03.",
+      "of": "A4"
+    },
+    {
+      "id": "P4",
+      "severity": "minor",
+      "file": "sentinel/policy.default.yaml",
+      "line": 145,
+      "title": "Con git -C a otro worktree, protected-branches decide con la rama de la sesión y no con la del destino: desde main bloquea un commit en una rama feature (antes pasaba) y desde una rama feature deja pasar un commit en main",
+      "evidence": "repro.sh p3-a4-main.txt <ws-main> y repro.sh p3-a4-feature.txt (salidas en p3-a4-main.out y p3-a4-feature.out), con un clon en main (ws-main), su worktree wt-feat en feature/wt y otro clon en feature/x (ws). Desde ws-main: «git -C ../wt-feat commit -m \"feat: x\"» y «git -C ../wt-feat merge --no-ff main» exit 2 «Rama protegida — crea una rama feature/fix/hotfix», aunque el commit va a feature/wt (en la base, 0: es nuevo de la ronda 3). Desde ws en feature/x: «git -C ../ws-main commit -m x» exit 0, y el commit cae en main (igual en la base). El reconocimiento de git -C que pedía A4 está, pero la rama sale de HEAD de la sesión (l. 76 del guard, git symbolic-ref en la carpeta de la sesión). Con varios worktrees (el flujo de Orca, o un agente que opera desde el checkout principal), el bloqueo engaña: dice que se cree una rama feature, que ya existe. La spec pone «git -C . commit» como ejemplo, donde las dos ramas coinciden. El pre-push del repo destino sigue parando el push a main.",
+      "fix": "Cuando el tramo lleva git -C <carpeta> (o --git-dir/--work-tree), tomar la rama con git -C <carpeta> symbolic-ref --short -q HEAD; si no se puede resolver (variables, carpeta inexistente), usar la de la sesión, como ahora. O bien documentar el límite junto al del cd previo y que el motivo diga que se decide con la rama de la sesión.",
+      "of": "A4"
+    },
+    {
+      "id": "P5",
+      "severity": "minor",
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 523,
+      "title": "V6 a medias: la aritmética antigua $[…] con «<<» sigue abriendo un heredoc que no existe, y una comilla de dos líneas esconde el comando que sigue",
+      "evidence": "v6-corchete.sh (salida en v6-corchete.out). Con el comando de tres líneas «echo $[1<<2]», «echo 'a», «b'; mv sentinel/githooks /tmp/pragm-x»: el Centinela sale con 0; el mismo con «echo $((1<<2))» en la primera línea sale con 2 (el arreglo de V6 cubre $((…)) y ((…))). Ejecutado con bash en una carpeta desechable, imprime 4, a, b y mueve sentinel/githooks. Solo se cuenta como aritmética lo que abre «((» (l. 523); $[…], obsoleta pero que bash 3.2 y 5 aceptan, no. Un agente no lo escribe sin querer: es un caso raro, de evasión, y la Esclusa sigue en el siguiente commit.",
+      "fix": "Tratar «$[» hasta su «]» como aritmética (ar), igual que «$((»; o, como mínimo, no abrir un heredoc con un «<<» que va dentro de «$[…]». Añadir el caso a sc-29 junto a los de V6.",
+      "of": "V6"
+    }
+  ],
+  "confirmations": [
+    {
+      "id": "V4",
+      "status": "fixed",
+      "evidence": "c11-v4v6-bloqueos.txt (c11.out): bloquean (2) «x=$(echo \"$(mv sentinel/githooks /tmp/x)\")», dash -c, ksh -c, bash -ec, sh -xc, bash --norc -c, bash --login -c, command eval, xargs -I{} sh -c, nohup bash -c … &, (bash -c …), \"$(…)\" con > /dev/null, printf con \"`rm -rf .claude`\", cat <<< \"$(mv …)\", env/time bash -c, eval con varias palabras, bash -c 'git commit -n', bash -c \"cp … .git 2>/dev/null\", sh -c 'mv .git …', un heredoc sin comillas con $(mv …) en el cuerpo y bash <<'EOF'. Solo pasa «bash -c 'cd /tmp; mv '\"$PWD\"'/sentinel/githooks …'», que monta la ruta con una variable (fuera de alcance por la fila «Regex evadibles»). Lo legítimo sigue libre (c1-legit-bash.out): echo \"$(git rev-parse …)\", x=\"$(date +%s)\", el for con \"$(wc -l < \"$f\")\", bash -c 'cd src && ls', bash -c \"npm test\", bash -lc 'which git', bash -c 'ls -la sentinel/githooks', eval \"$(ssh-agent -s)\", eval \"$(pyenv init -)\", y los mensajes con «1) …», «it's», «:)», «case de uso», ${VAR:-…} o backticks en Markdown (c9-mensajes.out). Pero el arreglo trae una regresión: P1. Igual en Debian 12 y Alpine 3.20."
+    },
+    {
+      "id": "V6",
+      "status": "partial",
+      "evidence": "Bloquean (2) las variantes de tres líneas con «cat <<< x», «cat <<<'x'», «echo $((1<<2))», «y=$(( (1<<2) ))», «(( a <<= 1 ))» y «for ((i=0; i<<1; i++))» delante de la comilla de dos líneas (c11.out y sc-29). Lo legítimo pasa: cat <<< \"hola\" | wc -c, wc -c <<< \"$(git log -1 --format=%s)\", echo $((1<<3)) y n=$((1<<3)) seguido de una comilla de dos líneas (c1-legit-bash.out). Queda $[1<<2], la aritmética antigua: P5."
+    },
+    {
+      "id": "A5",
+      "status": "partial",
+      "evidence": "Pasan (0) los ejemplos del panel y sus variantes: grep -rn \"chmod\" sentinel/hooks, grep -rn 'rm -rf' sentinel/hooks, grep -rn -e \"mv\" -e \"cp\" sentinel/githooks, grep -rnw \"ln\" .claude, grep --include='*.sh' \"rm\", grep -l \"unlink\" con dos carpetas, git grep -n \"chmod\" -- sentinel/hooks, git log -S \"chmod\" / -G\"rm -rf\" / --all --grep=\"mv\", xargs grep -n \"chmod\", con | head, | grep -v, | sort | uniq -c y 2>/dev/null, y bash -c 'grep -rn \"chmod\" sentinel/hooks' (c1-legit-bash.out, c2-r3.out; varias de ellas bloqueaban en la base). Siguen bloqueando las alternativas entre comillas («chmod|chown», «chmod\\|chown») y otros buscadores (rg, ag, find -exec grep): P2. Sin comillas (grep -rn chmod sentinel/hooks) sigue bloqueando, que es la deuda P7."
+    },
+    {
+      "id": "A1",
+      "status": "fixed",
+      "evidence": "c3-ficheros.txt (c3-ficheros.out frente a c3-base.out): bloquean (2) y en la base pasaban «cp /tmp/e/config .git» con 2>/dev/null, >/dev/null 2>&1, «|| true», -v detrás, --suffix=.bak y --backup=simple detrás; --target=.git, --ta .git, --target-dir .git, install --targ sentinel/adapters; rsync -a /tmp/e/ .git/ con --exclude=x, --exclude x --delete y 2>&1 | tail -1; y, en APFS, .GIT y .Git como destino (c10-v1.txt). Lo normal sigue libre (69 de 72 casos; los tres que bloquean también bloqueaban en la base: cp .git/config /tmp/… [self-protection], rm -f .git/index.lock y find .git -name '*.lock' [managed-files]): cp a build/ con 2>/dev/null, con -v o --preserve=mode detrás, con && echo, cp -t build, --target=build, --target-directory=build, --backup=numbered, cp -r src/. build/, cp -a ./ /tmp/…, cp -r . /tmp/…, mv -v … 2>&1 | tail, rsync -av con --exclude node_modules, --exclude '*.log' --delete detrás, --exclude-from=.gitignore, --filter=':- .gitignore', -e ssh a un remoto, install -m 644, install -Dm644, install -m 0755 -d, ln -sfn, cp a .claude/skills/. Mismas decisiones en Debian 12 y Alpine 3.20."
+    },
+    {
+      "id": "A2",
+      "status": "fixed",
+      "evidence": "Bloquean (2), y en la base pasaban: mv .git /tmp/…, mv .git/ .g, rm -rf .git, rm -rf ./.git/, chmod -R 000 .git, mv .git/Worktrees/x (y sc-21 con .git/worktrees/x). Lo que se hace a diario con .git sigue libre: ls -la .git, du -sh .git, cat .git/HEAD, rm -rf .git/rebase-merge, rm -f .git/MERGE_HEAD, git worktree add/remove --force/prune, rm -rf ../pragm-wt (la carpeta de trabajo del worktree, que no es la de .git/worktrees), mv .gitignore, mv .github/workflows/ci.yml. rm -f .git/index.lock y find .git -name '*.lock' bloquean por managed-files, igual que antes de la ronda 3 (no es de este arreglo). El motivo nombra «.git, sus hooks y sus worktrees»."
+    },
+    {
+      "id": "V1",
+      "status": "fixed",
+      "evidence": "En macOS (APFS sin distinguir caja) bloquean (2), y en la base pasaban: mv .GIT, mv Sentinel/githooks, mv sentinel/GitHooks, rm -rf .Claude, chmod -R 000 SENTINEL/hooks (c3-ficheros.out), cp /tmp/e/config .GIT, .Git con 2>/dev/null, install --t Sentinel/adapters, rsync a .GIT/ --exclude x, cp a ./.git/WORKTREES/../ (c10-v1.txt); y Write/Edit de Sentinel/hooks/sentinel-guard.sh, SENTINEL/policy.yaml, .Claude/settings.json, .GIT/config, .git/HOOKS/pre-commit y la ruta absoluta con la carpeta en mayúsculas (v1-tools.out). Lo legítimo con otra caja pasa: ls Sentinel/githooks, mv Docs/README.md docs/README2.md, Write de Docs/nota.md y src/Nuevo.txt. En Debian 12 y Alpine 3.20 (disco que distingue la caja) mv Sentinel/githooks pasa (es otra carpeta, que no existe) y mv sentinel/githooks bloquea; sc-21 se salta allí la parte de la caja, como dice."
+    },
+    {
+      "id": "V2",
+      "status": "fixed",
+      "evidence": "c4-git-feature.txt (c4-git-feature.out), en feature/x: bloquean (2) git commit -n, -nm, -anm, -sn, -qn, -vn, --no-verify, --no-verif, --no-veri detrás, -n tras -m \"x\", -m \"a b\", -F fichero, --amend y --no-edit; con git -c, env, X=1, command, sudo y /usr/bin/git; git push --no-verify y git merge --no-verif; y «grep … | git commit -n -F -» (c8-p1.out, en la base pasaba). Lo normal pasa: -am, -sm, -s -m, -S -m, -qm, --allow-empty, --amend --no-edit, -F, --fixup, --signoff, --no-gpg-sign, -- fichero, un fichero que empieza por n, -v, --verbose, -m con «-n» dentro del texto, -m con dos párrafos, git -C . commit, --dry-run, --no-status, --author=, --date=, --cleanup=, -e, -o, -i, -C HEAD, git log -n 5 y --no-merges -n3, git merge --no-ff/--no-edit, git push -u. -Sn y -Ssn pasan, y es correcto: -S lleva el id de la clave pegado. --no-ver pasa, pero git lo rechaza por ambiguo. «--no-verify-signatures» de rebase o merge bloquea, igual que en la base (subcadena de --no-verify)."
+    },
+    {
+      "id": "A4",
+      "status": "partial",
+      "evidence": "c5-git-main.txt en un clon en main (c5-git-main.out frente a c5-base.out): bloquean (2) git -C . commit, git -c user.name=x / commit.gpgsign=false commit, git --no-pager, git -P, --git-dir=.git --work-tree=., --git-dir .git, env GIT_AUTHOR_NAME=x, env -i PATH=…, dos asignaciones, command, nice -n 5, timeout 60, time, nohup, git add . && git -C . commit, git -C \"$PWD\", git -C ~, merge/cherry-pick/rebase/revert/am/apply detrás de -C, bash -c 'git commit', sh -c \"git -C . commit\", echo \"$(git commit -m x)\" (en la base pasaban 27 de ellos; solo git commit -m x bloqueaba). Lo que no hace commit pasa: git -C . status/log/diff/show/branch/fetch/pull --ff-only/config --get/stash list/merge-base, commit-graph, commit-tree, git -c color.ui=always log, echo git commit, grep \"git commit\", git log --grep \"commit\". En una rama feature, git -C . commit, env, X=1 pasan. Quedan dos huecos: los prefijos con una opción que lleva argumento (sudo -u root, doas -u, env -u, timeout -s KILL), en P3, y git -C a otro worktree, que decide con la rama de la sesión, en P4. (git -C . apply --check / --stat y rebase --help en main bloquean, como git apply --check sin -C en la base: es la regex de siempre.)"
+    },
+    {
+      "id": "P1",
+      "status": "fixed",
+      "evidence": "c8-p1.txt (c8-p1.out frente a c8-base.out): pasan (0), y en la base bloqueaban: grep -rni core.hookspath docs, grep -rn \"core.hooksPath\" docs …, git log --oneline -Score.hookspath y -S\"core.hooksPath\" -- sentinel, grep -rn 'GIT_CONFIG_KEY_0=include.path', grep -rn -- --no-verify, grep \"HUSKY=0\", grep \"SENTINEL_OVERRIDE=\", grep \"include.path\", con 2>/dev/null | wc -l; y también git log --grep=\"no-verify\", cat … | grep -n hooksPath, git diff … | grep -i hookspath. Cambiarlo sigue bloqueado: git config core.hooksPath /dev/null, --local, «grep …; git config core.hookspath /dev/null», «grep … && git config --unset core.hooksPath», grep … | tee .git/hooks/x, git -c core.hooksPath=/dev/null commit, HUSKY=0 git commit, --no-verify detrás de una lectura. Siguen bloqueando git grep -n \"core.hooksPath\" y rg -n \"core.hooksPath\" (ro_segment no los tiene por lectores: la clase de la deuda P9) y git config --get core.hooksPath (excluido a propósito de los lectores)."
+    }
+  ]
+}

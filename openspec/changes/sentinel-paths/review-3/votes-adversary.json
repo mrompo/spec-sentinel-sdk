@@ -1,0 +1,96 @@
+{
+  "lens": "adversary",
+  "votes": [
+    {
+      "id": "A1",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido en mi copia (l/cr1.out): en feature/x, «git commit -m 'x;' -n», «-m \"fix: a;\" -n», «-m 'R&' -n» y «--message 'x;' -n» → exit 0, mientras «git commit -m x -n» → 2. Para un agente hostil es trivial (basta un mensaje que acabe en ; & o |) y salta pre-commit y commit-msg sin la llave: el mismo efecto que V2, que la ronda 2 dio por grave y que la spec (SC-sentinel-paths-11) cierra. Lo subo a grave por coherencia con mi V3; el pre-push sigue.",
+      "dup": null
+    },
+    {
+      "id": "A2",
+      "agree": true,
+      "severity": "major",
+      "note": "Es mi V3 (salvo el alias de git -c, que también entra allí): reproducido en l/a4.out y l/v2.out, y ejecutado en un repo con la Esclusa, donde «env -u X git commit -n …» y «exec -a g git commit -n …» meten el commit en main. La vuelta de A5 detrás de sudo -u root grep es la misma causa en sentido contrario. Grave: incumple SC-sentinel-paths-11 con una grafía cercana a las que el escenario nombra.",
+      "dup": "V3"
+    },
+    {
+      "id": "A3",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido (l/cr1.out): grep -rnE 'cp|mv' .claude, \"chmod|chown\", 'mv\\|cp', git grep -nE 'rm|mv', \" rm \" y git log -G\"chmod|chown\" → 2 [protect-enforcement-dirs]. Es bloqueo de más, no abre nada, y la base también lo bloqueaba; menor como variante cercana de A5. Mismo defecto que P2.",
+      "dup": "P2"
+    },
+    {
+      "id": "A4",
+      "agree": true,
+      "severity": "major",
+      "note": "Es parte de mi V2: $[1<<2] (y además ${x:1<<1} y a[1<<2]=x) siguen abriendo un heredoc falso; ejecutado con bash y zsh mueve sentinel/githooks. Desde mi lente, grave: desarma el enforcement sin la llave por el mismo mecanismo que V6, aunque haya que buscarlo.",
+      "dup": "V2"
+    },
+    {
+      "id": "A5",
+      "agree": true,
+      "severity": "minor",
+      "note": "Es mi V5: reproducido desde un worktree enlazado (chmod -R 000 .git/worktrees → 0; rm -rf → solo ask). Menor: el efecto es que git deja de reconocer el worktree y el cableado falla cerrado, no un salto de la Esclusa.",
+      "dup": "V5"
+    },
+    {
+      "id": "A6",
+      "agree": true,
+      "severity": "nit",
+      "note": "No lo he reproducido con otro HOME, pero el código lo confirma: add_target (l.183) compara la ruta física con PERSONAL con '=', que distingue mayúsculas, mientras canon() y dir_re ya no. Con el HOME en /Users lo cubre path_re con -i. Queda para un HOME fuera de esas raíces en un disco sin caja; sin prueba en Windows, retoque.",
+      "dup": null
+    },
+    {
+      "id": "A7",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido (l/cr1.out): su -c, script … -c, watch y flock -c → 0; el alias '!' de git -c ya está en mi V1, ejecutado de verdad. Para mí no es un retoque de README: es la misma puerta que V4 con otro programa, y algunos (git -c alias.x='!…', y tcsh/csh/env -S/trap de V1) funcionan en cualquier máquina. su, script -c, watch y flock son menos probables (contraseña, util-linux), pero el arreglo es el mismo: leer como código lo que esos programas pasan a una shell, o nombrarlos en el límite.",
+      "dup": "V1"
+    },
+    {
+      "id": "A8",
+      "agree": true,
+      "severity": "nit",
+      "note": "Las entradas que matan a los tres mutantes se bloquean hoy en mi copia (install -S … sentinel/adapters, cp … ~ --backup=docs, rsync … .git/ --stderr errors → 2 [self-protection]), así que el código acierta y lo que falta es el caso en sc-30. Un hueco del banco: retoque.",
+      "dup": null
+    },
+    {
+      "id": "P1",
+      "agree": true,
+      "severity": "major",
+      "note": "Reproducido (l/cr2.out), en feature/x: git commit -m \"$(cat <<'EOF' … mv .git ya se bloquea … EOF)\" → 2 [protect-enforcement-dirs], con «git commit -n ni --no-veri» en el texto → 2 [no-hook-disabling], y gh pr create --body \"$(cat <<'EOF' …)\" → 2; el mismo texto en -m \"…\" sin heredoc → 0. Con <<'EOF' bash no ejecuta nada del cuerpo. Es la forma de commit por defecto de Claude Code: grave. El arreglo debe ir con el de mi V4, que es el mismo sitio pero al revés: con el delimitador entre comillas el cuerpo no es código; sin comillas, las sustituciones del cuerpo sí lo son aunque vayan tras una comilla.",
+      "dup": null
+    },
+    {
+      "id": "P2",
+      "agree": true,
+      "severity": "minor",
+      "note": "Mismo defecto que A3, reproducido igual. Bloqueo de más en lecturas, ya presente en la base. rg no está en la lista de lectores de la spec: eso es una decisión, no un defecto de este panel.",
+      "dup": "A3"
+    },
+    {
+      "id": "P3",
+      "agree": true,
+      "severity": "major",
+      "note": "Es mi V3 y el A2 del Auditor: reproducido en main (sudo -u root, doas -u root, env -u HOME, timeout -s KILL, timeout --signal=KILL → 0) y ejecutado en un repo con la Esclusa con -n. Grave desde mi lente: junto con -n, el commit entra en main saltándose la Esclusa local sin la llave; solo el pre-push lo para.",
+      "dup": "V3"
+    },
+    {
+      "id": "P4",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido el sentido que me toca: con la sesión en un worktree en feature/wt, «git -C <principal> commit -m x», «git -C <principal> merge …» y git --git-dir=… --work-tree=… commit → 0 aunque el commit cae en main (l/cr-p4.out). Es como el cd previo que el README deja fuera, y ya pasaba en la base, pero el arreglo de A4 reconoce git -C y sigue decidiendo con la rama de la sesión; el bloqueo de más en el otro sentido es nuevo de la ronda 3. Menor: el pre-push del repo destino para el push.",
+      "dup": null
+    },
+    {
+      "id": "P5",
+      "agree": true,
+      "severity": "major",
+      "note": "Es parte de mi V2 (y el A4 del Auditor). Para un agente hostil, $[…] es tan fácil de escribir como $((…)) y desarma protect-enforcement-dirs: grave, como V6.",
+      "dup": "V2"
+    }
+  ]
+}

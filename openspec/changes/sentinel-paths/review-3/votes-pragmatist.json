@@ -1,0 +1,96 @@
+{
+  "lens": "pragmatist",
+  "votes": [
+    {
+      "id": "A1",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido (cr-feature.txt → cr-feature.out, rama feature/x): «git commit -m 'x;' -n», «-m \"fix: a;\" -n», «-m 'R&' -n» y «--message 'x;' -n» salen con 0; «git commit -m x -n» sale con 2. En la base pasaban todos, así que es un hueco que deja el arreglo de V2. Para tropezar con él, el mensaje tiene que acabar en ; & o | y llevar -n detrás, y eso no se escribe sin querer: menor. El arreglo que proponen (cambiar ;&| por '_' en la palabra del tramo) es el mismo que propongo yo en P2 para las palabras marcadas, y conviene hacerlo una sola vez en flush().",
+      "dup": null
+    },
+    {
+      "id": "A2",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: en feature, «sudo -u root git commit -n -m x» y «env -u X git commit -n -m x» → 0; en main, «sudo -u root git commit» y «sudo -u root git merge» → 0 (cr-main.out). Al revés, «sudo -u root grep -rn \"chmod\" sentinel/hooks» y «env -u X grep …» → 2. Es el mismo defecto que mi P3 y que V3. Lo dejo en menor: ningún agente escribe sudo -u root o env -u para hacer un commit sin buscarlo, y en main el pre-push lo para; el lado del grep es un falso positivo raro.",
+      "dup": "P3"
+    },
+    {
+      "id": "A3",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido. Las alternativas («chmod|chown», «mv\\|cp») son mi P2, y además «grep -rn \" rm \" sentinel» y «git grep -n \"&& rm \" -- sentinel» → 2, también en la base. Es una búsqueda realista sobre los hooks, pero no es una regresión y se sortea con dos greps: menor, como A5 en la ronda 2.",
+      "dup": "P2"
+    },
+    {
+      "id": "A4",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: «echo $[1<<2]» y luego la comilla de dos líneas → 0 (cr-feature.out); en mi v6-corchete.sh, bash ejecuta el mv. Es el mismo defecto que mi P5 y que V2. $[…] está obsoleto y nadie lo escribe sin querer: menor.",
+      "dup": "P5"
+    },
+    {
+      "id": "A5",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido en mi ws, con .git/worktrees/x: «rm -rf .git/worktrees» → 0 y «chmod -R 000 .git/worktrees» → 0; «mv .git/worktrees /tmp/x» y «rm -rf .git/worktrees/x» → 2. Es el mismo defecto que V5. Como el cableado falla cerrado después, no es un salto silencioso. Añadirla a dir_re no estorba nada legítimo: «git worktree prune» sigue pasando, y borrar a mano .git/worktrees no es un flujo que haya que proteger. Menor.",
+      "dup": "V5"
+    },
+    {
+      "id": "A6",
+      "agree": true,
+      "severity": "nit",
+      "note": "No lo he reproducido: sin Windows, el caso solo existe con un HOME fuera de /Users, /home y /root en un disco sin caja. Por el código parece cierto: add_target compara con '=' mientras canon() y dir_re ya no distinguen caja. Con el HOME real de macOS, path_re con -i lo cubre (como dice su c-home). Retoque, con confianza baja.",
+      "dup": null
+    },
+    {
+      "id": "A7",
+      "agree": true,
+      "severity": "nit",
+      "note": "Reproducido: su -c, script -c, watch, flock -c y el alias '!' de git -c → 0 (cr-feature.out). Desde el uso real, nadie lanza un mv del enforcement por estas vías sin buscarlo, y la spec enumera las shells que lee. Basta con nombrarlos en la fila «Regex evadibles». Se solapa con V1.",
+      "dup": "V1"
+    },
+    {
+      "id": "A8",
+      "agree": true,
+      "severity": "nit",
+      "note": "Sus tres entradas bloquean hoy (cr-feature.out: «install -S … sentinel/adapters», «cp … ~ --backup=docs», «rsync -a /tmp/e/ .git/ --stderr errors» → 2; la última pasaba en la base), y en mut.out sobreviven los mutantes a, b y t con sc-30 en verde. Sirve para mantener el banco: tres casos baratos que fijan piezas del arreglo de A1. Encima, «install -S» es un indicador real del install de macOS. Retoque.",
+      "dup": null
+    },
+    {
+      "id": "V1",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: tcsh -c, csh -c, env -S, trap '…' EXIT y git -c alias.x='!mv …' → 0 (cr-feature.out; también en la base). Es real y vale la pena dejarlo escrito, pero desde mi lente no es grave: hay que construirlo a propósito. La spec enumera las shells que lee (bash, sh, zsh, dash, ksh), y la fila «Regex evadibles» ya avisa de que siempre habrá otra grafía. Lo barato es añadir csh/tcsh y env -S a role() y nombrar el resto en el README. Es el mismo tema que A7.",
+      "dup": "A7"
+    },
+    {
+      "id": "V2",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: $[1<<2], ${x:1<<1} y a[1<<2]=x seguidos de la comilla de dos líneas → 0 (cr-feature.out). Es el mismo defecto que A4 y que mi P5, más dos grafías. Bajo de grave a menor: son formas de aritmética que no aparecen en el trabajo normal, el bloqueo solo se salta construyendo la comilla de dos líneas a propósito, y la Esclusa sigue en el commit siguiente.",
+      "dup": "A4"
+    },
+    {
+      "id": "V3",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: en main, exec -a g, stdbuf -o L, sudo --user=root, env --unset=HOME y git -c alias.ci=commit ci → 0 (cr-main.out); en feature, «exec -a g git commit -n» y «git -c alias.ci='commit -n' ci» → 0. Es el mismo defecto que A2 y que mi P3; el alias en -c es una variante más. Lo dejo en menor: ningún agente escribe así un commit sin buscarlo, y en main el pre-push sigue parando el push. Con -n en feature sí se salta pre-commit, pero también hay que buscarlo.",
+      "dup": "A2"
+    },
+    {
+      "id": "V4",
+      "agree": true,
+      "severity": "minor",
+      "note": "Reproducido: «cat <<E\\n'$(mv …)'\\nE», «cat <<E\\nit's done $(rm -rf sentinel)\\nE» y el mismo dentro de x=$(cat <<E …) → 0; sin comillas → 2. En la base pasaban igual. Un apóstrofo en el cuerpo de un heredoc es corriente, pero que detrás venga una sustitución que toca el enforcement no ocurre sin querer: menor. Su arreglo y el de mi P1 son el mismo: en un heredoc con el delimitador sin comillas, sacar cada $(…) y `…` del cuerpo como código y no abrir comillas; con el delimitador entre comillas, no leer el cuerpo como comandos.",
+      "dup": null
+    },
+    {
+      "id": "V5",
+      "agree": true,
+      "severity": "minor",
+      "note": "Mismo defecto que A5, reproducido igual (rm -rf y chmod -R 000 sobre .git/worktrees → 0). Menor: el efecto es que el cableado falla cerrado, no un salto de la Esclusa.",
+      "dup": "A5"
+    }
+  ]
+}
