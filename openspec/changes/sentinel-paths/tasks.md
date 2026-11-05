@@ -338,7 +338,7 @@ mergeable sola.
 
 Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde `main`.
 
-- [ ] R13. Casos en rojo:
+- [x] R13. Casos en rojo:
        - P1: el commit y la PR con el mensaje en un heredoc entre comillas dentro de `"$(…)"`
          (`git commit -m "$(cat <<'EOF' …)"`) pasan en una rama feature aunque el mensaje
          nombre `mv .git` o `chmod sentinel/hooks`;
@@ -346,6 +346,14 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          detrás de un apóstrofo se lee como código;
        - A1: `git commit -m 'x;' -n` (y con `&` o `|`) se bloquea;
        - A8: los tres casos de `sc-30` que matan los mutantes del destino de `cp`/`mv`
+       → En `sc-29`, `sc-16` y `sc-30` (`b3f9818`): con el guard de `main` fallan 23 de los
+         46 casos nuevos de `sc-29` y `sc-16`. Con cada grupo, sus controles: lo que ejecuta la
+         salida de `cat` (`bash -c`, `eval`, el programa, una tubería a `sh`), otro programa en
+         la línea del heredoc, lo que sigue al cierre, un delimitador que no es de la forma de
+         siempre (`<<$'EOF'`, que bash cierra en `EOF`) y lo que redefine `cat` (una función,
+         `alias`, `PATH`, un `cat` de otra carpeta) se siguen bloqueando. Los de `sc-30` ya
+         pasan: son de mutantes. Deltas en SC-sentinel-paths-01 y en la fila «Regex evadibles»
+         del README
 - [ ] R14. 👤 Parche `sentinel-paths-9.patch`: el cuerpo de un heredoc con el delimitador entre
        comillas no cuenta como comandos ni rutas, y en uno sin comillas no abre comillas y cada
        sustitución sale como código; en el tramo, `;`, `&` y `|` dentro de una palabra no cortan

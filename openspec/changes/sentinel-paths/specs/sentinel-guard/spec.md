@@ -60,6 +60,16 @@ solo por el texto de la ruta.
   detrás de cualquiera de los dos cierres se lee en su sitio. Si bash 5 no se sabe dónde la
   cierra (un `case`, una llave suelta en `${…}`, un salto de línea escapado, una aritmética
   que no cierra con `))`, unas comillas sin cerrar), el hook no sabe qué se ejecuta y bloquea
+- **AND** en el cuerpo de un heredoc con el delimitador sin comillas, que bash expande, las
+  comillas son texto: una sustitución cuenta aunque vaya entre comillas simples o detrás de un
+  apóstrofo (`cat <<E` y `it's $(rm -rf sentinel)`) (panel corto, V4)
+- **AND** el mensaje de `git commit|tag|notes|merge` o de `gh pr|issue|release` en un heredoc
+  con el delimitador entre comillas (`'EOF'`, `"EOF"`, `\EOF`) que solo lee `cat`
+  (`git commit -m "$(cat <<'EOF' … EOF)"`) es texto y no cuenta, aunque nombre un verbo y una
+  carpeta protegida; siguen contando lo que ejecuta la salida (`bash -c`, `eval`, el programa,
+  una tubería a `sh`), otro programa en la línea que abre el heredoc, lo que sigue a la línea
+  que lo cierra y lo que viene después de redefinir `cat` (una función, `alias`, `hash`,
+  `PATH`) (panel corto, P1)
 - **AND** lo que busca un lector entre comillas (el patrón de `grep` o de `git log`/`git grep`)
   y el valor de una asignación no hacen de programa: buscar un verbo en una carpeta protegida
   (`grep -rn "chmod" sentinel/hooks`) es leerla; los argumentos de cualquier otro programa
