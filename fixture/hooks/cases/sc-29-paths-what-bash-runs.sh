@@ -352,7 +352,8 @@ assert_err_contains "anida código" || exit 1
 # ── Panel corto, P1 y V4: el cuerpo de un heredoc ─────────────────────────────────────────
 # El mensaje de git commit|tag o de gh pr en "$(cat <<'EOF' … EOF)", la forma que usa Claude
 # Code, es texto que lee cat: no cuenta aunque nombre un verbo y una carpeta protegida (P1). Lo
-# que ejecuta la salida (bash -c, eval, el programa, una tubería a sh), un programa que no es
+# que ejecuta la salida (bash -c, eval, el programa, una tubería a sh, git rebase -x, un alias
+# de shell de gh), un programa que no es
 # cat en la línea que abre el heredoc, lo que sigue a la línea que lo cierra, un cuerpo que no
 # cierra, un delimitador que no es de la forma de siempre y lo que redefine cat (una función,
 # alias, PATH) siguen contando. En una rama feature, donde el commit se permite. Cada línea es el valor de "command" en el JSON
@@ -401,6 +402,10 @@ PATH=/tmp/x:$PATH; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nE
 git commit -m \"$(cat() { bash; }\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 git commit -m \"$( $(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n) )\"
 git commit -m \"$( `cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n` )\"
+git commit -m x; \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git rebase -x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\" main
+gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+gh pr list; gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 EOF
 
 # Con el delimitador sin comillas, bash expande el cuerpo: sus comillas son texto y no esconden
