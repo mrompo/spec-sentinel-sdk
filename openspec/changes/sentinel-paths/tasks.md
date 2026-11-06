@@ -365,6 +365,10 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          githooks 16, install 18) y `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30` en
          Debian 12. Los 21 mutantes del arreglo mueren (`a46bab9` añade los casos que pedían
          cuatro de ellos). El 11 queda cerrado
+       → Revisión de CodeRabbit en la #24: `eval 'cat() { bash; }'` antes del commit redefinía
+         `cat` sin que el guard lo viera. `eval`, `source`, `.`, `trap`, `mapfile` y `readarray`
+         cuentan ahora como redefinición (casos en `a83d0ce`, 👤 parche `sentinel-paths-9b.patch`
+         en `f0a22b3`). Banco en verde, 6 mutantes muertos y Debian 12 en verde
 
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
