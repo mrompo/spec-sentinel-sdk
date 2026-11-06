@@ -1,0 +1,235 @@
+{
+  "verdict": "CONDITIONAL",
+  "counts": {
+    "major": {
+      "total": 2,
+      "validated": 2
+    },
+    "minor": {
+      "total": 13,
+      "validated": 13
+    },
+    "nit": {
+      "total": 3,
+      "validated": 3
+    }
+  },
+  "findings": [
+    {
+      "id": "P1",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 486,
+      "title": "Regresión del arreglo de V4: el commit o la PR con el mensaje en un heredoc dentro de \"$(…)\", la forma que usa Claude Code, se bloquea en una rama feature en cuanto el texto menciona un verbo y una carpeta protegida"
+    },
+    {
+      "id": "V4",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 467,
+      "title": "En el cuerpo de un heredoc sin comillas en el delimitador, una sustitución entre comillas simples o detrás de un apóstrofo se ejecuta, pero el Centinela lee esas comillas como comillas y no ve su código"
+    },
+    {
+      "id": "A1",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 125,
+      "title": "git commit -n pasa sin la llave si la palabra anterior acaba en ';', '&' o '|' (p. ej. un mensaje entre comillas: -m 'x;' -n)"
+    },
+    {
+      "id": "A2",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 293,
+      "title": "El argumento de una opción de un prefijo (sudo -u root, env -u X, timeout -s KILL, --signal=KILL, stdbuf -o L) se toma por el programa: protected-branches y -n no ven el git commit, y el patrón de grep vuelve a hacer de verbo"
+    },
+    {
+      "id": "A3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 323,
+      "title": "Un patrón de grep con alternativas ('cp|mv', \"chmod|chown\") o con un espacio delante del verbo sigue bloqueando la lectura de una carpeta protegida"
+    },
+    {
+      "id": "A4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 504,
+      "title": "El << de la aritmética antigua $[…] sigue abriendo un heredoc que no existe: una comilla de dos líneas esconde el comando siguiente"
+    },
+    {
+      "id": "A5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 93,
+      "title": "La carpeta que contiene los worktrees (.git/worktrees) no es carpeta protegida: rm -r solo pide confirmación y chmod 000 pasa, aunque mv sí se bloquea"
+    },
+    {
+      "id": "P2",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 323,
+      "title": "A5 a medias: un patrón de grep entre comillas con una alternativa («chmod|chown», «chmod\\|chown») sigue haciendo de programa y bloquea la lectura de una carpeta protegida"
+    },
+    {
+      "id": "P3",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 293,
+      "title": "A4 a medias: un prefijo con una opción que lleva argumento aparte (sudo -u root, doas -u, env -u VAR, timeout -s KILL) esconde el git commit en main"
+    },
+    {
+      "id": "P4",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 145,
+      "title": "Con git -C a otro worktree, protected-branches decide con la rama de la sesión y no con la del destino: desde main bloquea un commit en una rama feature (antes pasaba) y desde una rama feature deja pasar un commit en main"
+    },
+    {
+      "id": "P5",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 523,
+      "title": "V6 a medias: la aritmética antigua $[…] con «<<» sigue abriendo un heredoc que no existe, y una comilla de dos líneas esconde el comando que sigue"
+    },
+    {
+      "id": "V1",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 295,
+      "title": "El código que se pasa como texto a otro ejecutor no se lee: tcsh/csh -c, env -S, trap '…' EXIT y un alias '!' definido con git -c mueven sentinel/githooks sin bloqueo"
+    },
+    {
+      "id": "V2",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 504,
+      "title": "El << de otras expresiones aritméticas ($[…], el desplazamiento de ${x:…} y el índice de un array) sigue abriendo un heredoc que no existe, y una comilla de dos líneas esconde el comando siguiente"
+    },
+    {
+      "id": "V3",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 292,
+      "title": "git commit en main y git commit -n pasan detrás de un prefijo cuya opción lleva un argumento que no es un número (sudo -u root, timeout -s KILL, env -u X, exec -a g, stdbuf -o L) o con un alias definido en el propio comando (git -c alias.ci=commit ci)"
+    },
+    {
+      "id": "V5",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/policy.default.yaml",
+      "line": 93,
+      "title": "La carpeta madre de los worktrees (.git/worktrees) no está en dir_re: chmod -R sobre ella pasa sin preguntar y rm -rf solo pide la confirmación genérica, aunque cada .git/worktrees/<nombre> esté protegida"
+    },
+    {
+      "id": "A6",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/sentinel-guard.sh",
+      "line": 183,
+      "title": "Con un disco sin caja, la configuración de git de la persona escrita con otra caja solo se reconoce si HOME cuelga de /Users, /home o /root: la comparación con PERSONAL distingue mayúsculas"
+    },
+    {
+      "id": "A7",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/README.md",
+      "line": 51,
+      "title": "Otros programas que ejecutan una cadena con una shell (su -c, script -c, watch, flock -c, un alias '!' de git -c) no se leen ni se nombran en el límite"
+    },
+    {
+      "id": "A8",
+      "lens": "auditor",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/hooks/cases/sc-30-paths-into-dirs.sh",
+      "line": 543,
+      "title": "sc-30 no comprueba tres piezas del arreglo de A1 = V3 que la spec promete: la búsqueda hacia atrás del último operando que es una carpeta, que el valor pegado (--x=v) no es operando, y la búsqueda con los argumentos de opción incluidos"
+    }
+  ]
+}
