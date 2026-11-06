@@ -268,7 +268,8 @@ json_text() {
 # el cuerpo de un heredoc con el delimitador entre comillas ('EOF', "EOF", \EOF) que solo lee
 # cat es texto y no cuenta ("$(cat <<'EOF' … EOF)", panel corto, P1), si en su línea no hay
 # más programa que cat (ni nada que ejecute su salida) y si antes nada ha redefinido cat (una
-# función, alias, hash, enable, PATH). «<<<» y el
+# función, alias, hash, enable, PATH, o lo que ejecuta código en la shell actual: eval, source,
+# ., trap, mapfile). «<<<» y el
 # «<<» de una expresión aritmética ((…)), $((…)) no abren un heredoc (V6). Lo que redirige una
 # redirección (y el número de su descriptor, 2>) sale como 'r<palabra>', y el valor pegado a una
 # opción tras '=' (--backup=numbered), como 'v<valor>': cuentan como rutas, pero no son operandos
@@ -301,7 +302,7 @@ cmd_words() {
         if (b ~ /^(sudo|doas|env|command|builtin|exec|nice|nohup|time|timeout|xargs|stdbuf|ionice|!|\{|if|then|else|elif|do|while|until)$/) { pre = 1; return 1 }
         pseen = 1; prog = b; drop = 0
         if (w !~ /^((\/usr)?\/bin\/)?cat$/) lp = 1
-        if (b ~ /^(alias|function|hash|enable)$/) fdef = 1
+        if (b ~ /^(alias|function|hash|enable|eval|source|\.|trap|mapfile|readarray)$/) fdef = 1
         if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
         else if (b == "eval") ev = 1
         else if (b == "git") gs = 1
