@@ -360,8 +360,8 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
        la regla de `-n`. Después, el 11 queda cerrado
        → `ea3cd5f` (+48/−20 en el guard): el cuerpo solo es texto en el mensaje de `git
          commit|tag|notes|merge` o `gh pr|issue|release`, con el delimitador `'EOF'`, `"EOF"` o
-         `\EOF`, si en su línea solo está `cat` y nada antes lo ha redefinido. Los 50 casos
-         nuevos pasan (con `main` fallan 23); `fixture/verify.sh` en verde en un clon (hooks 31,
+         `\EOF`, si en su línea solo está `cat` y nada antes lo ha redefinido. Pasan los 50 casos
+         nuevos: los 46 de `sc-29` y `sc-16` (con `main` fallan 23) y los 4 de `sc-30`; `fixture/verify.sh` en verde en un clon (hooks 31,
          githooks 16, install 18) y `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30` en
          Debian 12. Los 21 mutantes del arreglo mueren (`a46bab9` añade los casos que pedían
          cuatro de ellos). El 11 queda cerrado

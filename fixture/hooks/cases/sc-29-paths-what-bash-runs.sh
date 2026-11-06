@@ -379,11 +379,15 @@ gh pr create --title x --body \"$(cat <<'EOF'\n`mv .git /tmp/x` ya se bloquea\nE
 git commit -m \"$(cat <<\"EOF\"\nmv .git /tmp/x\nEOF\n)\"
 git commit -m \"$(/bin/cat <<'EOF'\nmv .git /tmp/x\nEOF\n)\"
 git commit -m \"$(cat <<'EOF'\nfix: mv .git (1)\n2) rm -rf .claude\nEOF\n)\"
+gh -R owner/repo pr create --title x --body \"$(cat <<'EOF'\nmv .git /tmp/x\nEOF\n)\"
+gh --repo owner/repo pr create --title x --body \"$(cat <<'EOF'\nmv .git /tmp/x\nEOF\n)\"
+gh -R; gh pr create --title x --body \"$(cat <<'EOF'\nmv .git /tmp/x\nEOF\n)\"
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
   fguard "$cmd"
   assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+  assert_err_contains "[protect-enforcement-dirs]" || { echo "    por otra regla: $cmd" >&2; exit 1; }
 done <<'EOF'
 bash -c \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 eval \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
@@ -394,7 +398,6 @@ git commit -m \"$(bash <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 git commit -m \"$(cat <<'EOF'; mv sentinel/githooks /tmp/x\nx\nEOF\n)\"
 git commit -m \"$(cat <<'EOF'\nx\nEOF\nmv sentinel/githooks /tmp/x\n)\"
 git commit -m \"$(cat <<'EOF'\nx\nEOF\n)\" ; mv sentinel/githooks /tmp/x
-git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\n)\"
 git commit -m \"$(cat <<$'EOF'\nx\nEOF\nmv sentinel/githooks /tmp/x\n$EOF\n)\"
 git commit -m \"$(/tmp/x/cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 cat() { bash; }; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
@@ -407,6 +410,7 @@ git commit -m x; \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 git rebase -x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\" main
 gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 gh pr list; gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+gh -R pr alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 eval 'cat() { bash; }'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 eval 'alias cat=bash'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 builtin eval 'cat() { bash; }'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
@@ -417,6 +421,14 @@ mapfile -C 'cat() { bash; }' -c 1 x < /tmp/x/rc; git commit -m \"$(cat <<'EOF'\n
 readarray -C 'cat() { bash; }' -c 1 x < /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 git commit -m \"$(eval 'cat() { bash; }'\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 git commit -m \"$(source /tmp/x/rc\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+EOF
+# Un cuerpo que no cierra deja la sustitución sin cierre conocido, y eso es lo que la bloquea
+while IFS= read -r cmd; do
+  fguard "$cmd"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+  assert_err_contains "[too-many-paths]" || { echo "    por otra regla: $cmd" >&2; exit 1; }
+done <<'EOF'
+git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\n)\"
 EOF
 
 # Con el delimitador sin comillas, bash expande el cuerpo: sus comillas son texto y no esconden
