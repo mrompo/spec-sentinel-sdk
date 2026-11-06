@@ -69,7 +69,8 @@ solo por el texto de la ruta.
   carpeta protegida; siguen contando lo que ejecuta la salida (`bash -c`, `eval`, el programa,
   una tubería a `sh`), otro programa en la línea que abre el heredoc, lo que sigue a la línea
   que lo cierra y lo que viene después de redefinir `cat` (una función, `alias`, `hash`,
-  `PATH`) (panel corto, P1)
+  `PATH`, o lo que ejecuta código en la shell actual: `eval`, `source`, `.`, `trap`, `mapfile`)
+  (panel corto, P1; revisión de la #24)
 - **AND** lo que busca un lector entre comillas (el patrón de `grep` o de `git log`/`git grep`)
   y el valor de una asignación no hacen de programa: buscar un verbo en una carpeta protegida
   (`grep -rn "chmod" sentinel/hooks`) es leerla; los argumentos de cualquier otro programa

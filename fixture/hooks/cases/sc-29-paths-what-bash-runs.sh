@@ -353,10 +353,11 @@ assert_err_contains "anida código" || exit 1
 # El mensaje de git commit|tag o de gh pr en "$(cat <<'EOF' … EOF)", la forma que usa Claude
 # Code, es texto que lee cat: no cuenta aunque nombre un verbo y una carpeta protegida (P1). Lo
 # que ejecuta la salida (bash -c, eval, el programa, una tubería a sh, git rebase -x, un alias
-# de shell de gh), un programa que no es
-# cat en la línea que abre el heredoc, lo que sigue a la línea que lo cierra, un cuerpo que no
-# cierra, un delimitador que no es de la forma de siempre y lo que redefine cat (una función,
-# alias, PATH) siguen contando. En una rama feature, donde el commit se permite. Cada línea es el valor de "command" en el JSON
+# de shell de gh), un programa que no es cat en la línea que abre el heredoc, lo que sigue a la
+# línea que lo cierra, un cuerpo que no cierra, un delimitador que no es de la forma de siempre
+# y lo que redefine cat (una función, alias, PATH, o lo que ejecuta código en la shell actual:
+# eval, source, ., trap, mapfile) siguen contando. En una rama feature, donde el commit se
+# permite. Cada línea es el valor de "command" en el JSON
 trap cleanup_workspace EXIT
 mk_workspace
 git -C "$WS" checkout -qB feature/x
@@ -406,6 +407,16 @@ git commit -m x; \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 git rebase -x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\" main
 gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 gh pr list; gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+eval 'cat() { bash; }'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+eval 'alias cat=bash'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+builtin eval 'cat() { bash; }'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+source /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+. /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+trap 'cat() { bash; }' DEBUG; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+mapfile -C 'cat() { bash; }' -c 1 x < /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+readarray -C 'cat() { bash; }' -c 1 x < /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(eval 'cat() { bash; }'\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(source /tmp/x/rc\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
 EOF
 
 # Con el delimitador sin comillas, bash expande el cuerpo: sus comillas son texto y no esconden
@@ -423,6 +434,8 @@ cat <<E\n\"$(mv sentinel/githooks /tmp/x)\"\nE
 x=$(cat <<E\nit's $(mv sentinel/githooks /tmp/x)\nE\n)
 echo \"$(cat <<E\n'$(mv sentinel/githooks /tmp/x)'\nE\n)\"
 git commit -m \"$(cat <<EOF\nit's $(mv sentinel/githooks /tmp/x)\nEOF\n)\"
+git commit -m \"$(cat <<'A' <<B\nliteral\nA\n$(mv sentinel/githooks /tmp/x)\nB\n)\"
+git commit -m \"$(cat <<'A'\nliteral\nA\ncat <<B\n$(mv sentinel/githooks /tmp/x)\nB\n)\"
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
