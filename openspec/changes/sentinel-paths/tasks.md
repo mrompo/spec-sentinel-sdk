@@ -354,10 +354,17 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          `alias`, `PATH`, un `cat` de otra carpeta) se siguen bloqueando. Los de `sc-30` ya
          pasan: son de mutantes. Deltas en SC-sentinel-paths-01 y en la fila «Regex evadibles»
          del README
-- [ ] R14. 👤 Parche `sentinel-paths-9.patch`: el cuerpo de un heredoc con el delimitador entre
+- [x] R14. 👤 Parche `sentinel-paths-9.patch`: el cuerpo de un heredoc con el delimitador entre
        comillas no cuenta como comandos ni rutas, y en uno sin comillas no abre comillas y cada
        sustitución sale como código; en el tramo, `;`, `&` y `|` dentro de una palabra no cortan
        la regla de `-n`. Después, el 11 queda cerrado
+       → `ea3cd5f` (+48/−20 en el guard): el cuerpo solo es texto en el mensaje de `git
+         commit|tag|notes|merge` o `gh pr|issue|release`, con el delimitador `'EOF'`, `"EOF"` o
+         `\EOF`, si en su línea solo está `cat` y nada antes lo ha redefinido. Los 50 casos
+         nuevos pasan (con `main` fallan 23); `fixture/verify.sh` en verde en un clon (hooks 31,
+         githooks 16, install 18) y `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30` en
+         Debian 12. Los 21 mutantes del arreglo mueren (`a46bab9` añade los casos que pedían
+         cuatro de ellos). El 11 queda cerrado
 
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
