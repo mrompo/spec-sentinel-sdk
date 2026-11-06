@@ -8,7 +8,10 @@
 #   heredoc; y lo que busca un lector, entre comillas, no es el programa. Revisiones de la #20
 #   (CodeRabbit): lo que sigue a -c, la shell como argumento, los argumentos que leen las
 #   reglas, un ")" que bash no lee como cierre de "$(…)" y lo que va detrás de "$(…)", que se
-#   lee donde la cierran bash 5, zsh y bash 3.2.
+#   lee donde la cierran bash 5, zsh y bash 3.2. Panel corto (P1, V4): el mensaje de git
+#   commit o de gh pr en un heredoc con el delimitador entre comillas, que solo lee cat, es
+#   texto; con el delimitador sin comillas, bash expande el cuerpo y sus comillas no esconden
+#   una sustitución.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh"
 P="$DEFAULT_POLICY"
 
@@ -345,4 +348,101 @@ assert_exit 0 || { echo "    debería permitirse: 8 sustituciones anidadas" >&2;
 guard "$(bash_payload "$(nest 9 true)")"
 assert_exit 2 || { echo "    debería bloquearse: 9 sustituciones anidadas" >&2; exit 1; }
 assert_err_contains "anida código" || exit 1
+
+# ── Panel corto, P1 y V4: el cuerpo de un heredoc ─────────────────────────────────────────
+# El mensaje de git commit|tag o de gh pr en "$(cat <<'EOF' … EOF)", la forma que usa Claude
+# Code, es texto que lee cat: no cuenta aunque nombre un verbo y una carpeta protegida (P1). Lo
+# que ejecuta la salida (bash -c, eval, el programa, una tubería a sh, git rebase -x, un alias
+# de shell de gh), un programa que no es cat en la línea que abre el heredoc, lo que sigue a la
+# línea que lo cierra, un cuerpo que no cierra, un delimitador que no es de la forma de siempre
+# y lo que redefine cat (una función, alias, PATH, o lo que ejecuta código en la shell actual:
+# eval, source, ., trap, mapfile) siguen contando. En una rama feature, donde el commit se
+# permite. Cada línea es el valor de "command" en el JSON
+trap cleanup_workspace EXIT
+mk_workspace
+git -C "$WS" checkout -qB feature/x
+mkdir -p "$WS/sentinel/hooks" "$WS/sentinel/githooks" "$WS/.claude"
+fguard() { RH_CWD="$WS" run_hook "$GUARD_HOOK" "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$1\"}}" -u CLAUDE_PROJECT_DIR SENTINEL_POLICY_DEFAULT="$P" SENTINEL_POLICY="$CONSUMER_POLICY"; }
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  fguard "$cmd"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+git commit -m \"$(cat <<'EOF'\nfix(sentinel): mv .git ya se bloquea\nEOF\n)\"
+git commit -m \"$(cat <<'EOF'\nfix: chmod -R 000 sentinel/hooks y rm -rf .claude\n\nIt's fine\nEOF\n)\"
+git commit -m \"$(cat <<\\EOF\nmv .git /tmp/x\nEOF\n)\"
+git commit -m \"$(cat <<-'EOF'\n\tmv .git /tmp/x\n\tEOF\n)\"
+git commit -m \"$(cat <<'EOF'\n$(mv sentinel/githooks /tmp/x)\nEOF\n)\"
+git commit --amend -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\" && git log -1
+git tag -a v1 -m \"$(cat <<'EOF'\nrm -rf .claude\nEOF\n)\"
+gh pr create --title x --body \"$(cat <<'EOF'\n`mv .git /tmp/x` ya se bloquea\nEOF\n)\"
+git commit -m \"$(cat <<\"EOF\"\nmv .git /tmp/x\nEOF\n)\"
+git commit -m \"$(/bin/cat <<'EOF'\nmv .git /tmp/x\nEOF\n)\"
+git commit -m \"$(cat <<'EOF'\nfix: mv .git (1)\n2) rm -rf .claude\nEOF\n)\"
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  fguard "$cmd"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+bash -c \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+eval \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+\"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+printf '%s' \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\" | sh
+git commit -m \"$(cat <<'EOF' | sh\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(bash <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(cat <<'EOF'; mv sentinel/githooks /tmp/x\nx\nEOF\n)\"
+git commit -m \"$(cat <<'EOF'\nx\nEOF\nmv sentinel/githooks /tmp/x\n)\"
+git commit -m \"$(cat <<'EOF'\nx\nEOF\n)\" ; mv sentinel/githooks /tmp/x
+git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\n)\"
+git commit -m \"$(cat <<$'EOF'\nx\nEOF\nmv sentinel/githooks /tmp/x\n$EOF\n)\"
+git commit -m \"$(/tmp/x/cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+cat() { bash; }; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+alias cat=bash; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+PATH=/tmp/x:$PATH; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(cat() { bash; }\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$( $(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n) )\"
+git commit -m \"$( `cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n` )\"
+git commit -m x; \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git rebase -x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\" main
+gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+gh pr list; gh alias set --shell x \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+eval 'cat() { bash; }'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+eval 'alias cat=bash'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+builtin eval 'cat() { bash; }'; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+source /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+. /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+trap 'cat() { bash; }' DEBUG; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+mapfile -C 'cat() { bash; }' -c 1 x < /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+readarray -C 'cat() { bash; }' -c 1 x < /tmp/x/rc; git commit -m \"$(cat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(eval 'cat() { bash; }'\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+git commit -m \"$(source /tmp/x/rc\ncat <<'EOF'\nmv sentinel/githooks /tmp/x\nEOF\n)\"
+EOF
+
+# Con el delimitador sin comillas, bash expande el cuerpo: sus comillas son texto y no esconden
+# una sustitución, tampoco tras un apóstrofo (V4). Con el delimitador entre comillas no expande
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  fguard "$cmd"
+  assert_exit 2 || { echo "    debería bloquearse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cat <<E\n'$(mv sentinel/githooks /tmp/x)'\nE
+cat <<E\nit's done $(rm -rf sentinel)\nE
+cat <<-E\n\t'$(mv sentinel/githooks /tmp/x)'\n\tE
+cat <<E\nit's `mv sentinel/githooks /tmp/x`\nE
+cat <<E\n\"$(mv sentinel/githooks /tmp/x)\"\nE
+x=$(cat <<E\nit's $(mv sentinel/githooks /tmp/x)\nE\n)
+echo \"$(cat <<E\n'$(mv sentinel/githooks /tmp/x)'\nE\n)\"
+git commit -m \"$(cat <<EOF\nit's $(mv sentinel/githooks /tmp/x)\nEOF\n)\"
+git commit -m \"$(cat <<'A' <<B\nliteral\nA\n$(mv sentinel/githooks /tmp/x)\nB\n)\"
+git commit -m \"$(cat <<'A'\nliteral\nA\ncat <<B\n$(mv sentinel/githooks /tmp/x)\nB\n)\"
+EOF
+while IFS= read -r cmd; do
+  [ -n "$cmd" ] || continue
+  fguard "$cmd"
+  assert_exit 0 || { echo "    debería permitirse: $cmd" >&2; exit 1; }
+done <<'EOF'
+cat <<'E'\n'$(mv sentinel/githooks /tmp/x)'\nE
+cat <<E\nit's fine\nE\nls sentinel/githooks
+EOF
 exit 0
