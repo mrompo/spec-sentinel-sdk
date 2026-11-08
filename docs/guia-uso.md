@@ -290,7 +290,9 @@ herramientas de edición no se puede) · nada de `.env` de producción.
   `.claude`, `.git` y sus hooks.
 - Desde un comando no puede cambiar `core.hooksPath` ni saltarse la Esclusa (`--no-verify` o
   `git commit -n`).
-- Leer esos ficheros desde la shell (`cat`, `grep`, `git log`) sí está permitido.
+- Leer esos ficheros desde la shell sí está permitido, con un lector de la lista del Centinela
+  (`cat`, `grep`, `git log`…) y sin redirecciones. Aún hay lecturas que se bloquean de más,
+  como un `grep` con alternativas (`'cp\|mv'`): están en la deuda de `STATUS.md`.
 
 El Centinela decide por la ruta física de cada fichero, así que da igual cómo se escriba (con
 `./`, entre comillas, por un enlace o con otra caja en un disco que no la distingue). Y lee el

@@ -162,7 +162,8 @@
   [review-3/](openspec/changes/archive/2026-11-08-sentinel-paths/review-3/README.md)):
   - un prefijo cuya opción lleva argumento (`sudo -u root`, `env -u X`, `timeout -s KILL`,
     `stdbuf -o L`, `exec -a g`) o un alias en el propio comando (`git -c alias.ci=commit ci`)
-    esconde el `git commit` al Centinela; el pre-push sigue parando el push (A2 = V3 = P3);
+    esconde el `git commit` al Centinela; el pre-push sigue parando el push a una rama
+    protegida (A2 = V3 = P3);
   - `git -C` a otro worktree decide con la rama de la sesión (P4);
   - el `<<` de `$[…]`, del desplazamiento de `${x:…}` y del índice de un array abre un heredoc
     que no existe, y una comilla de dos líneas esconde el comando siguiente (A4 = V2 = P5);
@@ -183,7 +184,18 @@
     fichero sin contar, y `bash /tmp/x.sh` lo ejecuta después. Es una forma más de «un script
     queda fuera»: en `main` ya pasaba `echo 'mv sentinel/githooks /tmp/y' > /tmp/x.sh; bash
     /tmp/x.sh` (aviso de seguridad de la #24, decisión del 2026-11-08);
-  - `\cat` sin redefinir hace que el mensaje vuelva a contar: solo bloquea de más (#24).
+  - `\cat` sin redefinir hace que el mensaje vuelva a contar: solo bloquea de más (#24);
+  - el texto de la spec viva `sentinel-guard`, que llegó con los deltas (revisión de la #25).
+    Una persona lo corrige, porque `managed-files` no deja al agente editar las specs vivas:
+    - SC-sentinel-guard-08 dice que la llave desaparece también con `SENTINEL_OVERRIDE`.
+      SC-sentinel-paths-05 precisa que solo se gasta la de esa misma acción, que es lo que
+      hace el guard;
+    - las rutas relativas «desde el `cwd` del tool call» no avisan de que ese `cwd` no se
+      decodifica del JSON (A6 del panel de confirmación, arriba);
+    - el `PATH` fijo dice «solo carpetas que el agente no puede modificar», pero
+      `/mingw64/bin` lo es si Git for Windows se instaló solo para la persona: el límite está
+      en `sentinel/README.md`, no en la spec;
+    - Git for Windows reciente instala también en `/ucrt64/bin`, que el `PATH` fijo no lleva.
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.
