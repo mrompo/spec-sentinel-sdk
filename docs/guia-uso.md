@@ -161,6 +161,7 @@ configuración de usuario.
 | Qué hace | Qué deja en tu repo |
 |---|---|
 | Copia el enforcement | `sentinel/`: hooks, git hooks, adaptadores y la política del SDK (`policy.default.yaml`) |
+| Registra la versión | `sentinel/.sdk-version`: el commit de tu copia del SDK y si tenía cambios sin commitear |
 | Crea tu política | `sentinel/policy.yaml`, vacía, para tus reglas (con `sdd: true` si el repo tiene `openspec/`: el `pre-push` exigirá `openspec validate --strict`, y `setup` te avisa si ya falla) |
 | Cablea el Centinela | `.claude/settings.json`: lo fusiona con lo tuyo usando `jq`, con backup, y comprueba que el cableado sea efectivo |
 | Protege lo personal | Añade `.claude/settings.local.json` a tu `.gitignore`, junto a la llave y los backups, y comprueba con git que de verdad queden fuera |
@@ -175,7 +176,7 @@ configuración de usuario.
 |---|---|---|
 | `0` | Instalado | Commitea (abajo) |
 | `3` | Instalado con pasos pendientes (líneas `⚠ PENDIENTE`) | Resuélvelos y vuelve a ejecutar `setup` hasta que salga `0` |
-| `1` | Error (p. ej. falta `jq`: no se ha instalado nada) | Lee el motivo y corrígelo. Si falló a mitad, lo hecho se queda y volver a ejecutar `setup` es seguro |
+| `1` | Error (p. ej. falta `jq`, o tu copia del SDK es más vieja que la instalada: no se ha instalado nada) | Lee el motivo y corrígelo. Si falló a mitad, lo hecho se queda y volver a ejecutar `setup` es seguro |
 
 **Los pendientes habituales** (cuando los resuelves, `setup` lo reconoce y sale con `0`):
 
@@ -260,6 +261,19 @@ bien va en su propio cambio,
 **Para actualizar**, vuelve a ejecutar `setup`. Actualiza lo que es del SDK, también el
 cableado de `.claude/settings.json` (si lo habías tocado, guarda tu versión en
 `sentinel/.backup/`), y nunca toca lo tuyo: `policy.yaml`, `stack.yaml` ni la bitácora.
+
+**`setup` no vuelve atrás sin preguntar.** Antes de copiar nada, compara la versión instalada
+(`sentinel/.sdk-version`) con la de tu copia del SDK. Solo instala si tu copia es la misma o
+más nueva (el commit instalado está en su historial) y no tiene cambios sin commitear. Si es
+más vieja, de otra rama, no es un clon de git o tiene cambios, no toca nada: te dice qué versión
+hay y cuál instalaría, y sale con `1`. Lo normal es actualizar tu copia del SDK (`git pull`) y
+volver a ejecutarlo. Si de verdad quieres instalar esa versión, confírmalo con `--downgrade`:
+
+```bash
+bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --downgrade .
+```
+
+`sentinel/.sdk-version` está protegido: el agente no puede cambiarlo.
 
 ## Shield · las reglas estrictas
 

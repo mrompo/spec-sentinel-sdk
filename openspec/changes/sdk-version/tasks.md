@@ -26,10 +26,14 @@ el banco en verde y es mergeable sola.
 
 ### PR 1/2 · La versión
 
-- [ ] 1. Casos en rojo en `fixture/install/`: la primera instalación y una sin versión anterior
+- [x] 1. Casos en rojo en `fixture/install/`: la primera instalación y una sin versión anterior
        (SC-01, SC-02), una copia más vieja, una de otra rama y una que no es un clon de git
        (SC-03), una con cambios sin commitear (SC-04) y `--downgrade` (SC-05). En
        `fixture/hooks/`, escribir y borrar `sentinel/.sdk-version`, y leerlo (SC-08)
+       → `install/sc-19` y `hooks/sc-32` (`c6fef43`), que fallan con el `setup` y la política
+         actuales; el resto del banco de instalación pasa. El harness de instalación ejecuta
+         `setup` desde una copia limpia del SDK, porque `setup` ya no instala desde una con
+         cambios sin commitear. `db43753` añade los casos que pedían cuatro mutantes
 - [ ] 2. 👤 Parche: `setup.sh` (el fichero de versión, la comparación por ascendencia y
        `--downgrade`) y `policy.default.yaml` (`sentinel/.sdk-version` en `self-protection`)
 - [ ] 3. La guía (instalar y actualizar) y `sentinel/README.md`
