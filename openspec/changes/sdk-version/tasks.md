@@ -4,15 +4,47 @@
 copia más vieja o con cambios sin commitear no revierta el enforcement sin que la persona lo
 decida.
 **Origen**: P3-4 de la tercera revisión de `git-gates`.
+**Ritmo**: un slice = caso del banco en rojo → parche mínimo → verde → commit atómico. Lo que
+toca el enforcement (`setup.sh`, `session-start.sh`, `policy.default.yaml`) es un fichero
+protegido: lo entrega el agente como parche en la raíz del worktree, sin trackear, y una persona
+lo revisa, lo aplica con `git apply --index`, comprueba el banco y hace el commit.
 
 ## Engine · antes de teclear
 
 - [x] 0. `propose`: expediente abierto el 2026-10-17 desde la disposición de la revisión
-- [ ] 0a. Gate **Intención** 👤
-- [ ] 0b. `tune` → gate **Claridad**: qué se registra (tag, commit, árbol sucio) y cómo se
-       compara entre versiones sin tags
-- [ ] 0c. `breakdown` → gate **Plan**
+- [x] 0a. Gate **Intención** 👤 — aprobado el 2026-11-08 (proposal §Decisiones)
+- [x] 0b. `tune` → gate **Claridad** ⚙️👤: delta de `sdk-setup` (SC-sdk-version-01..07) y de
+       `sentinel-guard` (SC-sdk-version-08); `openspec validate --strict` en verde. Aprobado
+       por la persona el 2026-11-08
+- [x] 0c. `breakdown` → gate **Plan** 👤: las dos PRs de abajo y un panel antes del `archive`,
+       aprobados el 2026-11-08
 
-## Checklist
+## Checklist (`apply` ↺ `verify`, por slice)
 
-(Se escribe en `breakdown`.)
+**Dos PRs**: **1/2 · La versión** = slices 1-3 · **2/2 · Activar** = slices 4-6. Cada una deja
+el banco en verde y es mergeable sola.
+
+### PR 1/2 · La versión
+
+- [ ] 1. Casos en rojo en `fixture/install/`: la primera instalación y una sin versión anterior
+       (SC-01, SC-02), una copia más vieja, una de otra rama y una que no es un clon de git
+       (SC-03), una con cambios sin commitear (SC-04) y `--downgrade` (SC-05). En
+       `fixture/hooks/`, escribir y borrar `sentinel/.sdk-version`, y leerlo (SC-08)
+- [ ] 2. 👤 Parche: `setup.sh` (el fichero de versión, la comparación por ascendencia y
+       `--downgrade`) y `policy.default.yaml` (`sentinel/.sdk-version` en `self-protection`)
+- [ ] 3. La guía (instalar y actualizar) y `sentinel/README.md`
+
+### PR 2/2 · Activar
+
+- [ ] 4. Casos en rojo: `setup --activate` en un clon con la instalación versionada, con otros
+       git hooks y con la instalación incompleta (SC-06); el aviso de `session-start` en ese
+       clon (SC-07)
+- [ ] 5. 👤 Parche: `setup.sh` (`--activate`) y `session-start.sh` (el aviso)
+- [ ] 6. La guía (el clon de un compañero)
+
+### Cierre
+
+- [ ] 7. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las dos PRs →
+       `disposition` 👤 de los hallazgos
+- [ ] 8. `archive`: los deltas pasan a `sdk-setup` y `sentinel-guard`; `STATUS.md` y la guía al
+       día, y la deuda que quede, registrada
