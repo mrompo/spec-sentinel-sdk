@@ -34,9 +34,12 @@ el banco en verde y es mergeable sola.
          actuales; el resto del banco de instalación pasa. El harness de instalación ejecuta
          `setup` desde una copia limpia del SDK, porque `setup` ya no instala desde una con
          cambios sin commitear. `db43753` añade los casos que pedían cuatro mutantes
-- [ ] 2. 👤 Parche: `setup.sh` (el fichero de versión, la comparación por ascendencia y
+- [x] 2. 👤 Parche: `setup.sh` (el fichero de versión, la comparación por ascendencia y
        `--downgrade`) y `policy.default.yaml` (`sentinel/.sdk-version` en `self-protection`)
-- [ ] 3. La guía (instalar y actualizar) y `sentinel/README.md`
+       → `58563b2`, aplicado y commiteado por la persona. `fixture/verify.sh` en verde en un clon
+         (hooks 32, githooks 16, install 19); en Debian 12, el banco de instalación entero y
+         `hooks/sc-13`, `sc-26` y `sc-32`; los 11 mutantes del arreglo hacen fallar algún caso
+- [x] 3. La guía (instalar y actualizar) y `sentinel/README.md` → `19f573f`
 
 ### PR 2/2 · Activar
 
