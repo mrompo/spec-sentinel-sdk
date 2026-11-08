@@ -369,6 +369,11 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          `cat` sin que el guard lo viera. `eval`, `source`, `.`, `trap`, `mapfile` y `readarray`
          cuentan ahora como redefinición (casos en `a83d0ce`, 👤 parche `sentinel-paths-9b.patch`
          en `f0a22b3`). Banco en verde, 6 mutantes muertos y Debian 12 en verde
+       → Segunda revisión: `gh -R owner/repo pr create` se bloqueaba de más, porque el guard
+         tomaba `owner/repo` por el subcomando. Ahora salta el valor de `-R`/`--repo` (casos en
+         `7b25253`, 👤 parche `sentinel-paths-9c.patch` en `b0defcc`). Los casos de bloqueo del
+         heredoc comprueban también la regla que bloquea. Banco en verde, 4 mutantes muertos y
+         Debian 12 en verde
 
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
