@@ -283,6 +283,22 @@ aviso al editar `src/` sin cambio activo (solo en el nivel Método) · `rm -rf`/
 confirmación · ejecutar o tocar el instalador desde la shell pide confirmación (y con las
 herramientas de edición no se puede) · nada de `.env` de producción.
 
+**El propio enforcement está protegido**:
+- El agente no modifica la política, los hooks del Centinela y de la Esclusa, la llave, la
+  bitácora, el cableado de `.claude/settings` ni la configuración de git (la del repo y la tuya).
+- Tampoco mueve, copia encima, enlaza, cambia los permisos ni borra sus carpetas: `sentinel`,
+  `.claude`, `.git` y sus hooks.
+- Desde un comando no puede cambiar `core.hooksPath` ni saltarse la Esclusa (`--no-verify` o
+  `git commit -n`).
+- Leer esos ficheros desde la shell (`cat`, `grep`, `git log`) sí está permitido.
+
+El Centinela decide por la ruta física de cada fichero, así que da igual cómo se escriba (con
+`./`, entre comillas, por un enlace o con otra caja en un disco que no la distingue). Y lee el
+comando como lo leería bash: también lo que va en `"$(…)"`, `bash -c` o `eval`. El mensaje de
+un commit o de una PR escrito como `git commit -m "$(cat <<'EOF' … EOF)"` es texto, aunque nombre
+esas carpetas. Lo que queda fuera (un script, una ruta montada con variables, un `cd` previo)
+está en la fila «Regex evadibles» de [`sentinel/README.md`](../sentinel/README.md).
+
 **Las ramas protegidas las fija el SDK**: tu proyecto no puede cambiar esa lista. Si trabajas
 con `develop` o `staging`, de momento no quedan protegidas; ampliarla irá en un cambio aparte.
 

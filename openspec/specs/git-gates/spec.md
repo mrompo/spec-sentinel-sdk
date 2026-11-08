@@ -7,7 +7,6 @@ publicar lo que no cumple el contrato del proyecto. Al commitear exigen mensajes
 Commits, ningún secreto y formato; al publicar, tests, rama no protegida y specs válidas.
 Degradan con aviso si falta una herramienta opcional, fallan si falta una obligatoria y admiten
 una excepción auditada con la misma llave que el Centinela.
-
 ## Requirements
 ### Requirement: Mensajes de commit conformes
 
@@ -93,8 +92,10 @@ sin ejecutar sus comprobaciones.
 ### Requirement: Excepción auditada (break-glass)
 
 Todo rechazo de la Esclusa SHALL poder saltarse **solo** con una excepción auditada, la misma que
-usa el Centinela: la llave (`sentinel/.override` con un motivo, **de un solo uso**) o
-`SENTINEL_OVERRIDE` con un motivo en el entorno de la sesión. Cada uso SHALL registrarse en la
+usa el Centinela: la llave (`sentinel/.override` con un motivo y su `para:`, **de un solo uso**)
+o `SENTINEL_OVERRIDE` con un motivo en el entorno de la sesión. La llave SHALL atarse a un hook:
+solo la gasta el rechazo del hook de su `para:` (`para: esclusa:<hook>`), y una llave atada a
+otra acción (de la Esclusa o del Centinela) SHALL conservarse. Cada uso SHALL registrarse en la
 bitácora (`sentinel/overrides.log`) con fecha, hook, qué se rechazaba y motivo. Si la bitácora no
 se puede escribir, la excepción SHALL denegarse y la llave SHALL conservarse. Un motivo vacío o
 solo de espacios SHALL NOT valer como excepción. La llave SHALL poder crearla solo una persona:
@@ -102,10 +103,16 @@ el Centinela SHALL impedir que el agente la escriba.
 
 #### Scenario: Rechazo saltado con la llave (SC-git-gates-11)
 
-- **WHEN** una persona escribe `hotfix INC-9` en `sentinel/.override` y se intenta un commit que
-  la Esclusa rechazaría
+- **WHEN** una persona escribe en `sentinel/.override` el motivo `hotfix INC-9` y
+  `para: esclusa:pre-commit`, y se intenta un commit que el `pre-commit` rechazaría
 - **THEN** el commit entra, la bitácora gana una línea con el hook y el motivo, y la llave
   desaparece: el siguiente rechazo vuelve a bloquear
+- **AND** si el rechazo es de otro hook (`commit-msg`) o la llave está atada a una acción del
+  Centinela o no tiene `para:`, el rechazo se mantiene, el mensaje da la llave de ese hook lista
+  para copiar y la llave sigue en su sitio
+- **AND** la llave del mensaje, copiada tal cual y pegada en bash, zsh o sh, escribe la llave;
+  lleva la ruta absoluta, entrecomillada para la shell, así que pegada desde una subcarpeta, y
+  aunque la ruta del repo tenga espacios o comillas, la llave va a la raíz del repo
 
 #### Scenario: Bitácora no escribible (SC-git-gates-12)
 
@@ -117,6 +124,8 @@ el Centinela SHALL impedir que el agente la escriba.
 
 - **WHEN** la sesión se arrancó con `SENTINEL_OVERRIDE="motivo"` y la Esclusa rechazaría un push
 - **THEN** el push se permite y queda registrado; con `SENTINEL_OVERRIDE` vacío, se rechaza
+- **AND** una llave atada a otra acción no se gasta: la excepción sale de la sesión; la llave de
+  este hook sí se gasta, porque si quedara valdría para repetir el salto sin la sesión
 
 #### Scenario: El agente no puede crear la llave (SC-git-gates-14)
 

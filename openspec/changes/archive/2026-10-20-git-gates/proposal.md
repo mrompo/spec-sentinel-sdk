@@ -1,7 +1,7 @@
 # Proposal — git-gates (fase 2 · el puesto Esclusa y el nivel Guardia instalable)
 
 > Reabierta el 2026-09-28 tras `framework-semantics`: reescrita con el vocabulario de
-> [docs/05-semantica.md](../../../docs/05-semantica.md). Sustituye a la versión aparcada del
+> [docs/05-semantica.md](../../../../docs/05-semantica.md). Sustituye a la versión aparcada del
 > 2026-08-05; el alcance técnico se mantiene y se añaden los hallazgos de la semántica.
 
 ## Why

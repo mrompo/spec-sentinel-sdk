@@ -218,7 +218,7 @@
        instalación, `sdd: true`, `.gitattributes` en el commit), skill y límites (configuración
        gestionada por MDM o servidor)
 - [x] W6. `STATUS.md`: la deuda de la quinta revisión y el cambio
-       [`sentinel-paths`](../../sentinel-paths/proposal.md) (abierto con la disposición)
+       [`sentinel-paths`](../2026-11-08-sentinel-paths/proposal.md) (abierto con la disposición)
 - [x] W7. Relanzar el panel → **Veredicto** `CONDITIONAL`: sin bloqueantes, tres graves
        ([`review/round6/`](review/round6/README.md))
 

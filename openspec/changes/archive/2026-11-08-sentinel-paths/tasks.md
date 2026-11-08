@@ -124,11 +124,13 @@ lectura sobre una protección ya basada en la ruta física.
 
 ### Cierre
 
-- [ ] 11. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las tres PRs →
+- [x] 11. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las tres PRs →
         `disposition` 👤 de los hallazgos. Primer panel el 2026-10-28
         ([`review/`](review/README.md)): `HOLD` por V1, con 8 graves y los 26 hallazgos
         validados. Disposición de la persona el mismo día: se arregla en este cambio (ronda 2,
         abajo) salvo P7 y P9, que van a deuda, y después un panel de confirmación
+        → Cerrado con la ronda 4 (R14): tres paneles (`HOLD`, `HOLD` y `CONDITIONAL`), cuatro
+          rondas de `apply` y los graves del último arreglados en la #24
 
 ### Ronda 2 · arreglos de la revisión (disposición del 2026-10-28)
 
@@ -379,5 +381,9 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          lo ejecuta. Es una forma más de «un script queda fuera»: en `main` ya pasa
          `echo 'mv sentinel/githooks /tmp/y' > /tmp/x.sh; bash /tmp/x.sh`
 
-- [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
+- [x] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
+        → Las nueve PRs en `main` (#9 a #13, #15 a #18, #20 a #22 y #24). `openspec archive`
+          lleva los deltas a las specs vivas `sentinel-guard` y `git-gates`. La guía explica lo
+          que protege el Centinela del propio enforcement, y `STATUS.md` registra la deuda del
+          panel corto, la de la revisión de la #22 y el aviso de seguridad de la #24
