@@ -313,7 +313,11 @@ cmd_words() {
       else if (sh == 1 && w ~ /^-[a-zA-Z]*c[a-zA-Z]*$/) sh = 2
       else if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
       if (ev) evc = evc (evc == "" ? "" : " ") w
-      if (prog == "gh" && ghs == "" && b !~ /^-/) ghs = b
+      if (prog == "gh" && ghs == "") {
+        if (ghr) ghr = 0
+        else if (b ~ /^(-R|--repo)$/) ghr = 1
+        else if (b !~ /^-/) ghs = b
+      }
       if (gs == 1) {
         if (b !~ /^-/) { gs = 0; gsc = b; return 1 }
         drop = 1
@@ -344,7 +348,7 @@ cmd_words() {
       if (seg != "") print "n" seg
       if (pseg != "" && pseg != seg) print "n" pseg
       seg = ""; pseg = ""; print "s"
-      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; ghs = ""; rd = 0; ov = 0
+      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; ghs = ""; ghr = 0; rd = 0; ov = 0
     }
     # subend, dqend, bqend, aqend, brend <desde> → dónde acaba lo que empieza en <desde> (el
     # paréntesis que cierra $(…), la comilla que cierra "…", el acento que cierra `…`, la comilla
