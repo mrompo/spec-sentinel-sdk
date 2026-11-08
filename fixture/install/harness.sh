@@ -5,7 +5,17 @@
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../githooks/harness.sh" || exit 1
-SETUP="$REPO_ROOT/ai-specs/skills/setup/setup.sh"
+# El SDK desde el que se instala es una copia limpia del de REPO_ROOT: los ficheros de su índice,
+# con el contenido del árbol de trabajo, en un repo git con un commit. setup no instala desde una
+# copia con cambios sin commitear (SC-sdk-version-04), y así el banco no depende de que REPO_ROOT
+# los tenga (p. ej. con un parche aplicado antes de su commit). Se borra al salir del caso
+SDK_TMP="$(mktemp -d)"; SDK_SRC="$SDK_TMP/sdk"
+trap 'rm -rf "$SDK_TMP"' EXIT
+mkdir -p "$SDK_SRC" \
+  && ( cd "$REPO_ROOT" && git ls-files -z | tar --null -T - -cf - ) | ( cd "$SDK_SRC" && tar -xf - ) \
+  && git -C "$SDK_SRC" init -q && git -C "$SDK_SRC" add -A && git -C "$SDK_SRC" commit -qm sdk \
+  || { echo "    no se pudo hacer la copia limpia del SDK" >&2; exit 1; }
+SETUP="$SDK_SRC/ai-specs/skills/setup/setup.sh"
 # setup también mira la configuración de usuario de Claude Code (SC-sdk-setup-14): el banco no
 # lee la de quien lo ejecuta. Un caso la fija con CLAUDE_CONFIG_DIR=… en run_setup
 export CLAUDE_CONFIG_DIR=/nonexistent/claude-user-config
