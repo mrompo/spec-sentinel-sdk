@@ -374,6 +374,10 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          `7b25253`, 👤 parche `sentinel-paths-9c.patch` en `b0defcc`). Los casos de bloqueo del
          heredoc comprueban también la regla que bloquea. Banco en verde, 4 mutantes muertos y
          Debian 12 en verde
+       → A deuda (decisión de la persona, 2026-11-08): con `cat <<'EOF' > /tmp/x.sh` dentro
+         del mensaje, el cuerpo se escribe en un fichero sin contar, y luego `bash /tmp/x.sh`
+         lo ejecuta. Es una forma más de «un script queda fuera»: en `main` ya pasa
+         `echo 'mv sentinel/githooks /tmp/y' > /tmp/x.sh; bash /tmp/x.sh`
 
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada
