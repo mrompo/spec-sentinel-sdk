@@ -80,6 +80,12 @@ run_setup
 refused "desde una copia con un cambio sin commitear"
 assert_out_contains "sin commitear" || fail_case "la salida debería decir que la copia tiene cambios sin commitear: $RH_ERR"
 sdk_git checkout -q -- sentinel/README.md
+# Si git status falla (aquí, con el índice dañado), no se sabe si hay cambios: tampoco instala
+cp "$SDK_SRC/.git/index" "$SDK_TMP/index.bien" && printf 'basura' >"$SDK_SRC/.git/index"
+run_setup
+refused "desde una copia en la que git status falla"
+assert_out_contains "git status" || fail_case "la salida debería decir que git status falla en la copia: $RH_ERR"
+mv "$SDK_TMP/index.bien" "$SDK_SRC/.git/index"
 printf '#!/bin/sh\n' >"$SDK_SRC/sentinel/hooks/nuevo.sh"
 run_setup
 refused "desde una copia con un fichero sin versionar en lo distribuido"
