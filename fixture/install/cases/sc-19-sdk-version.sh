@@ -56,15 +56,21 @@ sdk_git checkout -q -b otra-rama "$C1" && sdk_git commit -q --allow-empty -m "ot
 run_setup
 refused "desde una copia de otra rama"
 
+# Una copia sin git propio, aunque esté dentro de otro repo: el de fuera, en el commit instalado
+# y sin cambios (la copia está excluida), no es su versión
+sdk_git checkout -q --detach "$C2"
 mkdir -p "$nogit" && ( cd "$SDK_SRC" && tar --exclude=./.git -cf - . ) | ( cd "$nogit" && tar -xf - )
+mv "$nogit" "$SDK_SRC/vendor-sdk" && nogit="$SDK_SRC/vendor-sdk"
+printf 'vendor-sdk/\n' >>"$SDK_SRC/.git/info/exclude"
 setup_from "$nogit/ai-specs/skills/setup/setup.sh"
 refused "desde una copia que no es un clon de git"
+assert_out_contains "no es un clon de git" || fail_case "la salida debería decir que la copia no es un clon de git: $RH_ERR"
 
-sdk_git checkout -q --detach "$C2"
 cp "$V" "$V.bien" && printf 'basura\n' >"$V"
 before="$(ws_snapshot)"
 run_setup
 refused "con un sentinel/.sdk-version ilegible"
+assert_out_contains "no se puede leer" || fail_case "la salida debería decir que la versión instalada no se puede leer: $RH_ERR"
 mv "$V.bien" "$V"
 
 # ── SC-04: una copia con cambios sin commitear no instala, aunque su commit sea el mismo ──────
@@ -91,8 +97,15 @@ assert_out_contains "${C1:0:7}" || fail_case "con --downgrade, la salida deberí
 grep -qx "commit=$C1" "$V" || fail_case "tras --downgrade, sentinel/.sdk-version debería decir commit=$C1: $(cat "$V")"
 grep -qx "dirty=no" "$V" || fail_case "tras --downgrade desde una copia limpia, debería decir dirty=no"
 
-# ── SC-01: sobre el propio SDK no se copia nada, y tampoco se escribe la versión ─────────────
+# ── SC-01: la versión viaja con el repo, así que setup avisa si el .gitignore la deja fuera ───
 sdk_git checkout -q --detach "$C2"
+cp "$WS/.gitignore" "$WS/.gitignore.bien" && printf 'sentinel/.sdk-version\n' >>"$WS/.gitignore"
+run_setup
+assert_exit 3 || fail_case "con sentinel/.sdk-version ignorado, setup debería terminar con pendientes (3): $RH_ERR"
+assert_out_contains "!sentinel/.sdk-version" || fail_case "setup debería dar la excepción que reincluye sentinel/.sdk-version: $RH_ERR"
+mv "$WS/.gitignore.bien" "$WS/.gitignore"
+
+# ── SC-01: sobre el propio SDK no se copia nada, y tampoco se escribe la versión ─────────────
 _capture env "$(gl_ok)" bash "$SETUP" "$SDK_SRC"
 [ -e "$SDK_SRC/sentinel/.sdk-version" ] && fail_case "sobre el propio SDK no debería escribirse sentinel/.sdk-version"
 
