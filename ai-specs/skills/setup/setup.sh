@@ -210,11 +210,17 @@ jqx -e '(.hooks | type == "object" and length > 0) and all(.hooks[]; type == "ar
 # cambios sin commitear no instalan nada sin --downgrade: así un clon viejo no revierte el
 # enforcement en silencio
 VFILE="sentinel/.sdk-version"
-SDK_COMMIT=""; SDK_DIRTY=no
+SDK_COMMIT=""; SDK_DIRTY=no; DIRTY_WHY="esta copia del SDK tiene cambios sin commitear"
 if [ "$(git -C "$SDK_ROOT" rev-parse --show-toplevel 2>/dev/null)" -ef "$SDK_ROOT" ]; then
   SDK_COMMIT="$(git -C "$SDK_ROOT" rev-parse --verify -q HEAD 2>/dev/null)" || SDK_COMMIT=""
-  [ -z "$(git -C "$SDK_ROOT" status --porcelain 2>/dev/null)" ] || SDK_DIRTY=yes
+  # Sin el código de salida, un git status que falla (un índice dañado) parecería una copia limpia
+  if st="$(git -C "$SDK_ROOT" status --porcelain 2>/dev/null)"; then
+    [ -z "$st" ] || SDK_DIRTY=yes
+  else
+    SDK_DIRTY=yes; DIRTY_WHY="git status falla en esta copia del SDK: no se sabe si tiene cambios sin commitear"
+  fi
 fi
+# short <commit> → sus 7 primeros caracteres, o «desconocida» si no hay
 short() { [ -n "$1" ] && printf '%s' "${1:0:7}" || printf 'desconocida'; }
 if [ "$SELF" -eq 0 ]; then
   INSTALLED=""; why=""
@@ -229,7 +235,7 @@ if [ "$SELF" -eq 0 ]; then
     fi
   fi
   if [ "$SDK_DIRTY" = yes ]; then
-    why="${why:+$why; y }esta copia del SDK tiene cambios sin commitear"
+    why="${why:+$why; y }$DIRTY_WHY"
   fi
   vers="instalada: $(short "$INSTALLED") · esta copia: $(short "$SDK_COMMIT")$([ "$SDK_DIRTY" = yes ] && printf ', con cambios sin commitear')"
   if [ -n "$why" ] && [ "$DOWNGRADE" -eq 0 ]; then
