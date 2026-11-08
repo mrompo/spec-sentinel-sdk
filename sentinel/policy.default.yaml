@@ -66,9 +66,11 @@ rules:
     # .config/git/config) es solo la de su carpeta personal, como ~/.jq; un .gitconfig del repo
     # que es esa configuración lo nombra el guard como ~/.gitconfig por su ruta física. Leer
     # desde la shell no se bloquea (skip_read_only).
+    # sdk-version (SC-sdk-version-08): la versión del SDK instalada (sentinel/.sdk-version). Si el
+    # agente la reescribiera, una copia vieja del SDK pasaría por la misma y setup la instalaría.
     # El instalador tiene sus propias reglas (protect-installer, install-needs-human).
     # AGENTS.md no va aquí: en un consumidor es suyo; el SDK lo protege en su propia policy.yaml.
-    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|(^|[^[:alnum:]._-])\.git/(worktrees/[^/]+/|modules/.+/)?config(\.worktree)?([^[:alnum:]._-]|$)|(~|\$HOME|\$\{HOME\}|(^|[[:space:]"'=])(/(Users|home)/[^/[:space:]]+|/root))/(\.jq|\.gitconfig|\.config/git/config)([^[:alnum:]._-]|$)|\.claude/settings)
+    path_re: (sentinel/(hooks/|githooks/(commit-msg|pre-commit|pre-push|lib/)|adapters/stack\.sh|policy(\.default)?\.yaml|overrides\.log|\.override|\.sdk-version|settings\.fragment\.json)|\.husky/(commit-msg|pre-commit|pre-push)|\.git/hooks/|(^|[^[:alnum:]._-])\.git/(worktrees/[^/]+/|modules/.+/)?config(\.worktree)?([^[:alnum:]._-]|$)|(~|\$HOME|\$\{HOME\}|(^|[[:space:]"'=])(/(Users|home)/[^/[:space:]]+|/root))/(\.jq|\.gitconfig|\.config/git/config)([^[:alnum:]._-]|$)|\.claude/settings)
     skip_read_only: true
     mode: block
     reason: No se modifica ni borra el propio enforcement (Centinela, Esclusa, política, llave, bitácora, cableado) — hazlo en un cambio OpenSpec revisado por un humano

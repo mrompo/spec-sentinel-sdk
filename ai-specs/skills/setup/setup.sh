@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # setup.sh — instala el nivel Guardia (Centinela + Esclusa) en un repo con un solo comando.
 #
-#   bash <sdk>/ai-specs/skills/setup/setup.sh [raíz-del-repo]      (por defecto, el directorio actual)
+#   bash <sdk>/ai-specs/skills/setup/setup.sh [--downgrade] [raíz-del-repo]   (por defecto, el directorio actual)
 #
 # Lo invoca la skill `spec-sentinel-setup` (SKILL.md, al lado); también se puede ejecutar a mano.
 # Idempotente: una segunda ejecución no cambia nada. Nunca pisa la configuración del consumidor:
@@ -15,7 +15,10 @@
 #   - .gitignore y .gitattributes reciben las líneas que la instalación necesita (la llave, los
 #     backups y lo personal fuera de git; sentinel/ siempre con LF);
 #   - core.hooksPath solo se activa si el repo no usa ya otros git hooks; si los usa, se dan
-#     las líneas que encadenan la Esclusa en ellos (chain.sh) y se reconoce cuando ya están.
+#     las líneas que encadenan la Esclusa en ellos (chain.sh) y se reconoce cuando ya están;
+#   - sentinel/.sdk-version registra el commit de la copia del SDK y si tenía cambios sin
+#     commitear. Solo se instala sin más desde una copia igual o más nueva que la instalada y
+#     limpia; si no, nada se escribe sin --downgrade (SC-sdk-version-01..05).
 # Los backups van a sentinel/.backup/<fecha>/ (fuera de git).
 #
 # Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error. Si falla una
@@ -24,7 +27,7 @@
 # mismos que la Esclusa), CLAUDE_CONFIG_DIR (la configuración de usuario de Claude Code, como en
 # Claude Code), SENTINEL_SETUP_MANAGED (la configuración gestionada; por defecto, la de la
 # plataforma).
-# Falsifica: SC-sdk-setup-01..18 (fixture/install/cases/).
+# Falsifica: SC-sdk-setup-01..18 y SC-sdk-version-01..05 (fixture/install/cases/).
 set -uo pipefail
 
 # cd -P primero: a través de un enlace a la skill (~/.claude/skills/spec-sentinel-setup) se sube
@@ -48,8 +51,18 @@ dist_files() {
 }
 
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
-[ -d "${1:-.}" ] || die "no existe el directorio ${1:-.}"
-TARGET="$(cd "${1:-.}" && pwd -P)"
+# --downgrade: la persona confirma instalar desde una copia del SDK que no es igual o más nueva
+# que la instalada, o que tiene cambios sin commitear (SC-sdk-version-05)
+DOWNGRADE=0; ARG=""
+for a in "$@"; do
+  case "$a" in
+    --downgrade) DOWNGRADE=1 ;;
+    -*) die "opción desconocida: $a (setup acepta --downgrade)" ;;
+    *) [ -z "$ARG" ] || die "setup recibe una sola carpeta: $ARG y $a"; ARG="$a" ;;
+  esac
+done
+[ -d "${ARG:-.}" ] || die "no existe el directorio ${ARG:-.}"
+TARGET="$(cd "${ARG:-.}" && pwd -P)"
 
 # Nada de lo que setup ejecuta puede venir del repo destino: el agente podría poner ahí un jq que
 # «fusione» quitando el cableado, un bash, un git o el intérprete de otro programa que reescriban
@@ -189,6 +202,47 @@ jqx -e '(.hooks | type == "object" and length > 0) and all(.hooks[]; type == "ar
   "$SDK_ROOT/.claude/settings.json" >/dev/null 2>&1 \
   || die "el .claude/settings.json del SDK no es un cableado válido — ejecuta setup.sh desde una copia íntegra del SDK"
 
+# ── La versión del SDK (SC-sdk-version-01..05) ───────────────────────────────────────────
+# sentinel/.sdk-version guarda el commit de la copia del SDK desde la que se instaló y si su árbol
+# tenía cambios sin commitear. Sin tags, «igual o más nueva» es que el commit instalado sea
+# antecesor del de esta copia (o el mismo). Una copia sin git propio (también dentro de otro
+# repo), una versión instalada que no se puede leer, una copia más vieja o de otra rama y una con
+# cambios sin commitear no instalan nada sin --downgrade: así un clon viejo no revierte el
+# enforcement en silencio
+VFILE="sentinel/.sdk-version"
+SDK_COMMIT=""; SDK_DIRTY=no
+if [ "$(git -C "$SDK_ROOT" rev-parse --show-toplevel 2>/dev/null)" -ef "$SDK_ROOT" ]; then
+  SDK_COMMIT="$(git -C "$SDK_ROOT" rev-parse --verify -q HEAD 2>/dev/null)" || SDK_COMMIT=""
+  [ -z "$(git -C "$SDK_ROOT" status --porcelain 2>/dev/null)" ] || SDK_DIRTY=yes
+fi
+short() { [ -n "$1" ] && printf '%s' "${1:0:7}" || printf 'desconocida'; }
+if [ "$SELF" -eq 0 ]; then
+  INSTALLED=""; why=""
+  if [ -f "$TARGET/$VFILE" ]; then
+    INSTALLED="$(sed -n 's/^commit=\([0-9a-f]\{40,64\}\)$/\1/p' "$TARGET/$VFILE" 2>/dev/null | head -1)"
+    if [ -z "$INSTALLED" ]; then
+      why="no se puede leer la versión instalada en $VFILE"
+    elif [ -z "$SDK_COMMIT" ]; then
+      why="esta copia del SDK no es un clon de git: no se sabe si es más vieja que la instalada"
+    elif ! git -C "$SDK_ROOT" merge-base --is-ancestor "$INSTALLED" "$SDK_COMMIT" 2>/dev/null; then
+      why="la versión instalada no es antecesora de la de esta copia: esta copia es más vieja o de otra rama"
+    fi
+  fi
+  if [ "$SDK_DIRTY" = yes ]; then
+    why="${why:+$why; y }esta copia del SDK tiene cambios sin commitear"
+  fi
+  vers="instalada: $(short "$INSTALLED") · esta copia: $(short "$SDK_COMMIT")$([ "$SDK_DIRTY" = yes ] && printf ', con cambios sin commitear')"
+  if [ -n "$why" ] && [ "$DOWNGRADE" -eq 0 ]; then
+    die "no se instala: $why ($vers).
+    Así una copia vieja del SDK no revierte el enforcement en silencio. Actualiza tu copia del
+    SDK (git pull, sin cambios locales) y vuelve a ejecutar setup. Si de verdad quieres instalar
+    esta, confírmalo con --downgrade: bash $(printf '%q' "$SDK_ROOT/ai-specs/skills/setup/setup.sh") --downgrade $(printf '%q' "$TARGET")
+    No se ha instalado nada"
+  fi
+  [ -z "$why" ] || echo "⚠ se instala con --downgrade: $why ($vers)"
+  [ -f "$TARGET/$VFILE" ] || note "no constaba versión del SDK instalada ($VFILE): se registra la de esta copia"
+fi
+
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 backup() {
   local rel="$1" dir="$TARGET/sentinel/.backup/$STAMP"
@@ -215,6 +269,13 @@ else
   done < <(dist_files)
   [ "$updated" -gt 0 ] && ok "enforcement instalado o actualizado ($updated ficheros en sentinel/)" \
     || ok "enforcement al día"
+  vtext="# Versión del SDK que instaló setup. La escribe setup; no se edita a mano (SC-sdk-version-01)
+commit=${SDK_COMMIT:-desconocido}
+dirty=$SDK_DIRTY"
+  if [ "$(cat "$TARGET/$VFILE" 2>/dev/null)" != "$vtext" ]; then
+    printf '%s\n' "$vtext" >"$TARGET/$VFILE" || die "no se pudo escribir $VFILE"
+  fi
+  ok "versión del SDK en $VFILE: commit $(short "$SDK_COMMIT")$([ "$SDK_DIRTY" = yes ] && printf ', con cambios sin commitear')"
 fi
 
 # ── 2. Lo del consumidor (solo se crea si falta) ─────────────────────────────────────────
@@ -584,6 +645,7 @@ checked_snapshot() {
   while IFS= read -r rel; do
     if [ -f "$TARGET/$rel" ]; then cksum <"$TARGET/$rel" 2>/dev/null || echo "?"; else echo "-"; fi
   done < <(dist_files)
+  if [ -f "$TARGET/$VFILE" ]; then cksum <"$TARGET/$VFILE" 2>/dev/null || echo "?"; else echo "-"; fi
   git -C "$TARGET" config --get core.hooksPath 2>/dev/null || echo "-"
 }
 CHECKED="$(checked_snapshot)"
@@ -642,6 +704,7 @@ fi
 versioned() {
   dist_files
   printf '%s\n' sentinel/policy.yaml sentinel/overrides.log .claude/settings.json
+  [ "$SELF" -eq 1 ] || echo "$VFILE"
   [ ! -f "$TARGET/sentinel/adapters/stack.yaml" ] || echo sentinel/adapters/stack.yaml
 }
 # exception_for <fichero> → las líneas que lo reincluyen desde el .gitignore del repo (que manda
