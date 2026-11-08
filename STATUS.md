@@ -4,14 +4,14 @@
 > (en qué fase §7 está el cambio activo). Se actualiza al abrir y al archivar cada cambio.
 > Desde la fase 4, `doctor --status` generará este fichero; hasta entonces, se mantiene a mano.
 
-**Última actualización**: 2026-11-03 · **`sentinel-paths` en la ronda 4 de `apply`**: las tres PRs en `main` (#9 a #13); el primer panel dio `HOLD` (V1, un escape del JSON delante del verbo, y 8 graves) y la persona decidió arreglarlo en este cambio con tres PRs más y un panel de confirmación. Las PRs 4 a 6 ya están en `main` (#15, #16 y su revisión en #17, y #18); el panel de confirmación dio `HOLD` (4 bloqueantes) y la persona decidió una ronda 3 acotada, de dos PRs, con el resto a deuda. La ronda 3 ya está en `main` (#20, #21 y #22); el panel corto dio `CONDITIONAL` (ningún bloqueante y dos graves en el cuerpo de un heredoc) y la persona decidió una ronda 4 mínima, de una PR, con el resto a deuda y el `archive` después · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` archivado (PR #7): las seis specs vivas declaran su propósito y el banco impide dejarlo en «TBD» · siguientes: cerrar `sentinel-paths`, los gates Intención de `hook-coexistence` y `sdk-version`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
+**Última actualización**: 2026-11-08 · **`sentinel-paths` archivado**: nueve PRs en `main` (#9 a #13, #15 a #18, #20 a #22 y #24) en cuatro rondas de `apply`, tras tres paneles (`HOLD`, `HOLD` y `CONDITIONAL`); sus deltas pasan a las specs vivas `sentinel-guard` y `git-gates`, y lo que queda, a deuda · ningún cambio en `apply` · **fase 2 `git-gates` archivada**: las tres PRs en `main` (#3, #4 y #5) y sus specs vivas (`git-gates`, `sdk-setup`, `sentinel-guard`) actualizadas · `spec-purposes` archivado (PR #7): las seis specs vivas declaran su propósito y el banco impide dejarlo en «TBD» · siguientes: los gates Intención de `hook-coexistence` y `sdk-version`, y la fase 3 · historia reescrita con los mensajes de commit en español (misma topología y contenido)
 
 ## Posición actual
 
 | Nivel | Estado |
 |---|---|
-| **Roadmap** | Fases 0, 1 y **2** ✅ archivadas · `framework-semantics` ✅ en `main` (fuera de roadmap) · `pr-format` ✅ en `main` (fuera de roadmap) · siguiente: fase 3 (`ci-gate`) |
-| **Loop** | [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md): Intención ✅ (2026-10-26), Claridad ✅ y Plan ✅ (2026-10-26, tres PRs) · PR 1/3 «Lo que se toca» en `main` (#9, y su revisión en #10 y #11); PR 2/3 «Sin falsos positivos y la llave» en `main` (#12); PR 3/3 «Cableado» en `main` (#13). [Primer panel](openspec/changes/sentinel-paths/review/README.md) (2026-10-28): `HOLD`, 26 hallazgos validados; ronda 2 de `apply`: PR 4 «Lo que ejecuta bash» en `main` (#15), PR 5 «Carpetas y ruta física» en `main` (#16, y su revisión en #17), PR 6 «El cableado en el uso real y la llave» en `main` (#18). [Panel de confirmación](openspec/changes/sentinel-paths/review-2/README.md) (2026-10-31): `HOLD`, 30 hallazgos validados; ronda 3: PR 7 «Lo que ejecuta bash, otra vez» en `main` (#20, y su revisión en #21) y PR 8 «`.git`, la caja y la Esclusa» en `main` (#22). [Panel corto](openspec/changes/sentinel-paths/review-3/README.md) (2026-11-03): `CONDITIONAL`, 18 hallazgos validados (dos graves); ronda 4: PR 9 «El cuerpo de un heredoc»; después, `archive`. Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). La revisión de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`) queda en su [expediente archivado](openspec/changes/archive/2026-10-20-git-gates/review/README.md) |
+| **Roadmap** | Fases 0, 1 y **2** ✅ archivadas · `framework-semantics`, `pr-format`, `spec-purposes` y `sentinel-paths` ✅ en `main` (fuera de roadmap) · siguiente: fase 3 (`ci-gate`) |
+| **Loop** | Ningún cambio en `apply`. Dos expedientes esperan el gate **Intención** 👤: [`hook-coexistence`](openspec/changes/hook-coexistence/proposal.md) y [`sdk-version`](openspec/changes/sdk-version/proposal.md). Las revisiones de `sentinel-paths` (tres paneles: [primero](openspec/changes/archive/2026-11-08-sentinel-paths/review/README.md), [de confirmación](openspec/changes/archive/2026-11-08-sentinel-paths/review-2/README.md) y [corto](openspec/changes/archive/2026-11-08-sentinel-paths/review-3/README.md)) y las de `git-gates` 3/3 (cinco `HOLD` y dos `CONDITIONAL`, en su [expediente](openspec/changes/archive/2026-10-20-git-gates/review/README.md)) quedan archivadas |
 | **Niveles entregados** | **Guardia**, salvo la Aduana: Centinela y Esclusa activos en este repo e instalables en cualquiera con `setup`; la Aduana llega en la fase 3 |
 
 ## Roadmap
@@ -24,6 +24,7 @@
 | — | `pr-format` | — | ✅ Archivada (`2026-09-29`, en `main` por la PR #2) — título en Conventional Commits + diez secciones fijas; la plantilla la verifica el banco. Adelanta la plantilla de la fase 5 |
 | — | `spec-purposes` | — | ✅ Archivada (`2026-10-21`, en `main` por la PR #7) — [change](openspec/changes/archive/2026-10-21-spec-purposes/proposal.md) · el `Purpose` de las seis specs vivas y la regla de `sdk-method` que impide dejarlo en «TBD» (SC-sdk-method-05) |
 | 2 | `git-gates` | 0 | ✅ Archivada (`2026-10-20`, en `main` por las PRs #3, #4 y #5) — [change](openspec/changes/archive/2026-10-20-git-gates/proposal.md) · la Esclusa (commit-msg, pre-commit, pre-push), los ficheros protegidos y `setup`, que instala el nivel Guardia en un comando; siete paneles adversariales en la 3/3 |
+| — | `sentinel-paths` | 0 | ✅ Archivada (`2026-11-08`, en `main` por las PRs #9 a #13, #15 a #18, #20 a #22 y #24) — [change](openspec/changes/archive/2026-11-08-sentinel-paths/proposal.md) · el Centinela decide por la ruta física y lee el comando como bash: las carpetas del enforcement enteras, los enlaces, `.git` y la configuración de git, `core.hooksPath` sin nombrarlo, la Esclusa con otra grafía, el cableado con un entorno limpio y la llave para una sola acción; tres paneles adversariales |
 | 3 | `ci-gate` + `spec-coverage` CLI | 0/1 | Pendiente |
 | 4 | `sdd-cycle` | 1 | Pendiente |
 | 5 | `release-hotfix` | 1 | Pendiente |
@@ -49,32 +50,31 @@
 
 | Check | Estado |
 |---|---|
-| `fixture/verify.sh` | ✅ verde — 28 casos del Centinela + 16 de la Esclusa + 17 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR. El banco de instalación necesita jq |
-| `openspec validate --all --strict` | ✅ verde (6 specs vivas + los 3 expedientes activos) |
+| `fixture/verify.sh` | ✅ verde — 31 casos del Centinela + 16 de la Esclusa + 18 de instalación (uno end-to-end sobre `demo-app`) + estructura + semántica + plantilla de PR. El banco de instalación necesita jq |
+| `openspec validate --all --strict` | ✅ verde (6 specs vivas + los 2 expedientes activos) |
 | CI (`.github/workflows/fixture.yml`) | ✅ activo (remote `mrompo/spec-sentinel-sdk`), matriz macOS + Linux |
-| KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log`: 15 excepciones, del 2026-10-17 al 2026-10-20. Catorce son llaves que una persona concedió para que el agente escribiera los ficheros protegidos de las rondas 3 a 8 de `git-gates`; una la gastó un agente revisor con un comando de solo lectura. Desde la PR 2/3 de `sentinel-paths`, leer no se bloquea y la llave solo la gasta la acción que nombra su `para:` |
+| KPIs activos (docs/04) | `overrides break-glass` — `sentinel/overrides.log`: 15 excepciones, del 2026-10-17 al 2026-10-20. Catorce son llaves que una persona concedió para que el agente escribiera los ficheros protegidos de las rondas 3 a 8 de `git-gates`; una la gastó un agente revisor con un comando de solo lectura. Desde la PR 2/3 de `sentinel-paths`, leer no se bloquea y la llave solo la gasta la acción que nombra su `para:`. `sentinel-paths` no gastó ninguna: los ficheros protegidos los aplicó una persona desde su terminal, con parches |
 | Enforcement real | **Centinela y Esclusa activos en este repo**. El Centinela (`.claude/settings.json`) impide al agente commitear en ramas protegidas, tocar ficheros gestionados, debilitar tests o desarmar el propio guard. La Esclusa (`core.hooksPath` → `sentinel/githooks`, desde el 2026-10-16) revisa cada commit y cada push. La Aduana llega en la fase 3 |
 
 ## Deudas / pendientes conscientes
 
 - El artefacto de revisión del plan menciona aún `docs/02`/`docs/03` (la investigación se movió
   al repo hermano `../spec-sentinel-research/`); se corrige en la próxima republicación.
-- **El Centinela decide por la ruta física, pero lee el comando como texto** (quinta revisión
-  de `git-gates`). Con las PRs 1/3 y 2/3 de
-  [`sentinel-paths`](openspec/changes/sentinel-paths/proposal.md) quedan cubiertos las carpetas
-  enteras, los enlaces, la configuración de git de un repo bare, las vías hacia
-  `core.hooksPath` que no lo nombran, `CLAUDE_CONFIG_DIR`, los comodines y los escapes del
-  JSON. Leer un fichero protegido desde la shell ya no se bloquea (lista cerrada de lectores),
-  los parecidos de la configuración de git ya no cuentan y la llave la gasta solo la acción
-  que nombra. Quedan como límite documentado en `sentinel/README.md` las llaves (`{a,b}`),
-  `$'…'`, las sustituciones, las rutas montadas con variables y un `cd` previo.
+- **Lo que el Centinela no lee** (quinta revisión de `git-gates`, cerrada en
+  [`sentinel-paths`](openspec/changes/archive/2026-11-08-sentinel-paths/proposal.md)). El
+  Centinela decide por la ruta física y lee el comando como bash, también dentro de `"$(…)"`,
+  `bash -c` y `eval`. Siguen como límite documentado en la fila «Regex evadibles» de
+  `sentinel/README.md`:
+  - las llaves (`{a,b}`) y el contenido de `$'…'`;
+  - las rutas montadas con variables y un `cd` previo;
+  - lo que llega a una shell por otra vía: un script, `source` o una tubería a `bash`.
 - **La protección de ficheros choca con operaciones legítimas.** `managed-files` y
   `self-protection` impiden al agente rellenar el `Purpose` de una spec viva recién archivada,
   deshacer un `openspec archive` que aún no está commiteado (pasó en `pr-format`, lo deshizo
-  una persona) e incluso escribir en un comando un texto que *menciona* esas rutas: un mensaje
-  de commit o un heredoc que las nombre junto a `rm` o `mv` (pasa a menudo; se rodea
-  escribiendo el texto en un fichero). Leer ya no se bloquea desde la PR 2/3 de
-  `sentinel-paths`, salvo con `protect-agents-md`, la regla de este repo, que no lleva
+  una persona) e incluso escribir en un comando un texto que *menciona* esas rutas: un heredoc
+  que las nombre junto a `rm` o `mv` (pasa a menudo; se rodea escribiendo el texto en un
+  fichero). El mensaje de commit o de PR en `"$(cat <<'EOF' … EOF)"` ya no se bloquea desde la
+  #24. Leer ya no se bloquea desde la PR 2/3 de `sentinel-paths`, salvo con `protect-agents-md`, la regla de este repo, que no lleva
   `skip_read_only`: un `grep --include=*.md` bloquea porque el comodín alcanza `CLAUDE.md`.
   Va en un expediente propio del Centinela.
 - Renombrar el job de CI `verify` (colisión asumida en docs/05 §10).
@@ -116,7 +116,7 @@
     `sentinel-paths`, que lo ejecuta con un entorno limpio y falla cerrado. Queda como límite
     la shell con que Claude Code lanza el hook (`SHELLOPTS=noexec`).
 - **Deuda del primer panel de `sentinel-paths`** (decisión del 2026-10-28, detalle en
-  [review/](openspec/changes/sentinel-paths/review/README.md)):
+  [review/](openspec/changes/archive/2026-11-08-sentinel-paths/review/README.md)):
   - `protect-enforcement-dirs` decide sobre el comando entero: nombrar `.claude` o `sentinel` en
     un tramo y tener un `rm` o un `cp` en otro (`ls -la .claude && rm -f tmp.txt`), o copiar la
     carpeta hacia fuera (`cp -r .claude /tmp/bk`), se bloquea. Haría falta decidir por tramo y
@@ -125,7 +125,7 @@
     `phys_path` y `canon` (un heredoc de 60 líneas pasaba de 0,36 s a 1 s antes de contar solo
     las rutas que existen): faltan una caché por carpeta y un caso de rendimiento (P9).
 - **Deuda del panel de confirmación de `sentinel-paths`** (decisión del 2026-10-31, detalle en
-  [review-2/](openspec/changes/sentinel-paths/review-2/README.md)):
+  [review-2/](openspec/changes/archive/2026-11-08-sentinel-paths/review-2/README.md)):
   - `git restore sentinel`, `git checkout <rev> -- sentinel` y `git stash push -- sentinel`
     pasan: borran las líneas de la bitácora que aún no están en un commit y traen una versión
     antigua del enforcement. Bloquear `git restore .` sería un falso positivo enorme, así que
@@ -149,7 +149,8 @@
     - `id -un` sin `2>/dev/null` escribe un error en cada llamada si el uid no tiene nombre
       (P8);
     - `sed -n`, `awk`, `rg` y `jq` no cuentan como lectura, y el motivo dice «modifica» (P9);
-    - el cuerpo de un heredoc cuenta como comandos, lo que amplía P7 (P10);
+    - el cuerpo de un heredoc cuenta como comandos, lo que amplía P7 (P10). Desde la #24 no
+      cuenta en el mensaje de un commit o de una PR en `"$(cat <<'EOF' … EOF)"`;
     - `~+` y `~-` no se expanden (V7);
     - con `SENTINEL_OVERRIDE`, más de 512 rutas tapan en la bitácora la regla que se saltó
       (V8);
@@ -157,6 +158,44 @@
     - el patrón de un `case` cuenta como un comodín de ruta: `case "$s" in *x*|"") …` se
       bloquea con `protect-agents-md`, porque `*x*` casa con `codex.md` (visto en la #20; ya
       pasaba en `main`).
+- **Deuda del panel corto de `sentinel-paths`** (decisión del 2026-11-03, detalle en
+  [review-3/](openspec/changes/archive/2026-11-08-sentinel-paths/review-3/README.md)):
+  - un prefijo cuya opción lleva argumento (`sudo -u root`, `env -u X`, `timeout -s KILL`,
+    `stdbuf -o L`, `exec -a g`) o un alias en el propio comando (`git -c alias.ci=commit ci`)
+    esconde el `git commit` al Centinela; el pre-push sigue parando el push a una rama
+    protegida (A2 = V3 = P3);
+  - `git -C` a otro worktree decide con la rama de la sesión (P4);
+  - el `<<` de `$[…]`, del desplazamiento de `${x:…}` y del índice de un array abre un heredoc
+    que no existe, y una comilla de dos líneas esconde el comando siguiente (A4 = V2 = P5);
+  - la carpeta `.git/worktrees` no está protegida, aunque cada `.git/worktrees/<nombre>` sí
+    (A5 = V5);
+  - un patrón de `grep` con alternativas (`'cp\|mv'`) o con un espacio delante del verbo
+    bloquea la lectura de una carpeta protegida (A3 = P2);
+  - `tcsh -c`, `csh -c`, `env -S`, `trap '…' EXIT`, `su -c`, `script -c`, `flock -c` y un
+    alias `!` de `git -c` ejecutan texto que el guard no lee (V1 = A7);
+  - en un disco sin caja, la configuración de git de la persona escrita con otra caja solo se
+    reconoce si `HOME` cuelga de `/Users`, `/home` o `/root` (A6).
+- **Deuda de las revisiones de CodeRabbit de `sentinel-paths`**:
+  - un `rsync` que nombra `.git`, también como argumento de una opción
+    (`rsync -a --exclude .git src/ dst/`), se bloquea. Solo bloquea de más y ya pasaba en
+    `main`; quitar el argumento de `--exclude` de las dos lecturas del destino abriría un
+    escape en `cp`, `mv`, `ln` e `install` de BSD (revisión de la #22);
+  - con `cat <<'EOF' > /tmp/x.sh` dentro del mensaje de un commit, el cuerpo se escribe en un
+    fichero sin contar, y `bash /tmp/x.sh` lo ejecuta después. Es una forma más de «un script
+    queda fuera»: en `main` ya pasaba `echo 'mv sentinel/githooks /tmp/y' > /tmp/x.sh; bash
+    /tmp/x.sh` (aviso de seguridad de la #24, decisión del 2026-11-08);
+  - `\cat` sin redefinir hace que el mensaje vuelva a contar: solo bloquea de más (#24);
+  - el texto de la spec viva `sentinel-guard`, que llegó con los deltas (revisión de la #25).
+    Una persona lo corrige, porque `managed-files` no deja al agente editar las specs vivas:
+    - SC-sentinel-guard-08 dice que la llave desaparece también con `SENTINEL_OVERRIDE`.
+      SC-sentinel-paths-05 precisa que solo se gasta la de esa misma acción, que es lo que
+      hace el guard;
+    - las rutas relativas «desde el `cwd` del tool call» no avisan de que ese `cwd` no se
+      decodifica del JSON (A6 del panel de confirmación, arriba);
+    - el `PATH` fijo dice «solo carpetas que el agente no puede modificar», pero
+      `/mingw64/bin` lo es si Git for Windows se instaló solo para la persona: el límite está
+      en `sentinel/README.md`, no en la spec;
+    - Git for Windows reciente instala también en `/ucrt64/bin`, que el `PATH` fijo no lleva.
 - **El SDK no declara su `stack.yaml`**: en este repo la Esclusa omite format, lint y tests
   con aviso. Con `tests: bash fixture/verify.sh`, el `pre-push` correría el banco antes de
   cada push.
