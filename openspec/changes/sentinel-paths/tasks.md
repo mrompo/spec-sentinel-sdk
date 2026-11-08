@@ -338,7 +338,7 @@ mergeable sola.
 
 Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde `main`.
 
-- [ ] R13. Casos en rojo:
+- [x] R13. Casos en rojo:
        - P1: el commit y la PR con el mensaje en un heredoc entre comillas dentro de `"$(…)"`
          (`git commit -m "$(cat <<'EOF' …)"`) pasan en una rama feature aunque el mensaje
          nombre `mv .git` o `chmod sentinel/hooks`;
@@ -346,10 +346,38 @@ Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Una PR desde 
          detrás de un apóstrofo se lee como código;
        - A1: `git commit -m 'x;' -n` (y con `&` o `|`) se bloquea;
        - A8: los tres casos de `sc-30` que matan los mutantes del destino de `cp`/`mv`
-- [ ] R14. 👤 Parche `sentinel-paths-9.patch`: el cuerpo de un heredoc con el delimitador entre
+       → En `sc-29`, `sc-16` y `sc-30` (`b3f9818`): con el guard de `main` fallan 23 de los
+         46 casos nuevos de `sc-29` y `sc-16`. Con cada grupo, sus controles: lo que ejecuta la
+         salida de `cat` (`bash -c`, `eval`, el programa, una tubería a `sh`), otro programa en
+         la línea del heredoc, lo que sigue al cierre, un delimitador que no es de la forma de
+         siempre (`<<$'EOF'`, que bash cierra en `EOF`) y lo que redefine `cat` (una función,
+         `alias`, `PATH`, un `cat` de otra carpeta) se siguen bloqueando. Los de `sc-30` ya
+         pasan: son de mutantes. Deltas en SC-sentinel-paths-01 y en la fila «Regex evadibles»
+         del README
+- [x] R14. 👤 Parche `sentinel-paths-9.patch`: el cuerpo de un heredoc con el delimitador entre
        comillas no cuenta como comandos ni rutas, y en uno sin comillas no abre comillas y cada
        sustitución sale como código; en el tramo, `;`, `&` y `|` dentro de una palabra no cortan
        la regla de `-n`. Después, el 11 queda cerrado
+       → `ea3cd5f` (+48/−20 en el guard): el cuerpo solo es texto en el mensaje de `git
+         commit|tag|notes|merge` o `gh pr|issue|release`, con el delimitador `'EOF'`, `"EOF"` o
+         `\EOF`, si en su línea solo está `cat` y nada antes lo ha redefinido. Pasan los 50 casos
+         nuevos: los 46 de `sc-29` y `sc-16` (con `main` fallan 23) y los 4 de `sc-30`; `fixture/verify.sh` en verde en un clon (hooks 31,
+         githooks 16, install 18) y `sc-03`, `sc-16`, `sc-21`, `sc-26`, `sc-29` y `sc-30` en
+         Debian 12. Los 21 mutantes del arreglo mueren (`a46bab9` añade los casos que pedían
+         cuatro de ellos). El 11 queda cerrado
+       → Revisión de CodeRabbit en la #24: `eval 'cat() { bash; }'` antes del commit redefinía
+         `cat` sin que el guard lo viera. `eval`, `source`, `.`, `trap`, `mapfile` y `readarray`
+         cuentan ahora como redefinición (casos en `a83d0ce`, 👤 parche `sentinel-paths-9b.patch`
+         en `f0a22b3`). Banco en verde, 6 mutantes muertos y Debian 12 en verde
+       → Segunda revisión: `gh -R owner/repo pr create` se bloqueaba de más, porque el guard
+         tomaba `owner/repo` por el subcomando. Ahora salta el valor de `-R`/`--repo` (casos en
+         `7b25253`, 👤 parche `sentinel-paths-9c.patch` en `b0defcc`). Los casos de bloqueo del
+         heredoc comprueban también la regla que bloquea. Banco en verde, 4 mutantes muertos y
+         Debian 12 en verde
+       → A deuda (decisión de la persona, 2026-11-08): con `cat <<'EOF' > /tmp/x.sh` dentro
+         del mensaje, el cuerpo se escribe en un fichero sin contar, y luego `bash /tmp/x.sh`
+         lo ejecuta. Es una forma más de «un script queda fuera»: en `main` ya pasa
+         `echo 'mv sentinel/githooks /tmp/y' > /tmp/x.sh; bash /tmp/x.sh`
 
 - [ ] 12. `archive`: los deltas pasan a `sentinel-guard` y `git-gates`; `STATUS.md` y la guía al
         día, y la deuda que quede, registrada

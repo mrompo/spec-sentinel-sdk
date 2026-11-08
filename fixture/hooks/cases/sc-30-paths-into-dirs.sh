@@ -143,7 +143,9 @@ r=$?
 # como las acepta GNU. Con una carpeta «2» y una «docs», que serían el destino si lo fueran el
 # descriptor, lo que lee <<< o el valor de --suffix=. Revisión de la #22: el argumento separado
 # de una opción (--suffix docs, -S docs, --exclude docs) tampoco lo es, y en un grupo de letras
-# la que lleva argumento se queda con el resto (-Stx es el sufijo «tx», no -t x) ──────────────
+# la que lleva argumento se queda con el resto (-Stx es el sufijo «tx», no -t x). Panel corto,
+# A8: cada pieza tiene su caso (el último operando que es carpeta, el valor pegado y la lectura
+# con los argumentos de opción, que pide -S de install, sin argumento en BSD) ──────────────────
 mkdir -p "$WS/2"
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue
@@ -189,6 +191,10 @@ rsync -a docs/cfg/ ~ --backup-dir docs
 cp -rt ~ /tmp/e/.gitconfig docs/b
 cp -rT docs/cfg ~
 rsync -at docs/cfg/ ~
+rsync -a /tmp/e/ .git/ --stderr errors
+cp /tmp/e/.gitconfig ~ --context x
+cp /tmp/e/.gitconfig ~ --backup=docs
+install -S /tmp/e/stack.sh sentinel/adapters
 EOF
 while IFS= read -r cmd; do
   [ -n "$cmd" ] || continue

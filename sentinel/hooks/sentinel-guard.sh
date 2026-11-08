@@ -261,7 +261,15 @@ json_text() {
 # (revisión de la #15): un comentario (# al principio de una palabra) se salta hasta el final
 # de la línea; en $'…' la barra escapa la comilla (su contenido no se expande); y el cuerpo de
 # un heredoc (<<FIN, <<-FIN, <<'FIN') se lee línea a línea, sin comillas que pasen de una a
-# otra ni comentarios, hasta la línea que lo cierra: sus palabras siguen contando. «<<<» y el
+# otra ni comentarios, hasta la línea que lo cierra: sus palabras siguen contando. Con el
+# delimitador sin comillas, bash expande el cuerpo y sus comillas son texto: no abren nada, y
+# una sustitución cuenta donde esté (panel corto, V4). El mensaje de git commit|tag|notes|merge
+# o de gh pr|issue|release en una sustitución entre comillas sale como 'd<código>', no 'c': ahí,
+# el cuerpo de un heredoc con el delimitador entre comillas ('EOF', "EOF", \EOF) que solo lee
+# cat es texto y no cuenta ("$(cat <<'EOF' … EOF)", panel corto, P1), si en su línea no hay
+# más programa que cat (ni nada que ejecute su salida) y si antes nada ha redefinido cat (una
+# función, alias, hash, enable, PATH, o lo que ejecuta código en la shell actual: eval, source,
+# ., trap, mapfile). «<<<» y el
 # «<<» de una expresión aritmética ((…)), $((…)) no abren un heredoc (V6). Lo que redirige una
 # redirección (y el número de su descriptor, 2>) sale como 'r<palabra>', y el valor pegado a una
 # opción tras '=' (--backup=numbered), como 'v<valor>': cuentan como rutas, pero no son operandos
@@ -269,7 +277,7 @@ json_text() {
 # como otro 'n<tramo>' si cambia: sin lo que va delante (prefijos, asignaciones, redirecciones) ni
 # las opciones globales de git con sus argumentos, así que git -C . commit es git commit (A4 = V9)
 cmd_words() {
-  printf '%s' "$1" | LC_ALL=C awk '
+  printf '%s' "$1" | LC_ALL=C awk -v dk="${2:-}" '
     function esc(x,   r, k, ch) {
       r = ""
       for (k = 1; k <= length(x); k++) {
@@ -286,12 +294,15 @@ cmd_words() {
     # su programa: lo que va delante del programa y las opciones globales de git con su argumento
     function role(b) {
       drop = 1
+      if (eqf && w == "PATH") fdef = 1
       if (!pseen) {
         if (aval) { aval = eqf ? eqv : 0; return 2 }
         if (eqf && !qw && w ~ /^[A-Za-z_][A-Za-z0-9_]*$/) { aval = eqv; return 1 }
         if (b ~ /^-/ || (pre && b ~ /^[0-9.]+[smhd]?$/)) return 1
         if (b ~ /^(sudo|doas|env|command|builtin|exec|nice|nohup|time|timeout|xargs|stdbuf|ionice|!|\{|if|then|else|elif|do|while|until)$/) { pre = 1; return 1 }
         pseen = 1; prog = b; drop = 0
+        if (w !~ /^((\/usr)?\/bin\/)?cat$/) lp = 1
+        if (b ~ /^(alias|function|hash|enable|eval|source|\.|trap|mapfile|readarray)$/) fdef = 1
         if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
         else if (b == "eval") ev = 1
         else if (b == "git") gs = 1
@@ -302,6 +313,11 @@ cmd_words() {
       else if (sh == 1 && w ~ /^-[a-zA-Z]*c[a-zA-Z]*$/) sh = 2
       else if (b ~ /^(bash|sh|zsh|dash|ksh)$/) sh = 1
       if (ev) evc = evc (evc == "" ? "" : " ") w
+      if (prog == "gh" && ghs == "") {
+        if (ghr) ghr = 0
+        else if (b ~ /^(-R|--repo)$/) ghr = 1
+        else if (b !~ /^-/) ghs = b
+      }
       if (gs == 1) {
         if (b !~ /^-/) { gs = 0; gsc = b; return 1 }
         drop = 1
@@ -317,7 +333,7 @@ cmd_words() {
         print (fd || rd ? "r" : ov ? "v" : "l") esc(w)
         b = w
         if (b ~ /\/./) { sub(/\/+$/, "", b); sub(/^.*\//, "", b) }
-        gsub(/[ \t\n\r]/, "_", b)
+        gsub(/[ \t\n\r;&|]/, "_", b)
         keep = 0; drop = 1
         if (fd) ; else if (rd) rd = 0; else keep = role(b)
         if (qw && b !~ /^-/ && (keep == 2 || (!keep && (prog ~ /^(grep|egrep|fgrep)$/ || (prog == "git" && gsc ~ /^(log|grep)$/))))) b = "\"" b
@@ -332,7 +348,7 @@ cmd_words() {
       if (seg != "") print "n" seg
       if (pseg != "" && pseg != seg) print "n" pseg
       seg = ""; pseg = ""; print "s"
-      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; rd = 0; ov = 0
+      pseen = 0; aval = 0; pre = 0; sh = 0; ev = 0; evc = ""; gs = 0; ghs = ""; ghr = 0; rd = 0; ov = 0
     }
     # subend, dqend, bqend, aqend, brend <desde> → dónde acaba lo que empieza en <desde> (el
     # paréntesis que cierra $(…), la comilla que cierra "…", el acento que cierra `…`, la comilla
@@ -448,20 +464,22 @@ cmd_words() {
     }
     function lit(ch) { w = w ch; pw = pw (index("*?[]\\", ch) ? "\\" ch : ch) }
     # hend → tras un salto de línea dentro de un heredoc: si la línea siguiente lo cierra, la
-    # salta y pasa al siguiente heredoc pendiente de la misma línea, o sale del cuerpo
+    # salta y pasa al siguiente heredoc pendiente de la misma línea, o sale del cuerpo. Si el
+    # cuerpo es texto (hk), salta también las líneas que no lo cierran (sin cierre, hasta el final)
     function hend(   j, line) {
       while (hb) {
+        if (i >= n) return
         j = index(substr(t, i + 1), "\n")
         line = j ? substr(t, i + 1, j - 1) : substr(t, i + 1)
         if (hs[hq]) sub(/^\t+/, "", line)
-        if (line != hd[hq]) return
+        if (line != hd[hq]) { if (!hk[hq]) return; i = j ? i + j : n; continue }
         i = j ? i + j : n
         if (++hq > hn) { hb = 0; hn = 0; hq = 1 }
       }
     }
     function scan() {
       q = ""; w = ""; pw = ""; has = 0; g = 0; seg = ""; pseg = ""; ov = 0
-      hb = 0; hn = 0; hq = 1; ar = 0
+      hb = 0; hn = 0; hq = 1; ar = 0; lp = 0; fdef = 0
       for (i = 1; i <= n; i++) {
         c = substr(t, i, 1)
         if (hb && c == "\n") q = ""
@@ -483,15 +501,17 @@ cmd_words() {
             if (c == "`") { k = bqend(i + 1); code = substr(t, i + 1, k - i - 1) }
             else { k = subend(i + 2); code = substr(t, i + 2, k - i - 2) }
             if (k > n && md == "b") print "u"
-            print "c" esc(code)
+            dm = pseen && !fdef &&((prog == "git" && gsc ~ /^(commit|tag|notes|merge)$/) || (prog == "gh" && ghs ~ /^(pr|issue|release)$/))
+            print (dm ? "d" : "c") esc(code)
             for (j = i; j <= k && j <= n; j++) lit(substr(t, j, 1))
             i = k
           }
           else lit(c)
           continue
         }
-        if (c == "$" && substr(t, i + 1, 1) == "\047") { q = "$"; i++; has = 1; qw = 1; continue }
-        if (c == "\047" || c == "\"") { q = c; has = 1; qw = 1; continue }
+        hu = hb && !hz[hq]
+        if (!hu && c == "$" && substr(t, i + 1, 1) == "\047") { q = "$"; i++; has = 1; qw = 1; continue }
+        if (!hu && (c == "\047" || c == "\"")) { q = c; has = 1; qw = 1; continue }
         if (c == "\\" && i < n) { d = substr(t, ++i, 1); if (d != "\n") { lit(d); has = 1; qw = 1 }; continue }
         if (!hb && c == "#" && !has && (i == 1 || index(" \t\n;|&()`", substr(t, i - 1, 1)))) {
           while (i < n && substr(t, i + 1, 1) != "\n") i++
@@ -505,24 +525,36 @@ cmd_words() {
           flush(); i += 2; st = 0
           if (substr(t, i, 1) == "-") { st = 1; i++ }
           while (i <= n && index(" \t", substr(t, i, 1))) i++
-          dl = ""
+          dl = ""; dq = 0; d0 = i
           while (i <= n && !index(" \t\n;|&()<>", (ch = substr(t, i, 1)))) {
             if (ch == "\047" || ch == "\"") {
-              k = index(substr(t, i + 1), ch)
+              dq = 1; k = index(substr(t, i + 1), ch)
               if (!k) { dl = dl substr(t, i + 1); i = n + 1; break }
               dl = dl substr(t, i + 1, k - 1); i += k + 1; continue
             }
-            if (ch == "\\" && i < n) { dl = dl substr(t, i + 1, 1); i += 2; continue }
+            if (ch == "\\" && i < n) { dq = 1; dl = dl substr(t, i + 1, 1); i += 2; continue }
             dl = dl ch; i++
           }
-          hd[++hn] = dl; hs[hn] = st
+          hd[++hn] = dl; hs[hn] = st; hz[hn] = dq
+          hw[hn] = substr(t, d0, i - d0) ~ ("^(\047[A-Za-z0-9_]+\047|\"[A-Za-z0-9_]+\"|\\\\[A-Za-z0-9_]+)$")
           i--
           continue
         }
-        if (c == "\n") { sep(); if (hq <= hn) { hb = 1; hend() }; continue }
-        if (c == "(" && (ar || substr(t, i + 1, 1) == "(")) { if (!ar) { ar = 1; i++ }; ar++; sep(); continue }
+        if (c == "\n") {
+          sep()
+          if (hq <= hn) {
+            if (!hb) for (hx = hq; hx <= hn; hx++) hk[hx] = dk == "d" && hw[hx] && !lp && !fdef
+            hb = 1; hend()
+          }
+          lp = 0; continue
+        }
+        if (c == "(" && (ar || substr(t, i + 1, 1) == "(")) { if (!ar) { ar = 1; i++ }; ar++; lp = 1; sep(); continue }
         if (c == ")" && ar) { ar--; sep(); continue }
-        if (index(";|&()`", c)) { sep(); continue }
+        if (index(";|&()`", c)) {
+          if (index("(`", c)) lp = 1
+          if (c == "(" && substr(t, i + 1) ~ /^[ \t]*\)/) fdef = 1
+          sep(); continue
+        }
         # Tras «=» sigue el valor de una asignación si no viene un espacio, o el de una opción
         # (hasta el siguiente espacio); tras «<» o «>», su destino, y un número delante es el
         # descriptor (2>x): ninguno es el programa
@@ -772,16 +804,17 @@ if [ -n "$COMMAND" ]; then
   # hasta MAX_NEST niveles; más allá no se sabe qué ejecuta (panel de confirmación, V4 = A3)
   MAX_NEST=8
   _code="$WORDS"; _lvl=0
-  while _code="$(printf '%s\n' "$_code" | sed -n 's/^c//p')"; [ -n "$_code" ]; do
+  while _code="$(printf '%s\n' "$_code" | sed -n '/^[cd]/p')"; [ -n "$_code" ]; do
     [ "$_lvl" -lt "$MAX_NEST" ] || {
       TOO_MANY="el comando anida código en más de $MAX_NEST niveles (sustituciones, shells con -c, eval) y el Centinela no puede leerlos todos — sácalo a un script"
       break
     }
     _new=""
     while IFS= read -r w; do
-      printf -v w '%b' "$w"
+      _k="${w:0:1}"
+      printf -v w '%b' "${w:1}"
       _new="$_new
-$(cmd_words "$w")"
+$(cmd_words "$w" "$_k")"
     done <<EOF
 $_code
 EOF
