@@ -22,6 +22,8 @@ assert_exit 0 || fail_case "session-start nunca debe fallar"
 case "$RH_OUT" in *"--activate"*) ;; *) fail_case "con la instalación versionada, el aviso debería proponer setup --activate: $RH_OUT" ;; esac
 case "$RH_OUT" in *"git config core.hooksPath sentinel/githooks"*) ;; *) fail_case "el aviso debería seguir dando el comando que la activa: $RH_OUT" ;; esac
 case "$RH_OUT" in *"ejecuta setup"*) fail_case "con la instalación versionada, el aviso no debería proponer reinstalar el SDK: $RH_OUT" ;; esac
+# Una copia del SDK anterior a sdk-version no conoce --activate: el aviso dice qué hacer (P6)
+case "$RH_OUT" in *"no existe el directorio --activate"*) ;; *) fail_case "el aviso debería decir qué hacer si la copia del SDK no conoce --activate: $RH_OUT" ;; esac
 
 git -C "$WS" config core.hooksPath sentinel/githooks
 start
