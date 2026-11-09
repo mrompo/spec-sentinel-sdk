@@ -48,11 +48,18 @@ el banco en verde y es mergeable sola.
 
 ### PR 2/2 · Activar
 
-- [ ] 4. Casos en rojo: `setup --activate` en un clon con la instalación versionada, con otros
+- [x] 4. Casos en rojo: `setup --activate` en un clon con la instalación versionada, con otros
        git hooks y con la instalación incompleta (SC-06); el aviso de `session-start` en ese
        clon (SC-07)
-- [ ] 5. 👤 Parche: `setup.sh` (`--activate`) y `session-start.sh` (el aviso)
-- [ ] 6. La guía (el clon de un compañero)
+       → `install/sc-20` y `hooks/sc-33` (`94cb843`), que fallan con el `setup` y el
+         `session-start` actuales (opción desconocida, el aviso de siempre)
+- [x] 5. 👤 Parche: `setup.sh` (`--activate`) y `session-start.sh` (el aviso)
+       → `2c820e2`, aplicado y commiteado por la persona. `fixture/verify.sh` en verde en un clon
+         (hooks 33, githooks 16, install 20); en Debian 12, el banco de instalación entero y
+         `hooks/sc-11`, `sc-13`, `sc-19`, `sc-26`, `sc-32` y `sc-33`; los 15 mutantes del arreglo
+         hacen fallar algún caso (cinco sobrevivían a la primera versión de `sc-20`, que se
+         reforzó)
+- [x] 6. La guía (el clon de un compañero) y `sentinel/README.md` → `9478985`
 
 ### Cierre
 
