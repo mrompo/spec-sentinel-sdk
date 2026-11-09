@@ -1,0 +1,68 @@
+{
+  "lens": "pragmatist",
+  "findings": [
+    {
+      "id": "P1",
+      "severity": "major",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 328,
+      "title": "Instalar desde una copia sin git (ZIP, copia vendorizada o clon de otro usuario con dubious ownership) deja commit=desconocido y desde entonces todo setup se niega diciendo que el fichero «no se puede leer», también para cerrar los pendientes y también desde un clon de git limpio y más nuevo",
+      "evidence": "pragmatist/r1-tarball.sh → r1-tarball.out: 1) primera instalación desde el ZIP: «✓ versión del SDK en sentinel/.sdk-version: commit desconocida», exit 3 con «Vuelve a ejecutar setup al resolverlos»; el fichero queda «commit=desconocido / dirty=no». 2) reejecutar desde el mismo ZIP (lo que pide el pendiente): «✗ no se instala: no se puede leer la versión instalada en sentinel/.sdk-version (instalada: desconocida · esta copia: desconocida)», exit 1. 3) actualizar desde un clon de git limpio y más nuevo (lo que aconseja el mensaje, «git pull»): mismo rechazo, exit 1. pragmatist/r7-dubious.sh → r7-dubious.out: un clon de git de otro usuario (git: «detected dubious ownership») toma el mismo camino. El fichero lo escribió el propio setup (línea 328, `commit=${SDK_COMMIT:-desconocido}`) y el lector (línea 237, regex de 40-64 hex) lo trata como ilegible; el mensaje (línea 252) habla de «una copia vieja» y propone «git pull», que en un ZIP no existe. Además registra dirty=no para una copia cuyo estado no se conoce. La guía (guia-uso.md, «setup no vuelve atrás sin preguntar») solo anuncia el rechazo «si no es un clon de git», no que una instalación desde ZIP bloquee también las actualizaciones desde un clon. Resultado práctico: la única salida es --downgrade en cada ejecución, que es justo el hábito que el cambio quiere evitar. SC-sdk-version-01/03.",
+      "fix": "Que la instalación desde una copia sin versión conocida no se dé por buena en silencio: o se niega también la primera vez (pide --downgrade, coherente con SC-03), o avisa con ⚠ de que la versión queda desconocida y las siguientes ejecuciones pedirán --downgrade. Leer `commit=desconocido` como «instalada desde una copia sin git» (no «ilegible») y, si esta copia es un clon de git limpio, tratarlo como «no constaba versión» (el mismo riesgo que ya acepta SC-02 para una instalación anterior al cambio). Escribir dirty=desconocido cuando no hay git. El mensaje de rechazo, según la causa: sin git → «clona el SDK con git», no «git pull». Caso: en sc-19, instalar desde la copia sin git, luego setup desde el clon limpio y más nuevo → exit 0 sin --downgrade (o, si se elige negar la primera vez, exit 1 ya en la primera)."
+    },
+    {
+      "id": "P2",
+      "severity": "major",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 226,
+      "title": "Cualquier fichero sin versionar en la copia del SDK (.idea/, .vscode/, notas) cuenta como «cambios sin commitear» y bloquea la primera instalación y cada actualización, con un mensaje que habla de copia vieja y aconseja git pull",
+      "evidence": "pragmatist/r2-untracked.sh → r2-untracked.out: el SDK se actualiza (commit v2) y la persona tiene `?? .vscode/` en su copia; setup: «✗ no se instala: esta copia del SDK tiene cambios sin commitear (instalada: ce56804 · esta copia: f2a144a, con cambios sin commitear). Así una copia vieja del SDK no revierte el enforcement en silencio. Actualiza tu copia del SDK (git pull, sin cambios locales)…», exit 1. pragmatist/r2b-first-install.sh → r2b-first-install.out: con `?? .idea/` ni siquiera la primera instalación pasa («instalada: desconocida · esta copia: 99559b6, con cambios sin commitear», exit 1). `git status --porcelain` (línea 226) mira todo el árbol, también lo que setup nunca copia; el .gitignore del SDK solo cubre .DS_Store y lo del propio SDK. El mensaje no dice qué ficheros, llama vieja a una copia más nueva y «git pull» no lo arregla: la salida que queda es --downgrade, que deja dirty=yes en el repo del consumidor por una carpeta del IDE. SC-sdk-version-04.",
+      "fix": "Limitar la comprobación a lo que setup instala o ejecuta: `git status --porcelain -- sentinel .claude/settings.json ai-specs/skills/setup` (con los sin versionar dentro de esas rutas, que sc-19 ya prueba con sentinel/hooks/nuevo.sh), y listar en el mensaje las rutas sucias (`git status --short` de esas rutas) en vez de «Así una copia vieja… git pull» cuando la causa es solo el árbol sucio. Caso: en sc-19, un `.vscode/settings.json` sin versionar en SDK_SRC → setup instala con exit 0 y dirty=no; el sentinel/hooks/nuevo.sh sin versionar sigue rechazado."
+    },
+    {
+      "id": "P3",
+      "severity": "major",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 296,
+      "title": "En un repo instalado antes de sdk-version (todos los existentes), --activate falla por falta de .sdk-version y manda a «instálalo con setup», que instala sin comprobar desde la copia que tenga el compañero y le deja el enforcement modificado en su clon",
+      "evidence": "pragmatist/r4-activate.sh → r4-activate.out, bloque B: clon de un repo con la instalación versionada pero sin sentinel/.sdk-version (instalación anterior al cambio). La guía nueva (guia-uso.md, «Cada persona que clone el repo… bash <ruta-al-sdk>/…/setup.sh --activate») lleva a: «✗ --activate no activa nada: la instalación versionada está incompleta: sentinel/.sdk-version — no está. Recupera lo que falta (git checkout -- <fichero>, o git pull si aún no te ha llegado). Si este repo no tiene el SDK versionado, instálalo con setup, sin --activate», exit 1. Nada que recuperar, y el repo sí tiene el SDK versionado. Siguiendo el consejo con una copia distinta del SDK: «no constaba versión… se registra la de esta copia», «✓ enforcement instalado o actualizado (1 ficheros en sentinel/)», exit 0, y el clon queda con ` M sentinel/hooks/sentinel-guard.sh` y `?? sentinel/.sdk-version` listos para commitear: es la reversión silenciosa que describe el Why de la propuesta, ahora por el camino que propone --activate. (session-start, en cambio, no propone --activate ahí: «actívala con git config core.hooksPath sentinel/githooks o ejecuta setup».) El camino feliz (bloque A, con .sdk-version) funciona: exit 0, hooksPath activo, árbol limpio. SC-sdk-version-06.",
+      "fix": "Cuando lo único que falta es sentinel/.sdk-version y el resto está completo y cableado, decir que es una instalación anterior a sdk-version y dar la salida correcta: activar con «git config core.hooksPath sentinel/githooks» (o, si hay otros hooks, las líneas de encadenado) y que la actualice quien mantiene la instalación, en su propio cambio; no proponer «instálalo con setup» ni «git checkout». Reservar «instálalo con setup» para cuando no hay instalación (sin sentinel/hooks versionado). Caso: en sc-20, un clon sin sentinel/.sdk-version versionado → la salida de --activate no contiene «instálalo con setup» y sí «git config core.hooksPath»."
+    },
+    {
+      "id": "P4",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 242,
+      "title": "Con un clon superficial del SDK más nuevo, el rechazo dice «más vieja o de otra rama» y aconseja git pull, que no lo resuelve",
+      "evidence": "pragmatist/r3-shallow.sh → r3-shallow.out: instalado desde edf2be1; copia `git clone --depth 1` en 9a907bc (dos commits más nueva): «✗ no se instala: la versión instalada no es antecesora de la de esta copia: esta copia es más vieja o de otra rama… Actualiza tu copia del SDK (git pull…)», exit 1. Tras `git pull`: el mismo rechazo. Tras `git fetch --unshallow`: exit 0. sentinel/README.md (tabla de límites, «Copias del SDK sin la comprobación de versión») lo documenta como «cuenta como dudoso», pero la persona solo ve el mensaje, que diagnostica mal y da un remedio que no funciona.",
+      "fix": "Si el commit instalado no existe en la copia (`git -C \"$SDK_ROOT\" cat-file -e \"$INSTALLED^{commit}\"` falla), otro motivo: «esta copia no tiene el commit instalado (clon superficial o sin actualizar): git fetch --unshallow, o git pull». Caso: en sc-19, una copia --depth 1 más nueva → la salida contiene «--unshallow»."
+    },
+    {
+      "id": "P5",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 286,
+      "title": "Si los git hooks se commitearon sin el bit de ejecución, --activate en el clon de un compañero dice solo «sin permiso de ejecución» y propone git checkout o reinstalar; la pista correcta (git add --chmod=+x y commit) no se alcanza",
+      "evidence": "pragmatist/r5-mode644.sh → r5-mode644.out: hooks versionados con modo 100644 (lo que deja quien instala con core.fileMode=false y no resuelve el pendiente); en un clon en macOS: «sentinel/githooks/commit-msg — sin permiso de ejecución» (×3) y «Recupera lo que falta (git checkout -- <fichero>, o git pull…). Si este repo no tiene el SDK versionado, instálalo con setup, sin --activate», exit 1. `git checkout` no cambia el modo y reinstalar no toca el índice. La rama con «sin permiso de ejecución en git… (git add --chmod=+x $f, y commit)» (línea 291) solo se evalúa si el fichero del clon sí es ejecutable, y en un clon recién hecho nunca lo es cuando git lo guarda sin él.",
+      "fix": "Comprobar primero el modo en git (`mode != 100755` → el mensaje con git add --chmod=+x y commit) y solo después el permiso local (`! -x` con modo 100755 → git checkout -- <fichero>). Caso: en sc-20, hooks commiteados con --chmod=-x, clon nuevo → la salida contiene «git add --chmod=+x»."
+    },
+    {
+      "id": "P6",
+      "severity": "minor",
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 43,
+      "title": "El aviso de arranque y la guía proponen setup --activate «aunque su copia del SDK sea de otra versión», pero una copia anterior a sdk-version responde «no existe el directorio --activate»",
+      "evidence": "pragmatist/r8-old-sdk-activate.sh → r8-old-sdk-activate.out: en el clon, session-start dice «…con «bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --activate»…»; con la copia del compañero anterior al cambio (setup.sh con el diff revertido): «✗ [setup] no existe el directorio --activate», exit 1 (también con «--activate .»). docs/guia-uso.md: «`--activate` no copia ni escribe nada, aunque su copia del SDK sea de otra versión». En un equipo con copias del SDK de fechas distintas es lo primero que verá quien no haya actualizado la suya, sin pista de que la causa es su copia.",
+      "fix": "En el aviso y en la guía: «con una copia del SDK que incluya sdk-version (si dice «no existe el directorio --activate», actualiza tu copia con git pull o usa git config core.hooksPath sentinel/githooks)». Caso: sc-33 comprueba que el aviso menciona la alternativa git config (ya lo hace) y la guía lo dice junto al comando."
+    },
+    {
+      "id": "P7",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/SKILL.md",
+      "line": 17,
+      "title": "La skill que ejecuta el agente no conoce --activate ni el rechazo por versión: en el clon de un compañero haría una instalación completa",
+      "evidence": "ai-specs/skills/setup/SKILL.md no está en el diff y no menciona --activate, --downgrade ni .sdk-version (grep sin resultados). «When to Use»: «Incorporar el SDK a un repo, o actualizarlo… (reinstalar es seguro)»; «Process» paso 2: «Ejecuta bash <sdk>/ai-specs/skills/setup/setup.sh <raíz-del-repo>». Mientras, session-start le inyecta al agente en ese mismo clon «el SDK ya viene versionado, así que no hay que reinstalarlo… --activate». Si la persona le pide «activa el SDK en mi clon», la skill le lleva a reinstalar: con una copia más nueva reescribe la instalación en el clon (diff que commitear) y con una más vieja falla con un exit 1 que la skill trata como error genérico, sin explicar --downgrade ni que lo normal es actualizar la copia.",
+      "fix": "Añadir a SKILL.md: el clon de un compañero → `setup.sh --activate` (y la frase de activación en la descripción); en el exit 1 por versión, explicar a la persona que lo normal es actualizar su copia del SDK y que --downgrade lo decide ella, nunca el agente por su cuenta. Es documentación: se falsifica con un grep en el banco de que SKILL.md nombra --activate y --downgrade."
+    }
+  ]
+}

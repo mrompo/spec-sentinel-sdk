@@ -1,0 +1,59 @@
+{
+  "lens": "auditor",
+  "findings": [
+    {
+      "id": "A1",
+      "severity": "major",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 236,
+      "title": "Una copia del SDK sin git solo se trata como dudosa si ya hay sentinel/.sdk-version: en un repo sin él instala sin --downgrade y deja «dirty=no» aunque no se sepa",
+      "evidence": "Script: panel/auditor/e1-nogit-first-install.sh. Salida: panel/auditor/e1-nogit-first-install.out. Una copia sin .git (tarball), con un cambio local en sentinel/hooks/sentinel-guard.sh, sobre un repo sin .sdk-version: exit=0, sin --downgrade, «no constaba versión», el hook instalado lleva el cambio local y el fichero queda «commit=desconocido / dirty=no». La comprobación «no es un clon de git» (l.240) está dentro de `if [ -f \"$TARGET/$VFILE\" ]` (l.236), mientras que la de cambios sin commitear se aplica siempre; y SDK_DIRTY parte de «no» (l.222) cuando no hay git. Incumple SC-sdk-version-03 (WHEN «que no es un clon de git» no depende de que haya fichero; SC-02 AND solo cubre el «sin fichero» dentro de su WHEN, que exige commit antecesor y copia limpia), SC-sdk-version-01 («dice si su árbol tenía cambios sin commitear»: escribe «no» sin saberlo) y contradice el propio comentario de l.219, la propuesta (decisión 1: sin git «cuenta como dudosa») y docs/guia-uso.md l.279 («no es un clon de git … no toca nada»). Efecto colateral en la misma salida: la siguiente actualización desde un clon git limpio y más nuevo se niega con «no se puede leer la versión instalada», un fichero que escribió el propio setup.",
+      "fix": "Sacar la comprobación de «sin git» fuera del `if [ -f VFILE ]` (si SDK_COMMIT está vacío, why=… siempre), y sin git registrar `dirty=desconocido` (o yes) en vez de «no». Caso en sc-19: setup desde la copia sin git sobre un workspace sin .sdk-version → refused; con --downgrade → instala y el fichero no dice dirty=no. Ojo: sc-18-smoke-through-wiring instala desde una copia sin git (tar) y hoy depende de este hueco; tendrá que pasar --downgrade o hacer git init en su copia."
+    },
+    {
+      "id": "A2",
+      "severity": "major",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 226,
+      "title": "La limpieza de la copia se mide con un `git status --porcelain` que no ve todo lo que se distribuye: con status.showUntrackedFiles=no o con ficheros ignorados en sentinel/, instala «limpia» contenido que no está en el commit",
+      "evidence": "Lo distribuido sale de `find` (dist_files, l.51-54) y la limpieza de `git status --porcelain` (l.226), que obedece la configuración de la persona y no lista lo ignorado. (a) panel/auditor/e3-showuntracked-no.sh → .out: el mismo caso que sc-19 da por rechazado («un fichero sin versionar en lo distribuido», sentinel/hooks/nuevo.sh) se niega sin configuración (exit=1), pero con `status.showUntrackedFiles = no` en la configuración global instala con exit=0, copia nuevo.sh al consumidor y registra dirty=no. (b) panel/auditor/e2-ignored-dist-file.sh → .out: con `*.orig` y `*~` ignorados (lo típico de un core.excludesFile; aquí en .git/info/exclude de la copia), `git status` sale vacío, setup instala sentinel/githooks/pre-push.orig y sentinel/hooks/sentinel-guard.sh~ en el consumidor (aparecen como ?? para versionar) y registra dirty=no. Incumple SC-sdk-version-04 (con a) y SC-sdk-version-01 (el fichero dice commit X limpio y lo instalado no es X).",
+      "fix": "Medir la limpieza sobre lo que se distribuye y sin depender de la configuración: `git -C \"$SDK_ROOT\" status --porcelain --untracked-files=all --ignored -- sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters .claude/settings.json` (además del status general si se quiere seguir contando el resto del árbol), o construir dist_files con `git ls-files` cuando la copia es un clon. Casos en sc-19: el fichero sin versionar con GIT_CONFIG_GLOBAL apuntando a un config con status.showUntrackedFiles=no → refused; un fichero ignorado por info/exclude en sentinel/githooks → refused."
+    },
+    {
+      "id": "A3",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 863,
+      "title": "--activate mide la instalación del clon con la lista de ficheros de la copia del SDK: con otra versión y core.fileMode=false pide marcar como ejecutable un fichero que el clon no tiene",
+      "evidence": "Script: panel/auditor/e6-activate-sdk-filelist.sh → .out. Clon con core.fileMode=false (lo que hace Git for Windows al clonar) y copia del SDK más nueva que distribuye un ejecutable más (sentinel/githooks/post-merge): --activate sale con 3 y da como pendiente «git add --chmod=+x sentinel/githooks/post-merge», un fichero que no existe en el clon (ls: No such file). El paso 7 (l.863-873, y versioned() en l.778) recorre dist_files de $SDK_ROOT, cuando SC-sdk-version-06 dice que --activate comprueba la instalación versionada «de la versión que sea» sin depender de la copia. --activate ya comprueba el 100755 de los git hooks del clon (l.289), así que este bucle sobra en ese modo.",
+      "fix": "Con --activate, saltar el bucle de core.fileMode (ya cubierto por la comprobación de --activate) y tomar la lista de versioned()/checked_snapshot de `git -C \"$TARGET\" ls-files -- sentinel` en vez de dist_files. Caso en sc-20: copia del SDK con un ejecutable distribuido nuevo + clon con core.fileMode=false → --activate sale con 0 y no nombra ese fichero."
+    },
+    {
+      "id": "A4",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 496,
+      "title": "--activate da por cableado el Centinela con cualquier matcher: con «Read» en su grupo de PreToolUse dice «Clon listo» aunque Claude Code no lo llame antes de Bash, Edit ni Write",
+      "evidence": "Script: panel/auditor/e4-activate-matcher.sh → .out. En el repo instalado se versiona .claude/settings.json con el matcher del grupo de sentinel-guard.sh reducido de «Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob» a «Read»; en un clon, --activate sale con 0 («✓ Centinela cableado en .claude/settings.json (versionado)», «✓ Clon listo»). La comprobación (l.496-500) solo mira que el script esté en algún grupo del evento, y la prueba de humo lanza el comando sin pasar por el matcher. setup normal sí lo detecta (WIRED compara el grupo entero) y lo repone. SC-sdk-version-06 pide comprobar el cableado y el propio código dice «el Centinela, antes de cada acción»; sc-20 ya falsifica el evento equivocado (Stop), no el matcher.",
+      "fix": "Exigir que el grupo que lleva sentinel-guard.sh tenga un matcher que cubra al menos Bash, Edit y Write (vacío o «*», o una expresión que los case: `[\"Bash\",\"Edit\",\"Write\"] | all(test($m))` en jq), sin compararlo con el de la copia del SDK. Caso en sc-20: matcher «Read» → not_activated con «.claude/settings.json»."
+    },
+    {
+      "id": "A5",
+      "severity": "minor",
+      "file": "fixture/install/cases/sc-20-activate.sh",
+      "line": 1,
+      "title": "sc-20 no falsifica dos piezas de --activate: que no toque .gitattributes y que exija post-edit.sh y session-start.sh en su evento",
+      "evidence": "Script: panel/auditor/mutants.sh → panel/auditor/mutants.out. M1: quitar `[ \"$ACTIVATE\" -eq 1 ] ||` delante de `add_lines .gitattributes` (setup.sh l.385, --activate escribiría en el clon) → sc-20 sale con 0, el mutante sobrevive: el clon del caso ya tiene la línea, solo se le quita una del .gitignore. M2: dejar en $want solo PreToolUse (l.497-498, sin PostToolUse ni SessionStart) → sc-20 sale con 0, sobrevive: el caso solo quita o mueve sentinel-guard.sh. (M3, la versión en checked_snapshot, l.719, también sobrevive a sc-19.) Las dos primeras son partes de SC-sdk-version-06 («no copia ni sustituye nada»; «el cableado … cada script en su evento», como dice la cabecera del caso). Como contraste, M4 (escribir .sdk-version sobre el propio SDK) y M5 (no saltar la comprobación de versión con --activate) los mata el banco (mutants-m4-m5.out).",
+      "fix": "En sc-20: en el clon de «otros git hooks», quitar también la línea `sentinel/** text eol=lf` del .gitattributes (clone_files no debe cambiar); y añadir dos casos not_activated: sin el grupo de post-edit.sh en PostToolUse, y con session-start.sh fuera de SessionStart."
+    },
+    {
+      "id": "A6",
+      "severity": "minor",
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 236,
+      "title": "Un sentinel/.sdk-version que existe pero no es un fichero regular cuenta como «no constaba»: setup sustituye el enforcement sin --downgrade y luego muere al escribir la versión",
+      "evidence": "Script: panel/auditor/e5-vfile-not-regular.sh → .out. Con sentinel/.sdk-version como carpeta y un hook instalado distinto del de la copia: «no constaba versión», «✓ enforcement instalado o actualizado (1 ficheros)», «✗ no se pudo escribir sentinel/.sdk-version», exit=1, y sentinel/hooks/post-edit.sh ya sustituido. `[ -f ]` (l.236) es falso para una carpeta o un enlace roto, así que el caso «no se puede leer» de SC-sdk-version-03 («no escribe nada») se trata como el de SC-02 sin fichero, y la escritura falla después de copiar (contra «nada se escribe hasta que todo cuadra»). Borde poco probable.",
+      "fix": "Decidir por existencia: `if [ -e \"$TARGET/$VFILE\" ] || [ -L \"$TARGET/$VFILE\" ]; then` y, si no es un fichero regular legible, why=«no se puede leer». Caso en sc-19: .sdk-version como carpeta → refused («no se puede leer»)."
+    }
+  ]
+}
