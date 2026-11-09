@@ -17,6 +17,10 @@ jq -s '
   | ["blocker","major","minor","nit"] as $name
   | (map(select(has("findings"))) | map(.lens as $l | .findings[] | . + {lens: $l})) as $f
   | (map(select(has("votes"))) | map(.lens as $l | .votes[] | . + {voter: $l})) as $v
+  # Una severidad desconocida daría null en $rank y un min/max que la ignora: mejor fallar
+  | ([ $f[] | select($rank[.severity] == null) | "\(.lens) \(.id): \(.severity)" ]
+     + [ $v[] | select(has("severity") and $rank[.severity] == null) | "voto de \(.voter) a \(.id): \(.severity)" ]) as $bad
+  | if ($bad | length) > 0 then error("severidad desconocida: \($bad | join("; "))") else . end
   | [ $f[] | . as $x
       | [ $v[] | select(.id == $x.id and .voter != $x.lens) ] as $mine
       | [ $mine[] | select(.agree == true) ] as $yes
@@ -33,7 +37,7 @@ jq -s '
         if any($all[]; .validated and .effective == "blocker") then "HOLD"
         elif any($all[]; (.validated and .effective == "major") or ((.validated | not) and .severity == "blocker")) then "CONDITIONAL"
         else "SHIP" end),
-      counts: ($all | group_by(.effective) | map({(.[0].effective): {total: length, validated: (map(select(.validated)) | length)}}) | add),
+      counts: ($all | group_by(.effective) | map({(.[0].effective): {total: length, validated: (map(select(.validated)) | length)}}) | add // {}),
       findings: ($all | sort_by($rank[.effective], (.validated | not), .id)
                  | map({id, lens, severity, effective, validated, support, against, file, line, title}))
     }

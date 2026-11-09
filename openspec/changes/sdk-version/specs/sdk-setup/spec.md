@@ -46,7 +46,8 @@ tenga cambios sin commitear, salvo que la persona lo confirme con `--downgrade` 
 
 #### Scenario: La persona confirma con --downgrade (SC-sdk-version-05)
 
-- **WHEN** la persona ejecuta `setup --downgrade` en cualquiera de los casos anteriores
+- **WHEN** la persona ejecuta `setup --downgrade` en cualquiera de los casos anteriores, salvo
+  un `sentinel/.sdk-version` que es un enlace simbólico o una carpeta (SC-sdk-version-03)
 - **THEN** `setup` instala, avisa de que la versión instalada es más vieja, dudosa o con
   cambios, y `sentinel/.sdk-version` registra la que ha quedado
 

@@ -39,7 +39,9 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
   SDK desde la que se instaló y si tenía cambios sin commitear. `setup` solo instala sin más
   desde un clon de git igual o más nuevo (el commit instalado es antecesor del suyo) y limpio en
   lo que instala (también lo que git ignora o no enseña); si no, no escribe nada hasta que la
-  persona lo confirma con `--downgrade`. Un `.sdk-version` que es un enlace simbólico o una
+  persona lo confirma con `--downgrade`. Sin versión registrada (la primera instalación, una
+  anterior a `sdk-version` o `commit=desconocido`) no hay con qué comparar: un clon de git limpio
+  instala y lo dice, sea cual sea su commit. Un `.sdk-version` que es un enlace simbólico o una
   carpeta no se lee ni se escribe, tampoco con `--downgrade`. El fichero está protegido como el
   resto del enforcement (`sdk-version`).
 - **El clon de un compañero solo activa** (`setup --activate`): con la instalación ya versionada,

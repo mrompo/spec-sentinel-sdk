@@ -288,7 +288,8 @@ bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --downgrade .
 ```
 
 Desde una copia sin git, `--downgrade` registra `commit=desconocido`: la siguiente instalación
-desde un clon de git limpio instala sin preguntar, como si no constara versión.
+desde un clon de git limpio instala sin preguntar, como si no constara versión. Sin versión
+registrada no hay con qué comparar, así que ese clon instala sea cual sea su commit.
 
 `sentinel/.sdk-version` está protegido: el agente no puede cambiarlo.
 
