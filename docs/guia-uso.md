@@ -275,14 +275,20 @@ cableado de `.claude/settings.json` (si lo habías tocado, guarda tu versión en
 
 **`setup` no vuelve atrás sin preguntar.** Antes de copiar nada, compara la versión instalada
 (`sentinel/.sdk-version`) con la de tu copia del SDK. Solo instala si tu copia es la misma o
-más nueva (el commit instalado está en su historial) y no tiene cambios sin commitear. Si es
-más vieja, de otra rama, no es un clon de git o tiene cambios, no toca nada: te dice qué versión
-hay y cuál instalaría, y sale con `1`. Lo normal es actualizar tu copia del SDK (`git pull`) y
-volver a ejecutarlo. Si de verdad quieres instalar esa versión, confírmalo con `--downgrade`:
+más nueva (el commit instalado está en su historial) y no tiene cambios sin commitear en lo que
+instala (`sentinel/` y su cableado; una carpeta del editor no cuenta). Si es más vieja, de otra
+rama, no es un clon de git (un ZIP, también en la primera instalación) o tiene cambios, no toca
+nada: te dice qué versión hay, cuál instalaría, qué ficheros tienen cambios y cómo resolverlo, y
+sale con `1`. Lo normal es actualizar tu copia del SDK (`git pull`; si es un clon superficial,
+`git fetch --unshallow`) y volver a ejecutarlo. Si de verdad quieres instalar esa versión,
+confírmalo con `--downgrade`:
 
 ```bash
 bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --downgrade .
 ```
+
+Desde una copia sin git, `--downgrade` registra `commit=desconocido`: la siguiente instalación
+desde un clon de git limpio instala sin preguntar, como si no constara versión.
 
 `sentinel/.sdk-version` está protegido: el agente no puede cambiarlo.
 
