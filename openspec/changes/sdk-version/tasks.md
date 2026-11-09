@@ -85,7 +85,7 @@ mergeable sola. A4 = V2 recoge lo que la revisión de CodeRabbit en la #27 dejó
 
 **PR 3 · La copia del SDK** (temas 1, 2 y 5 del panel, y P4)
 
-- [ ] R1. Casos en rojo en `fixture/install/sc-19`:
+- [x] R1. Casos en rojo en `fixture/install/sc-19` → `4461b96`:
        - una copia sin git en un repo sin `.sdk-version` → se niega; con `--downgrade`, instala
          y no registra `dirty=no` (A1);
        - tras instalar desde una copia sin git, `setup` desde un clon limpio y más nuevo →
@@ -98,8 +98,9 @@ mergeable sola. A4 = V2 recoge lo que la revisión de CodeRabbit en la #27 dejó
          repo (A6 = V6);
        - una copia superficial más nueva → el mensaje propone `git fetch --unshallow` (P4).
        `sc-18`, que instala desde una copia sin git, se ajusta
-- [ ] R2. 👤 Parche: `setup.sh`
-- [ ] R3. La guía y `sentinel/README.md`, si cambia lo que dicen
+- [x] R2. 👤 Parche: `setup.sh` → `1e0f411`. Banco completo en verde en un clon (hooks 33,
+       githooks 16, install 20), Debian 12 en verde y 11 de 11 mutantes muertos
+- [x] R3. La guía, `sentinel/README.md` y el delta de SC-02, 03 y 04 → `f213fab`
 
 **PR 4 · Activar** (temas 3, 4 y 6 del panel, salvo P4)
 
