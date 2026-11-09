@@ -60,6 +60,13 @@ el banco en verde y es mergeable sola.
          hacen fallar algún caso (cinco sobrevivían a la primera versión de `sc-20`, que se
          reforzó)
 - [x] 6. La guía (el clon de un compañero) y `sentinel/README.md` → `9478985`
+- [x] 6a. Revisión de CodeRabbit en la #27: `--activate` no exigía `sentinel/adapters/stack.sh`,
+       aceptaba enlaces simbólicos y git hooks ejecutables en el clon pero no en git, y el
+       Centinela cableado en cualquier evento; su prueba de humo lanzaba el cableado de la copia
+       del SDK, no el del clon. Casos en `sc-20` (`61fccd7`, en rojo con el `setup` anterior) y
+       parche 👤 `cd8a696`. Banco completo en verde en un clon, Debian 12 en verde y 8 de 8
+       mutantes muertos. Fuera: un comando del cableado que solo nombra el script (un `echo`) y
+       los matchers; `--activate` confía en el cableado versionado, que ya pasó revisión
 
 ### Cierre
 
