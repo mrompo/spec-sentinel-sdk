@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # setup.sh — instala el nivel Guardia (Centinela + Esclusa) en un repo con un solo comando.
 #
-#   bash <sdk>/ai-specs/skills/setup/setup.sh [--downgrade] [raíz-del-repo]   (por defecto, el directorio actual)
+#   bash <sdk>/ai-specs/skills/setup/setup.sh [--downgrade | --activate] [raíz-del-repo]   (por defecto, el directorio actual)
 #
 # Lo invoca la skill `spec-sentinel-setup` (SKILL.md, al lado); también se puede ejecutar a mano.
 # Idempotente: una segunda ejecución no cambia nada. Nunca pisa la configuración del consumidor:
@@ -18,7 +18,10 @@
 #     las líneas que encadenan la Esclusa en ellos (chain.sh) y se reconoce cuando ya están;
 #   - sentinel/.sdk-version registra el commit de la copia del SDK y si tenía cambios sin
 #     commitear. Solo se instala sin más desde una copia igual o más nueva que la instalada y
-#     limpia; si no, nada se escribe sin --downgrade (SC-sdk-version-01..05).
+#     limpia; si no, nada se escribe sin --downgrade (SC-sdk-version-01..05);
+#   - con --activate (el clon de un compañero, con la instalación ya versionada) no se copia ni
+#     se escribe nada: se comprueba que la instalación está completa y cableada, y se activa o
+#     encadena la Esclusa (SC-sdk-version-06).
 # Los backups van a sentinel/.backup/<fecha>/ (fuera de git).
 #
 # Salida: 0 instalado · 3 instalado con pasos pendientes (se listan) · 1 error. Si falla una
@@ -27,7 +30,7 @@
 # mismos que la Esclusa), CLAUDE_CONFIG_DIR (la configuración de usuario de Claude Code, como en
 # Claude Code), SENTINEL_SETUP_MANAGED (la configuración gestionada; por defecto, la de la
 # plataforma).
-# Falsifica: SC-sdk-setup-01..18 y SC-sdk-version-01..05 (fixture/install/cases/).
+# Falsifica: SC-sdk-setup-01..18 y SC-sdk-version-01..06 (fixture/install/cases/).
 set -uo pipefail
 
 # cd -P primero: a través de un enlace a la skill (~/.claude/skills/spec-sentinel-setup) se sube
@@ -52,12 +55,14 @@ dist_files() {
 
 # ── Comprobaciones: nada se escribe hasta que todo cuadra ────────────────────────────────
 # --downgrade: la persona confirma instalar desde una copia del SDK que no es igual o más nueva
-# que la instalada, o que tiene cambios sin commitear (SC-sdk-version-05)
-DOWNGRADE=0; ARG=""
+# que la instalada, o que tiene cambios sin commitear (SC-sdk-version-05). --activate: solo activar
+# la Esclusa sobre la instalación versionada (SC-sdk-version-06)
+DOWNGRADE=0; ACTIVATE=0; ARG=""
 for a in "$@"; do
   case "$a" in
     --downgrade) DOWNGRADE=1 ;;
-    -*) die "opción desconocida: $a (setup acepta --downgrade)" ;;
+    --activate) ACTIVATE=1 ;;
+    -*) die "opción desconocida: $a (setup acepta --downgrade y --activate)" ;;
     *) [ -z "$ARG" ] || die "setup recibe una sola carpeta: $ARG y $a"; ARG="$a" ;;
   esac
 done
@@ -131,7 +136,11 @@ if [ "$TARGET" -ef "${HOME:-/nonexistent}" ] || [ "$TARGET/.claude" -ef "${CLAUD
 fi
 SELF=0; [ "$TARGET" = "$SDK_ROOT" ] && SELF=1
 
-echo "Instalando el nivel Guardia en $TARGET"
+if [ "$ACTIVATE" -eq 1 ]; then
+  echo "Comprobando la instalación versionada y activando la Esclusa en $TARGET (--activate)"
+else
+  echo "Instalando el nivel Guardia en $TARGET"
+fi
 [ -z "$PATH_DROPPED" ] || note "se quitan del PATH de setup las entradas vacías, relativas o que
     están dentro del repo destino (también a través de un enlace):$PATH_DROPPED. setup no ejecuta
     nada que venga del repo, y el cableado del Centinela tampoco: no usa el PATH de la sesión"
@@ -222,7 +231,7 @@ if [ "$(git -C "$SDK_ROOT" rev-parse --show-toplevel 2>/dev/null)" -ef "$SDK_ROO
 fi
 # short <commit> → sus 7 primeros caracteres, o «desconocida» si no hay
 short() { [ -n "$1" ] && printf '%s' "${1:0:7}" || printf 'desconocida'; }
-if [ "$SELF" -eq 0 ]; then
+if [ "$SELF" -eq 0 ] && [ "$ACTIVATE" -eq 0 ]; then
   INSTALLED=""; why=""
   if [ -f "$TARGET/$VFILE" ]; then
     INSTALLED="$(sed -n 's/^commit=\([0-9a-f]\{40,64\}\)$/\1/p' "$TARGET/$VFILE" 2>/dev/null | head -1)"
@@ -249,6 +258,35 @@ if [ "$SELF" -eq 0 ]; then
   [ -f "$TARGET/$VFILE" ] || note "no constaba versión del SDK instalada ($VFILE): se registra la de esta copia"
 fi
 
+# ── --activate: el clon de un compañero solo activa (SC-sdk-version-06) ─────────────────
+# La instalación viaja con el repo: no se copia ni se sustituye nada, tampoco desde una copia del
+# SDK de otra versión. Lo que ejecutan el cableado y la Esclusa tiene que estar, versionado, y los
+# git hooks con su permiso de ejecución (git no ejecuta los que no lo tienen). Si falta algo, no se
+# activa nada. El cableado se comprueba en el paso 3, con el lector de JSON
+if [ "$ACTIVATE" -eq 1 ]; then
+  missing=""
+  for f in sentinel/hooks/sentinel-guard.sh sentinel/hooks/post-edit.sh sentinel/hooks/session-start.sh \
+           sentinel/githooks/commit-msg sentinel/githooks/pre-commit sentinel/githooks/pre-push \
+           sentinel/githooks/lib/breakglass.sh sentinel/policy.default.yaml sentinel/policy.yaml \
+           sentinel/overrides.log "$VFILE" .claude/settings.json; do
+    if [ ! -f "$TARGET/$f" ]; then
+      missing="$missing
+      $f — no está"
+    elif ! git -C "$TARGET" ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+      missing="$missing
+      $f — no está versionado"
+    else
+      case "$f" in sentinel/githooks/lib/*) ;; sentinel/githooks/*)
+        [ -x "$TARGET/$f" ] || missing="$missing
+      $f — sin permiso de ejecución" ;; esac
+    fi
+  done
+  [ -z "$missing" ] || die "--activate no activa nada: la instalación versionada está incompleta:$missing
+    Recupera lo que falta (git checkout -- <fichero>, o git pull si aún no te ha llegado). Si este
+    repo no tiene el SDK versionado, instálalo con setup, sin --activate"
+  note "--activate: la instalación versionada está completa; no se copia ni se escribe nada"
+fi
+
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 backup() {
   local rel="$1" dir="$TARGET/sentinel/.backup/$STAMP"
@@ -260,7 +298,7 @@ backup() {
 # ── 1. Enforcement distribuido (se actualiza) ────────────────────────────────────────────
 if [ "$SELF" -eq 1 ]; then
   note "instalación sobre el propio SDK: el enforcement ya está en su sitio, no se copia"
-else
+elif [ "$ACTIVATE" -eq 0 ]; then
   updated=0
   while IFS= read -r rel; do
     src="$SDK_ROOT/$rel"; dst="$TARGET/$rel"
@@ -330,10 +368,10 @@ add_lines() {
   done
   [ -z "$added" ] || ok "$rel:$added"
 }
-add_lines .gitignore "sentinel/.override" "sentinel/.backup/" ".claude/settings.local.json"
+[ "$ACTIVATE" -eq 1 ] || add_lines .gitignore "sentinel/.override" "sentinel/.backup/" ".claude/settings.local.json"
 # .gitattributes: sentinel/ siempre con LF, también en un clon de Git for Windows con
 # core.autocrlf=true, donde bash no ejecutaría los hooks (SC-sdk-setup-16)
-add_lines .gitattributes "sentinel/** text eol=lf"
+[ "$ACTIVATE" -eq 1 ] || add_lines .gitattributes "sentinel/** text eol=lf"
 
 # ── 3. Cableado del Centinela en .claude/settings.json ───────────────────────────────────
 SCRIPTS='["sentinel/hooks/sentinel-guard.sh","sentinel/hooks/post-edit.sh","sentinel/hooks/session-start.sh"]'
@@ -438,7 +476,19 @@ write_fragment() { # $1=motivo [$2=qué hacer con el fragmento]
 drop_fragment() { [ -f "$F" ] && rm -f "$F" && note "retirado sentinel/settings.fragment.json: el cableado ya está"; return 0; }
 
 S_OK=1
-if [ ! -f "$S" ]; then
+if [ "$ACTIVATE" -eq 1 ]; then
+  # Con --activate no se fusiona: el cableado versionado, de la versión que sea, llama a los tres
+  # scripts del SDK. Si no, no se activa nada
+  json_ok "$S" || die "--activate no activa nada: .claude/settings.json no es JSON válido ($JSON_ERR):
+    Claude Code no lo carga, tampoco el Centinela. Recupéralo: git checkout -- .claude/settings.json"
+  jqx -e --argjson scripts "$SCRIPTS" "$SDK_DEFS"'
+      [ $scripts[] as $s | [ (.hooks // {})[][]? | (.hooks // [])[] | is_sdk([$s]) ] | any ] | all' \
+      "$S" >/dev/null 2>&1 \
+    || die "--activate no activa nada: .claude/settings.json no cablea el Centinela (sentinel-guard.sh,
+    post-edit.sh y session-start.sh). Recupéralo (git checkout -- .claude/settings.json) o, si este
+    repo no tiene el SDK versionado, instálalo con setup, sin --activate"
+  ok "Centinela cableado en .claude/settings.json (versionado)"
+elif [ ! -f "$S" ]; then
   mkdir -p "$TARGET/.claude" && printf '%s\n' "$FRAGMENT" >"$S" || die "no se pudo crear .claude/settings.json"
   ok "Centinela cableado (.claude/settings.json creado)"; drop_fragment
 elif ! json_ok "$S"; then
@@ -660,6 +710,9 @@ CHECKED="$(checked_snapshot)"
 A="$TARGET/sentinel/adapters"
 if [ -f "$A/stack.yaml" ]; then
   ok "adaptador de stack declarado (sentinel/adapters/stack.yaml)"
+elif [ "$ACTIVATE" -eq 1 ]; then
+  note "sin sentinel/adapters/stack.yaml: la Esclusa omite format, lint y tests con aviso
+    (--activate no propone un stack)"
 else
   # shellcheck source=/dev/null
   source "$SDK_ROOT/sentinel/adapters/stack.sh"
@@ -842,6 +895,14 @@ fi
     cambiado (git status) y vuelve a ejecutar setup"
 
 echo
+if [ "$ACTIVATE" -eq 1 ]; then
+  if [ "$pending" -eq 1 ]; then
+    echo "Clon comprobado con pasos pendientes (⚠ arriba); no se ha copiado nada. Vuelve a ejecutar setup --activate al resolverlos."
+    exit 3
+  fi
+  echo "✓ Clon listo: la instalación versionada está completa y la Esclusa, activa. No se ha copiado nada."
+  exit 0
+fi
 if [ "$pending" -eq 1 ]; then
   echo "Nivel Guardia instalado con pasos pendientes (⚠ arriba). Vuelve a ejecutar setup al resolverlos."
   exit 3
