@@ -55,10 +55,18 @@ tenga cambios sin commitear, salvo que la persona lo confirme con `--downgrade` 
 
 - **WHEN** en un clon que ya tiene la instalación versionada (con `sentinel/.sdk-version`) se
   ejecuta `setup --activate`
-- **THEN** no copia ni sustituye nada: comprueba que la instalación versionada está completa y
-  el cableado en `.claude/settings.json`, y activa la Esclusa o, si el repo usa otros git hooks,
-  da las líneas para encadenarla, como `setup`
-- **AND** si falta algo de la instalación versionada, lo dice y no activa nada
+- **THEN** no copia ni sustituye nada: comprueba que la instalación versionada está completa
+  (los git hooks, con su permiso de ejecución también en git) y el cableado en
+  `.claude/settings.json` (cada script en su evento, y el Centinela con un matcher que cubre las
+  acciones que escriben), y activa la Esclusa o, si el repo usa otros git hooks, da las líneas
+  para encadenarla, como `setup`
+- **AND** si falta algo de la instalación versionada, o el cableado deja pasar una acción que el
+  Centinela tiene que bloquear, lo dice y no activa nada; si no hay nada del SDK versionado, dice
+  que se instala con `setup`
+- **AND** una instalación anterior a `sdk-version` (sin `sentinel/.sdk-version` versionado) y
+  completa se activa con aviso, sin proponer reinstalar desde el clon
+- **AND** `setup`, también sin `--activate`, avisa si su cableado deja pasar una acción que el
+  Centinela tiene que bloquear
 
 #### Scenario: El aviso de arranque propone activar (SC-sdk-version-07)
 
@@ -66,3 +74,4 @@ tenga cambios sin commitear, salvo que la persona lo confirme con `--downgrade` 
   sin activar ni encadenar
 - **THEN** el aviso de arranque propone `setup --activate` (o `git config core.hooksPath
   sentinel/githooks`), no reinstalar el SDK
+- **AND** dice qué hacer si la copia del SDK no conoce `--activate`
