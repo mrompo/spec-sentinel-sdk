@@ -89,6 +89,7 @@ mv "$SDK_TMP/index.bien" "$SDK_SRC/.git/index"
 printf '#!/bin/sh\n' >"$SDK_SRC/sentinel/hooks/nuevo.sh"
 run_setup
 refused "desde una copia con un fichero sin versionar en lo distribuido"
+assert_out_contains "sentinel/hooks/nuevo.sh" || fail_case "la salida debería nombrar el fichero sin versionar: $RH_ERR"
 
 # ── SC-05: con --downgrade, instala, avisa y registra lo que ha quedado ──────────────────────
 setup_from "$SETUP" --downgrade
@@ -114,6 +115,77 @@ mv "$WS/.gitignore.bien" "$WS/.gitignore"
 # ── SC-01: sobre el propio SDK no se copia nada, y tampoco se escribe la versión ─────────────
 _capture env "$(gl_ok)" bash "$SETUP" "$SDK_SRC"
 [ -e "$SDK_SRC/sentinel/.sdk-version" ] && fail_case "sobre el propio SDK no debería escribirse sentinel/.sdk-version"
+
+# ── Panel de sdk-version (ronda 2) ───────────────────────────────────────────────────────────
+run_setup
+assert_exit 0 || fail_case "desde la copia limpia en C2 debería instalar: $RH_ERR"
+
+# SC-04 (P2): lo que no se instala no cuenta como cambio de la copia, por ejemplo una carpeta del
+# editor sin versionar
+mkdir -p "$SDK_SRC/.vscode" && printf '{}\n' >"$SDK_SRC/.vscode/settings.json"
+run_setup
+assert_exit 0 || fail_case "con un .vscode/ sin versionar en la copia, setup debería instalar: $RH_ERR"
+grep -qx "dirty=no" "$V" || fail_case "un .vscode/ sin versionar no es un cambio de lo que se instala: $(cat "$V")"
+rm -rf "$SDK_SRC/.vscode"
+
+# SC-04 (A2): lo que se instala cuenta aunque git status no lo enseñe, con
+# status.showUntrackedFiles=no o ignorado
+before="$(ws_snapshot)"
+sdk_git config status.showUntrackedFiles no
+printf '#!/bin/sh\n' >"$SDK_SRC/sentinel/hooks/nuevo.sh"
+run_setup
+refused "con un fichero sin versionar en lo distribuido y status.showUntrackedFiles=no"
+assert_out_contains "sentinel/hooks/nuevo.sh" || fail_case "la salida debería nombrar el fichero sin versionar: $RH_ERR"
+rm -f "$SDK_SRC/sentinel/hooks/nuevo.sh"; sdk_git config --unset status.showUntrackedFiles
+printf 'pre-commit.orig\n' >>"$SDK_SRC/.git/info/exclude"
+cp "$SDK_SRC/sentinel/githooks/pre-commit" "$SDK_SRC/sentinel/githooks/pre-commit.orig"
+run_setup
+refused "con un fichero ignorado en lo distribuido"
+assert_out_contains "sentinel/githooks/pre-commit.orig" || fail_case "la salida debería nombrar el fichero ignorado: $RH_ERR"
+rm -f "$SDK_SRC/sentinel/githooks/pre-commit.orig"
+
+# SC-03 (P4): una copia superficial más nueva no tiene el commit instalado: lo dice y propone
+# --unshallow, no git pull. La copia tiene ya la Esclusa activa (setup sobre el propio SDK)
+sdk_git checkout -q -b panel "$C2" && sdk_git commit -q --allow-empty -m "chore: más nuevo" \
+  || fail_case "no se pudo hacer el commit más nuevo en la copia"
+git clone -q --depth 1 -b panel "file://$SDK_SRC" "$SDK_TMP/superficial" || fail_case "no se pudo hacer el clon superficial"
+setup_from "$SDK_TMP/superficial/ai-specs/skills/setup/setup.sh"
+refused "desde un clon superficial más nuevo"
+assert_out_contains "--unshallow" || fail_case "con un clon superficial, la salida debería proponer git fetch --unshallow: $RH_ERR"
+rm -rf "$SDK_TMP/superficial"; sdk_git checkout -q --detach "$C2"
+
+# A6 = V6: un sentinel/.sdk-version que no es un fichero normal no se lee ni se escribe, tampoco
+# con --downgrade: una carpeta no cuenta como «no constaba», y un enlace llevaría la escritura
+# fuera del repo
+mv "$V" "$V.bien" && mkdir "$V"
+before="$(ws_snapshot)"
+run_setup
+assert_exit 1 || fail_case "con sentinel/.sdk-version como carpeta, setup debería negarse: $RH_ERR"
+[ "$(ws_snapshot)" = "$before" ] || fail_case "con sentinel/.sdk-version como carpeta, setup no debería escribir nada"
+assert_out_contains "no es un fichero normal" || fail_case "la salida debería decir que sentinel/.sdk-version no es un fichero normal: $RH_ERR"
+rmdir "$V" && ln -s "$SDK_TMP/fuera" "$V"
+before="$(ws_snapshot)"
+setup_from "$SETUP" --downgrade
+assert_exit 1 || fail_case "con sentinel/.sdk-version como enlace, setup debería negarse también con --downgrade: $RH_ERR"
+[ -e "$SDK_TMP/fuera" ] && fail_case "setup no debería escribir fuera del repo siguiendo el enlace"
+assert_out_contains "enlace simbólico" || fail_case "la salida debería decir que sentinel/.sdk-version es un enlace simbólico: $RH_ERR"
+rm "$V" && mv "$V.bien" "$V"
+
+# SC-03 (A1): una copia sin git no instala sin --downgrade, tampoco sin versión anterior, y con
+# --downgrade no registra «dirty=no», porque no se sabe
+rm -f "$V"; before="$(ws_snapshot)"
+setup_from "$nogit/ai-specs/skills/setup/setup.sh"
+refused "desde una copia sin git, sin versión instalada"
+assert_out_contains "no es un clon de git" || fail_case "la salida debería decir que la copia no es un clon de git: $RH_ERR"
+setup_from "$nogit/ai-specs/skills/setup/setup.sh" --downgrade
+assert_exit 0 || fail_case "desde una copia sin git, con --downgrade, debería instalar: $RH_ERR"
+grep -qx "commit=desconocido" "$V" || fail_case "desde una copia sin git, sentinel/.sdk-version debería decir commit=desconocido: $(cat "$V")"
+grep -qx "dirty=no" "$V" && fail_case "desde una copia sin git no se sabe si hay cambios: no debería registrar dirty=no"
+# P1 = V7: después, desde un clon de git limpio, instala con aviso, como sin versión anterior
+run_setup
+assert_exit 0 || fail_case "tras instalar desde una copia sin git, un clon limpio debería instalar sin --downgrade: $RH_ERR"
+assert_out_contains "copia del SDK sin git" || fail_case "la salida debería decir que la versión anterior se instaló desde una copia sin git: $RH_ERR"
+grep -qx "commit=$C2" "$V" || fail_case "desde el clon limpio debería registrar commit=$C2: $(cat "$V")"
 
 cleanup_git_workspace
 exit 0
