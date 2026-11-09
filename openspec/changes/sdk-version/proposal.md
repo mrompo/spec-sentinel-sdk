@@ -15,19 +15,43 @@ está instalada, así que la bajada solo se ve leyendo el diff de `sentinel/`.
 
 ## What Changes
 
-1. `setup` escribe un fichero versionado (p. ej. `sentinel/.sdk-version`) con la versión del SDK
-   que instala: el tag o el commit, y si su árbol tenía cambios sin commitear.
-2. Antes de sustituir lo distribuido, `setup` compara esa versión con la del SDK desde el que se
-   ejecuta: si es más antigua o el árbol está sucio, no sustituye nada sin una confirmación
-   explícita de la persona, y dice qué haría.
-3. En un clon que ya tiene `sentinel/` versionado, `session-start` y la guía indican solo
-   activar `core.hooksPath` (o un modo de `setup` que active sin copiar), en vez de «ejecuta
-   setup».
+1. `setup` escribe un fichero versionado, `sentinel/.sdk-version`, con la versión del SDK que
+   instala: el commit de la copia del SDK y si su árbol tenía cambios sin commitear.
+2. Antes de sustituir lo distribuido, `setup` compara esa versión con la de la copia desde la
+   que se ejecuta. Solo instala sin más si el commit instalado es antecesor del de la copia (o
+   el mismo) y la copia no tiene cambios sin commitear. En cualquier otro caso no escribe nada,
+   dice qué versión hay y cuál instalaría, y sale con error; la persona lo confirma con
+   `--downgrade` en el comando.
+3. `sentinel/.sdk-version` es un fichero protegido, como el resto del enforcement.
+4. `setup --activate` activa la Esclusa en un clon que ya tiene la instalación versionada, sin
+   copiar nada. En ese clon, `session-start` propone `setup --activate`, no reinstalar.
+
+## Decisiones
+
+Gate **Intención** aprobado el 2026-11-08. La persona eligió:
+
+1. **La versión es el commit, y se compara por ascendencia.** El SDK no tiene tags. Se
+   registra el commit de la copia del SDK y si su árbol estaba sucio. Una copia es «igual o más
+   nueva» solo si el commit instalado es antecesor del suyo; si no lo es, si la copia no es un
+   clon de git o si el fichero de versión no se puede leer, cuenta como dudosa.
+2. **Se confirma con una opción en el comando, `--downgrade`.** Sin ella, `setup` no toca nada
+   ante una versión más vieja, dudosa o con cambios sin commitear. La opción va en el comando
+   que la persona ve y aprueba, también cuando lo lanza el agente, que no tiene terminal
+   interactivo.
+3. **`sentinel/.sdk-version` está protegido** (`self-protection`): el agente no lo reescribe
+   para que una versión vieja parezca la misma.
+4. **Un modo `setup --activate`.** Comprueba que la instalación versionada está completa y
+   activa la Esclusa (o da las líneas para encadenarla, como `setup`), sin copiar nada.
 
 ## Impact
 
-- Capability afectada: `sdk-setup` (y el aviso de `session-start` en `sentinel-guard`).
-- Ficheros: `ai-specs/skills/setup/setup.sh` y `sentinel/hooks/session-start.sh` (protegidos: los
-  aplica una persona o con la llave).
-- El banco gana casos con un SDK más viejo, uno con cambios sin commitear y un clon que ya
-  tiene la instalación versionada.
+- Capabilities afectadas: `sdk-setup` (la versión, `--downgrade`, `--activate` y el aviso de
+  arranque) y `sentinel-guard` (el fichero de versión, protegido).
+- Ficheros protegidos (los aplica una persona con un parche): `ai-specs/skills/setup/setup.sh`,
+  `sentinel/hooks/session-start.sh` y `sentinel/policy.default.yaml`.
+- El banco gana casos con una copia del SDK más vieja, una dudosa, una con cambios sin
+  commitear, `--downgrade`, `--activate` y el aviso en un clon con la instalación versionada.
+- La guía (`docs/guia-uso.md`, instalar y el clon de un compañero).
+- Límite: la comprobación solo protege entre versiones que la incluyen. Una copia del SDK
+  anterior a este cambio no sabe leer `sentinel/.sdk-version` y sigue instalando sin
+  comprobar; lo hará visible el fichero, que esa copia no actualiza.

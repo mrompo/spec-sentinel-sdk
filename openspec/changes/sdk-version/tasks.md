@@ -4,15 +4,59 @@
 copia más vieja o con cambios sin commitear no revierta el enforcement sin que la persona lo
 decida.
 **Origen**: P3-4 de la tercera revisión de `git-gates`.
+**Ritmo**: un slice = caso del banco en rojo → parche mínimo → verde → commit atómico. Lo que
+toca el enforcement (`setup.sh`, `session-start.sh`, `policy.default.yaml`) es un fichero
+protegido: lo entrega el agente como parche en la raíz del worktree, sin trackear, y una persona
+lo revisa, lo aplica con `git apply --index`, comprueba el banco y hace el commit.
 
 ## Engine · antes de teclear
 
 - [x] 0. `propose`: expediente abierto el 2026-10-17 desde la disposición de la revisión
-- [ ] 0a. Gate **Intención** 👤
-- [ ] 0b. `tune` → gate **Claridad**: qué se registra (tag, commit, árbol sucio) y cómo se
-       compara entre versiones sin tags
-- [ ] 0c. `breakdown` → gate **Plan**
+- [x] 0a. Gate **Intención** 👤 — aprobado el 2026-11-08 (proposal §Decisiones)
+- [x] 0b. `tune` → gate **Claridad** ⚙️👤: delta de `sdk-setup` (SC-sdk-version-01..07) y de
+       `sentinel-guard` (SC-sdk-version-08); `openspec validate --strict` en verde. Aprobado
+       por la persona el 2026-11-08
+- [x] 0c. `breakdown` → gate **Plan** 👤: las dos PRs de abajo y un panel antes del `archive`,
+       aprobados el 2026-11-08
 
-## Checklist
+## Checklist (`apply` ↺ `verify`, por slice)
 
-(Se escribe en `breakdown`.)
+**Dos PRs**: **1/2 · La versión** = slices 1-3 · **2/2 · Activar** = slices 4-6. Cada una deja
+el banco en verde y es mergeable sola.
+
+### PR 1/2 · La versión
+
+- [x] 1. Casos en rojo en `fixture/install/`: la primera instalación y una sin versión anterior
+       (SC-01, SC-02), una copia más vieja, una de otra rama y una que no es un clon de git
+       (SC-03), una con cambios sin commitear (SC-04) y `--downgrade` (SC-05). En
+       `fixture/hooks/`, escribir y borrar `sentinel/.sdk-version`, y leerlo (SC-08)
+       → `install/sc-19` y `hooks/sc-32` (`c6fef43`), que fallan con el `setup` y la política
+         actuales; el resto del banco de instalación pasa. El harness de instalación ejecuta
+         `setup` desde una copia limpia del SDK, porque `setup` ya no instala desde una con
+         cambios sin commitear. `db43753` añade los casos que pedían cuatro mutantes
+- [x] 2. 👤 Parche: `setup.sh` (el fichero de versión, la comparación por ascendencia y
+       `--downgrade`) y `policy.default.yaml` (`sentinel/.sdk-version` en `self-protection`)
+       → `58563b2`, aplicado y commiteado por la persona. `fixture/verify.sh` en verde en un clon
+         (hooks 32, githooks 16, install 19); en Debian 12, el banco de instalación entero y
+         `hooks/sc-13`, `sc-26` y `sc-32`; los 11 mutantes del arreglo hacen fallar algún caso
+- [x] 3. La guía (instalar y actualizar) y `sentinel/README.md` → `19f573f`
+- [x] 3a. Revisión de CodeRabbit en la #26: un `git status` que falla (un índice dañado) se leía
+       como una copia limpia. Caso en `sc-19` (`78bb665`, en rojo con el `setup` anterior) y
+       parche 👤 `ba8dd57`: si falla, la copia cuenta como con cambios y `setup` dice por qué.
+       Banco completo en verde en un clon, Debian 12 en verde y 2 de 2 mutantes muertos. El
+       aviso de «Docstring Coverage»: `short()` lleva su comentario, como el resto de funciones
+
+### PR 2/2 · Activar
+
+- [ ] 4. Casos en rojo: `setup --activate` en un clon con la instalación versionada, con otros
+       git hooks y con la instalación incompleta (SC-06); el aviso de `session-start` en ese
+       clon (SC-07)
+- [ ] 5. 👤 Parche: `setup.sh` (`--activate`) y `session-start.sh` (el aviso)
+- [ ] 6. La guía (el clon de un compañero)
+
+### Cierre
+
+- [ ] 7. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las dos PRs →
+       `disposition` 👤 de los hallazgos
+- [ ] 8. `archive`: los deltas pasan a `sdk-setup` y `sentinel-guard`; `STATUS.md` y la guía al
+       día, y la deuda que quede, registrada

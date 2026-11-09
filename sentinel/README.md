@@ -35,6 +35,11 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
   comando se parte en tramos como lo parte bash (un `|` entre comillas no parte nada) y no puede
   llevar redirecciones, sustituciones, asignaciones ni opciones que escriben. Ante la duda, la
   regla aplica.
+- **La versión instalada** (`setup`): `sentinel/.sdk-version` guarda el commit de la copia del
+  SDK desde la que se instaló y si tenía cambios sin commitear. `setup` solo instala sin más
+  desde una copia igual o más nueva (el commit instalado es antecesor del suyo) y limpia; si no,
+  no escribe nada hasta que la persona lo confirma con `--downgrade`. El fichero está protegido
+  como el resto del enforcement (`sdk-version`).
 - **Skip-vs-fail** (Esclusa): "aún no instalado" = skip con aviso; "mal configurado" = fallo
   duro con la instrucción exacta de arreglo. Nunca dejar pasar sin checks por silencio.
 - **El veredicto de un gate lo calcula código determinista; el LLM solo genera hallazgos.**
@@ -57,6 +62,7 @@ el Centinela no puede garantizar lo cierran la Esclusa y la Aduana):
 | **Configuración gestionada** | `setup` lee el `managed-settings.json` de la plataforma (`allowManagedHooksOnly`, `disableAllHooks`), pero no ve la configuración que llega por MDM o desde el servidor, que también puede impedir los hooks del proyecto | La persona comprueba con `/hooks` en una sesión nueva; lo resuelve quien administra esa configuración |
 | **Windows** | El SDK y `setup` son bash: funcionan con Git Bash o WSL, y el `.gitattributes` (del SDK y del consumidor) mantiene en LF lo que ejecuta bash. Windows nativo no está soportado de forma oficial (plan §11) | La **Esclusa** falla cerrada si algo llega con CRLF: rechaza, no deja pasar |
 | **Esquema de Claude Code** | Un `.claude/settings.json` que es JSON válido pero no valida el esquema de Claude Code (un tipo equivocado en cualquier clave) no se carga entero, Centinela incluido. `setup` comprueba la gramática, el cableado, `disableAllHooks` y `env`, no el esquema completo | Claude Code avisa al arrancar; la persona comprueba con `/hooks` en una sesión nueva |
+| **Copias del SDK sin la comprobación de versión** | Una copia del SDK anterior a `sdk-version` no lee `sentinel/.sdk-version`: instala sin comprobar y deja el fichero como estaba, con una versión que ya no es la instalada. Y la comparación necesita el historial: un clon superficial (`--depth 1`) sin el commit instalado cuenta como dudoso y pide `--downgrade` | La **Esclusa** y la **Aduana**: la bajada se ve en el diff de `sentinel/` del commit que la versiona |
 | **Superficie de tools** | Solo se evalúan los tools del matcher de `settings.json`; tools MCP de escritura no pasan por aquí | La **Aduana** + deny-list de permisos del harness |
 
 La regla práctica: **el Centinela evita el 95% de los accidentes y todo el descuido; no pretende

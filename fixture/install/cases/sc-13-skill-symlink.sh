@@ -8,16 +8,16 @@ source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh" || exit 1
 mk_git_workspace
 # Donde lo pone la guía: <HOME>/.claude/skills/spec-sentinel-setup (subir tres niveles desde ahí no
 # lleva al SDK). <HOME>/.claude/skills no existe todavía
-home="$WS.home"; link="$home/.claude/skills/spec-sentinel-setup"; nested="$REPO_ROOT/ai-specs/skills/setup/setup"
+home="$WS.home"; link="$home/.claude/skills/spec-sentinel-setup"; nested="$SDK_SRC/ai-specs/skills/setup/setup"
 fail_case() { echo "    $1" >&2; rm -rf "$home"; [ -L "$nested" ] && rm -f "$nested"; cleanup_git_workspace; exit 1; }
 mkdir -p "$home"
 for _ in 1 2; do
   ( HOME="$home" && mkdir -p "$HOME/.claude/skills" \
-      && ln -sfn "$REPO_ROOT/ai-specs/skills/setup" "$HOME/.claude/skills/spec-sentinel-setup" ) \
+      && ln -sfn "$SDK_SRC/ai-specs/skills/setup" "$HOME/.claude/skills/spec-sentinel-setup" ) \
     || fail_case "la orden de la guía para enlazar la skill falló"
 done
 [ -L "$nested" ] && fail_case "repetir la orden de la guía anidó un enlace dentro del SDK"
-[ "$(cd -P "$link" && pwd -P)" = "$(cd -P "$REPO_ROOT/ai-specs/skills/setup" && pwd -P)" ] \
+[ "$(cd -P "$link" && pwd -P)" = "$(cd -P "$SDK_SRC/ai-specs/skills/setup" && pwd -P)" ] \
   || fail_case "el enlace no apunta a la skill del SDK"
 
 _capture env "$(gl_ok)" bash "$link/setup.sh" "$WS"
@@ -27,13 +27,13 @@ assert_exit 0 || fail_case "a través del enlace a la skill, setup debería inst
 
 # Una copia de la carpeta de la skill (lo que hace ln -s en Git Bash sin enlaces nativos) no
 # encuentra el SDK: setup lo dice y sugiere enlazarla (P6-5)
-cp -R "$REPO_ROOT/ai-specs/skills/setup" "$home/copia"
+cp -R "$SDK_SRC/ai-specs/skills/setup" "$home/copia"
 _capture env "$(gl_ok)" bash "$home/copia/setup.sh" "$WS"
 assert_exit 1 || fail_case "desde una copia de la skill debería terminar con 1: $RH_ERR"
 assert_out_contains "enlaz" || fail_case "desde una copia de la skill, la salida debería sugerir enlazarla"
 
 # El nombre de la skill es el del enlace
-grep -qx "name: spec-sentinel-setup" "$REPO_ROOT/ai-specs/skills/setup/SKILL.md" \
+grep -qx "name: spec-sentinel-setup" "$SDK_SRC/ai-specs/skills/setup/SKILL.md" \
   || fail_case "la skill debería llamarse como su enlace (name: spec-sentinel-setup)"
 
 rm -rf "$home"
