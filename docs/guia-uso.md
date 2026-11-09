@@ -245,9 +245,20 @@ carga el `.claude/settings.json` de la raíz. Comprueba con `/hooks` que aparece
 lo comprueba todo.
 
 **Cada persona que clone el repo** tiene que activar la Esclusa en su clon: `core.hooksPath`
-es configuración local y no viaja con git. Basta con `git config core.hooksPath
-sentinel/githooks` (o con ejecutar `setup`). El Centinela sí llega con el repo y, al arrancar la
-sesión, avisa si la Esclusa no está activa en ese clon.
+es configuración local y no viaja con git. No hace falta reinstalar el SDK, que ya viene
+versionado. Desde la raíz del clon, con su copia del SDK:
+
+```bash
+bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --activate
+```
+
+`--activate` no copia ni escribe nada, aunque su copia del SDK sea de otra versión. Comprueba
+que la instalación versionada está completa: los hooks y los git hooks, versionados y con su
+permiso de ejecución, y el cableado en `.claude/settings.json`. Después activa la Esclusa o, si
+el clon ya usa otros git hooks, da las líneas para encadenarla, como `setup`. Si falta algo, lo
+dice, sale con `1` y no activa nada. Sin otros git hooks, también basta con `git config
+core.hooksPath sentinel/githooks`. El Centinela sí llega con el repo y, al arrancar la sesión,
+avisa si la Esclusa no está activa en ese clon y propone estas dos formas.
 
 **Límite conocido: otros gestores de git hooks.** Con husky, lefthook, el framework pre-commit
 o git-lfs, la Esclusa se encadena a mano en sus hooks y esas herramientas tienen su propio ciclo
