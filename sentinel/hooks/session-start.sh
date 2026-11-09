@@ -20,7 +20,9 @@ fi
 echo "[sentinel] Rama: $BRANCH · $ACTIVE · Estado: STATUS.md · Reglas: sentinel/policy.default.yaml (SDK) + sentinel/policy.yaml (proyecto)"
 
 # Los git hooks no viajan con el clon: si el repo tiene la Esclusa pero aquí no está activa ni
-# encadenada (p. ej. un clon recién hecho), se avisa (SC-sentinel-guard-22)
+# encadenada (p. ej. un clon recién hecho), se avisa (SC-sentinel-guard-22). Con la instalación
+# versionada (sentinel/.sdk-version en git) no hay que reinstalar: basta con activarla
+# (SC-sdk-version-07)
 if [ -d "$ROOT/sentinel/githooks" ]; then
   # --type=path: git expande «~» como cuando ejecuta los hooks (A2-8)
   hp="$(git -C "$ROOT" config --type=path --get core.hooksPath 2>/dev/null || true)"; hp="${hp%/}"; hp="${hp#./}"
@@ -36,6 +38,12 @@ if [ -d "$ROOT/sentinel/githooks" ]; then
     case "$hd" in */.husky/_) hd="${hd%/_}" ;; esac
     grep -qsF 'sentinel/githooks/pre-commit "$@"' "$hd/pre-commit" && esclusa=1
   fi
-  [ "$esclusa" -eq 1 ] || echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon: actívala con «git config core.hooksPath sentinel/githooks» o ejecuta setup"
+  if [ "$esclusa" -eq 0 ]; then
+    if git -C "$ROOT" ls-files --error-unmatch -- sentinel/.sdk-version >/dev/null 2>&1; then
+      echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon y el SDK ya viene versionado, así que no hay que reinstalarlo: actívala con «git config core.hooksPath sentinel/githooks» o, en la raíz del repo y desde una copia del SDK, con «bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --activate», que comprueba la instalación y, si el repo usa otros git hooks, da las líneas para encadenarla"
+    else
+      echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon: actívala con «git config core.hooksPath sentinel/githooks» o ejecuta setup"
+    fi
+  fi
 fi
 exit 0

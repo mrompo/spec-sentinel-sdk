@@ -40,6 +40,12 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
   desde una copia igual o más nueva (el commit instalado es antecesor del suyo) y limpia; si no,
   no escribe nada hasta que la persona lo confirma con `--downgrade`. El fichero está protegido
   como el resto del enforcement (`sdk-version`).
+- **El clon de un compañero solo activa** (`setup --activate`): con la instalación ya versionada,
+  no copia ni escribe nada. Comprueba que lo que ejecutan el cableado y la Esclusa está,
+  versionado y con su permiso de ejecución, y que `.claude/settings.json` cablea el Centinela.
+  Después activa la Esclusa o da las líneas para encadenarla; si falta algo, no activa nada. El
+  aviso de `session-start` lo propone cuando `sentinel/.sdk-version` está versionado
+  (`sdk-version`).
 - **Skip-vs-fail** (Esclusa): "aún no instalado" = skip con aviso; "mal configurado" = fallo
   duro con la instrucción exacta de arreglo. Nunca dejar pasar sin checks por silencio.
 - **El veredicto de un gate lo calcula código determinista; el LLM solo genera hallazgos.**
