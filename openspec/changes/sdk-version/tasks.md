@@ -40,6 +40,11 @@ el banco en verde y es mergeable sola.
          (hooks 32, githooks 16, install 19); en Debian 12, el banco de instalación entero y
          `hooks/sc-13`, `sc-26` y `sc-32`; los 11 mutantes del arreglo hacen fallar algún caso
 - [x] 3. La guía (instalar y actualizar) y `sentinel/README.md` → `19f573f`
+- [x] 3a. Revisión de CodeRabbit en la #26: un `git status` que falla (un índice dañado) se leía
+       como una copia limpia. Caso en `sc-19` (`78bb665`, en rojo con el `setup` anterior) y
+       parche 👤 `ba8dd57`: si falla, la copia cuenta como con cambios y `setup` dice por qué.
+       Banco completo en verde en un clon, Debian 12 en verde y 2 de 2 mutantes muertos. El
+       aviso de «Docstring Coverage»: `short()` lleva su comentario, como el resto de funciones
 
 ### PR 2/2 · Activar
 
