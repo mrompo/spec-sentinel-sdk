@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # SC-sdk-version-06: en el clon de un compañero, con la instalación versionada, setup --activate no
 # copia ni sustituye nada, aunque la copia del SDK sea otra versión: comprueba que la instalación
-# está completa (versionada, con sus ejecutables) y cableada en .claude/settings.json, y activa la
-# Esclusa o, si el clon usa otros git hooks, da las líneas para encadenarla (exit 3). Si falta
-# algo, lo dice, sale con 1 y no activa nada.
+# está completa (versionada, sin enlaces simbólicos, con sus ejecutables también en git) y cableada
+# en .claude/settings.json, cada script en su evento, y activa la Esclusa o, si el clon usa otros
+# git hooks, da las líneas para encadenarla (exit 3). Si falta algo, lo dice, sale con 1 y no
+# activa nada. La prueba de humo del Centinela usa el cableado del clon, no el de la copia del SDK.
 source "$(dirname "${BASH_SOURCE[0]}")/../harness.sh" || exit 1
 
 mk_git_workspace
@@ -93,6 +94,52 @@ sed '1s/^{/{"x": NaN, /' "$clone/.claude/settings.json" >"$clone/.claude/setting
 activate
 not_activated "con un .claude/settings.json que Claude Code no carga" "no es JSON válido"
 in_clone checkout -q -- .claude/settings.json
+
+# El Centinela cableado en otro evento que el suyo: Claude Code no lo llama antes de cada acción
+jq '.hooks.Stop = ((.hooks.Stop // []) + [.hooks.PreToolUse[] | select([.hooks[]?.command] | map(contains("sentinel-guard.sh")) | any)])
+    | .hooks.PreToolUse |= map(select(([.hooks[]?.command] | map(contains("sentinel-guard.sh")) | any) | not))' \
+  "$clone/.claude/settings.json" >"$clone/.claude/settings.tmp" && mv "$clone/.claude/settings.tmp" "$clone/.claude/settings.json"
+before="$(clone_files)"
+activate
+not_activated "con el Centinela cableado en Stop y no en PreToolUse" ".claude/settings.json"
+in_clone checkout -q -- .claude/settings.json
+
+# pre-commit y pre-push cargan sentinel/adapters/stack.sh: sin él, la Esclusa no funciona
+in_clone rm -q sentinel/adapters/stack.sh; before="$(clone_files)"
+activate
+not_activated "sin sentinel/adapters/stack.sh" "sentinel/adapters/stack.sh — no está"
+in_clone reset -q --hard
+
+# Ejecutable en el clon, pero no en git: otro clon lo recibiría sin permiso y git no lo ejecutaría
+in_clone update-index --chmod=-x sentinel/githooks/pre-commit; before="$(clone_files)"
+activate
+not_activated "con sentinel/githooks/pre-commit sin permiso de ejecución en git" "sentinel/githooks/pre-commit"
+in_clone update-index --chmod=+x sentinel/githooks/pre-commit
+
+# Un enlace simbólico ejecuta lo que hay fuera de la instalación versionada: en git (un clon sin
+# enlaces simbólicos, como en Windows, lo saca como fichero normal) y en el clon
+g="$clone/sentinel/hooks/sentinel-guard.sh"
+rm "$g" && ln -s /usr/bin/true "$g" && in_clone add sentinel/hooks/sentinel-guard.sh \
+  && rm "$g" && in_clone show HEAD:sentinel/hooks/sentinel-guard.sh >"$g" || fail_case "no se pudo versionar el enlace"
+before="$(clone_files)"
+activate
+not_activated "con sentinel/hooks/sentinel-guard.sh como enlace simbólico en git" "enlace simbólico"
+in_clone reset -q --hard
+rm "$clone/sentinel/githooks/pre-commit" && ln -s /usr/bin/true "$clone/sentinel/githooks/pre-commit"
+before="$(clone_files)"
+activate
+not_activated "con sentinel/githooks/pre-commit como enlace simbólico" "enlace simbólico"
+in_clone reset -q --hard
+
+# La prueba de humo lanza el cableado del clon: uno que no deja pasar nada lo dice, aunque el de la
+# copia del SDK funcione
+jq '.hooks.PreToolUse[].hooks[] |= (if (.command | contains("sentinel-guard.sh")) then .command += "; exit 7" else . end)' \
+  "$clone/.claude/settings.json" >"$clone/.claude/settings.tmp" && mv "$clone/.claude/settings.tmp" "$clone/.claude/settings.json"
+activate
+assert_exit 3 || fail_case "con un cableado del Centinela que no deja pasar nada, --activate debería terminar con 3: $RH_ERR"
+assert_out_contains "no deja pasar una acción inocua" || fail_case "debería decir que el cableado del clon no deja pasar lo inocuo: $RH_ERR"
+in_clone checkout -q -- .claude/settings.json
+in_clone config --unset core.hooksPath || true
 
 in_clone rm -q sentinel/.sdk-version; before="$(clone_files)"
 activate
