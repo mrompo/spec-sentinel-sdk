@@ -51,6 +51,7 @@ run_setup
 refused "desde una copia más vieja"
 assert_out_contains "${C2:0:7}" || fail_case "la salida debería decir la versión instalada (${C2:0:7}): $RH_ERR"
 assert_out_contains "${C1:0:7}" || fail_case "la salida debería decir la versión que instalaría (${C1:0:7}): $RH_ERR"
+assert_out_contains "git -C" || fail_case "la salida debería actualizar la copia del SDK (git -C <copia> pull), no el proyecto: $RH_ERR"
 
 sdk_git checkout -q -b otra-rama "$C1" && sdk_git commit -q --allow-empty -m "otra rama"
 run_setup
