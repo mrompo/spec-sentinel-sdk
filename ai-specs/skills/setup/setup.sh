@@ -309,7 +309,7 @@ fi
 # recibiría sin él). Si falta algo, no se activa nada. El cableado se comprueba en el paso 3, con
 # el lector de JSON
 if [ "$ACTIVATE" -eq 1 ]; then
-  missing=""
+  missing=""; PRE_SDKV=0
   for f in sentinel/hooks/sentinel-guard.sh sentinel/hooks/post-edit.sh sentinel/hooks/session-start.sh \
            sentinel/githooks/commit-msg sentinel/githooks/pre-commit sentinel/githooks/pre-push \
            sentinel/githooks/lib/breakglass.sh sentinel/adapters/stack.sh sentinel/policy.default.yaml \
@@ -318,6 +318,10 @@ if [ "$ACTIVATE" -eq 1 ]; then
     if [ -L "$TARGET/$f" ] || [ "$mode" = 120000 ]; then
       missing="$missing
       $f — es un enlace simbólico (ejecutaría lo que hay fuera de la instalación versionada)"
+    elif [ "$f" = "$VFILE" ] && [ ! -e "$TARGET/$f" ] && [ -z "$mode" ]; then
+      # Una instalación anterior a sdk-version: no hay versión que comprobar, pero sí todo lo demás.
+      # Reinstalar desde el clon instalaría su copia del SDK sin comparar con nada
+      PRE_SDKV=1
     elif [ ! -f "$TARGET/$f" ]; then
       missing="$missing
       $f — no está"
@@ -325,20 +329,31 @@ if [ "$ACTIVATE" -eq 1 ]; then
       missing="$missing
       $f — no está versionado"
     else
+      # Primero git: el clon recibe el permiso que guarda git, y un git checkout no lo cambia
       case "$f" in sentinel/githooks/lib/*) ;; sentinel/githooks/*)
-        if [ ! -x "$TARGET/$f" ]; then
+        if [ "$mode" != 100755 ]; then
           missing="$missing
-      $f — sin permiso de ejecución"
-        elif [ "$mode" != 100755 ]; then
+      $f — sin permiso de ejecución en git: los clones lo reciben sin él (git add --chmod=+x $f, y commit)"
+        elif [ ! -x "$TARGET/$f" ]; then
           missing="$missing
-      $f — sin permiso de ejecución en git: otro clon lo recibiría sin él (git add --chmod=+x $f, y commit)"
+      $f — sin permiso de ejecución en este clon (git checkout -- $f)"
         fi ;; esac
     fi
   done
-  [ -z "$missing" ] || die "--activate no activa nada: la instalación versionada está incompleta:$missing
-    Recupera lo que falta (git checkout -- <fichero>, o git pull si aún no te ha llegado). Si este
-    repo no tiene el SDK versionado, instálalo con setup, sin --activate"
-  note "--activate: la instalación versionada está completa; no se copia ni se escribe nada"
+  if [ -n "$missing" ]; then
+    [ -n "$(git -C "$TARGET" ls-files -- sentinel/hooks 2>/dev/null)" ] \
+      || die "--activate no activa nada: este repo no tiene el SDK versionado (nada en sentinel/hooks):
+    instálalo con setup, sin --activate, y versiona la instalación en su propio cambio"
+    die "--activate no activa nada: la instalación versionada está incompleta:$missing
+    Recupera lo que falta (git checkout -- <fichero>, o git pull si aún no te ha llegado)"
+  fi
+  if [ "$PRE_SDKV" -eq 1 ]; then
+    note "--activate: la instalación versionada es anterior a sdk-version (no tiene $VFILE): no
+    consta qué versión del SDK es, y lo demás está completo, así que se activa. Que la actualice
+    quien mantiene la instalación, con setup y en su propio cambio, no desde este clon"
+  else
+    note "--activate: la instalación versionada está completa; no se copia ni se escribe nada"
+  fi
 fi
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
@@ -529,22 +544,55 @@ write_fragment() { # $1=motivo [$2=qué hacer con el fragmento]
 # El paso manual ya está hecho: el fragmento sobra (y no debe acabar versionado)
 drop_fragment() { [ -f "$F" ] && rm -f "$F" && note "retirado sentinel/settings.fragment.json: el cableado ya está"; return 0; }
 
+# guard_try <cableado> <payload> → lanza el Centinela con su cableado, como Claude Code, desde la
+# raíz del repo y sin las variables que cambian su política: sale como el cableado, y GUARD_ERR
+# es lo que dice
+guard_try() {
+  GUARD_ERR="$(cd "$TARGET" && printf '%s' "$2" \
+    | env -u SENTINEL_POLICY -u SENTINEL_POLICY_DEFAULT -u SENTINEL_OVERRIDE -u SENTINEL_CONFIRM \
+        CLAUDE_PROJECT_DIR="$TARGET" /bin/sh -c "$1" 2>&1 >/dev/null)"
+}
+# wiring_of <settings> → el comando que lanza el Centinela en PreToolUse
+wiring_of() {
+  jqx -r '[.hooks.PreToolUse[]?.hooks[]?.command | select(contains("sentinel/hooks/sentinel-guard.sh"))][0] // empty' \
+    "$1" 2>/dev/null
+}
+# Una acción que el Centinela bloquea siempre (self-protection): un cableado que la deja pasar
+# descarta su veredicto (… || true) o no lo ejecuta, aunque deje pasar lo inocuo. Con una llave
+# sin usar no se lanza: la gastaría
+BLOCK_WHAT="escribir en sentinel/hooks/sentinel-guard.sh"
+BLOCK_PAYLOAD="{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$(printf '%s' "$TARGET/sentinel/hooks/sentinel-guard.sh" \
+  | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')\",\"content\":\"\"}}"
+
 S_OK=1
 if [ "$ACTIVATE" -eq 1 ]; then
   # Con --activate no se fusiona: el cableado versionado, de la versión que sea, llama a los tres
-  # scripts del SDK, cada uno en su evento (el Centinela, antes de cada acción). Si no, no se activa
-  # nada
+  # scripts del SDK, cada uno en su evento, y el Centinela antes de cada acción que escribe (su
+  # matcher las cubre: todas las versiones del SDK las han llevado) y decidiendo él. Si no, no se
+  # activa nada
   json_ok "$S" || die "--activate no activa nada: .claude/settings.json no es JSON válido ($JSON_ERR):
     Claude Code no lo carga, tampoco el Centinela. Recupéralo: git checkout -- .claude/settings.json"
-  jqx -e "$SDK_DEFS"'
+  jqx -e --argjson writers '["Bash","Edit","Write","MultiEdit","NotebookEdit"]' "$SDK_DEFS"'
+      def covers($t): (.matcher // "") as $m
+        | $m == "" or $m == "*" or all($t[]; test("^(" + $m + ")$"));
       { "PreToolUse": "sentinel/hooks/sentinel-guard.sh", "PostToolUse": "sentinel/hooks/post-edit.sh",
         "SessionStart": "sentinel/hooks/session-start.sh" } as $want | (.hooks // {}) as $h
-      | [ $want | to_entries[] | .value as $s | [ $h[.key][]? | (.hooks // [])[] | is_sdk([$s]) ] | any ]
+      | [ $want | to_entries[] | .key as $k | .value as $s
+          | [ $h[$k][]? | select($k != "PreToolUse" or covers($writers)) | (.hooks // [])[] | is_sdk([$s]) ]
+          | any ]
       | all' "$S" >/dev/null 2>&1 \
-    || die "--activate no activa nada: .claude/settings.json no cablea el Centinela (sentinel-guard.sh
-    en PreToolUse, post-edit.sh en PostToolUse y session-start.sh en SessionStart). Recupéralo
-    (git checkout -- .claude/settings.json) o, si este repo no tiene el SDK versionado, instálalo
-    con setup, sin --activate"
+    || die "--activate no activa nada: .claude/settings.json no cablea el Centinela como hace falta:
+    sentinel-guard.sh en PreToolUse, con un matcher que cubra Bash, Edit, Write, MultiEdit y
+    NotebookEdit; post-edit.sh en PostToolUse y session-start.sh en SessionStart. Recupéralo
+    (git checkout -- .claude/settings.json) o corrige el cableado versionado en su propio cambio"
+  if [ -e "$TARGET/sentinel/.override" ]; then
+    note "hay una llave sin usar (sentinel/.override): no se prueba que el cableado bloquee, porque la gastaría"
+  elif guard_try "$(wiring_of "$S")" "$BLOCK_PAYLOAD"; then
+    die "--activate no activa nada: el cableado del Centinela en .claude/settings.json deja pasar
+    una acción que tiene que bloquear ($BLOCK_WHAT): descarta su veredicto o no lo ejecuta, y
+    Claude Code no protegería nada. Recupéralo (git checkout -- .claude/settings.json) o corrige el
+    cableado versionado en su propio cambio"
+  fi
   ok "Centinela cableado en .claude/settings.json (versionado)"
 elif [ ! -f "$S" ]; then
   mkdir -p "$TARGET/.claude" && printf '%s\n' "$FRAGMENT" >"$S" || die "no se pudo crear .claude/settings.json"
@@ -819,6 +867,8 @@ fi
 # ── 7. Lo que tiene que viajar con el repo no puede estar ignorado ───────────────────────
 # Todo lo que se instala (no una muestra: la librería de la Esclusa también) y lo del consumidor
 versioned() {
+  # Con --activate, lo que el clon tiene versionado: la copia del SDK puede ser de otra versión
+  if [ "$ACTIVATE" -eq 1 ]; then git -C "$TARGET" ls-files -- sentinel .claude/settings.json; return; fi
   dist_files
   printf '%s\n' sentinel/policy.yaml sentinel/overrides.log .claude/settings.json
   [ "$SELF" -eq 1 ] || echo "$VFILE"
@@ -902,8 +952,9 @@ done
     «sentinel/** text eol=lf»): en un clon de Git for Windows, bash no ejecutaría los hooks.
     Compruébalo con: git check-attr eol -- sentinel/hooks/sentinel-guard.sh"
 
-# Con core.fileMode=false git no guarda el permiso de ejecución: en los clones ignoraría los hooks
-if [ "$(git -C "$TARGET" config --bool core.fileMode 2>/dev/null)" = "false" ]; then
+# Con core.fileMode=false git no guarda el permiso de ejecución: en los clones ignoraría los hooks.
+# Con --activate ya se comprobó en git el de los git hooks del clon
+if [ "$ACTIVATE" -eq 0 ] && [ "$(git -C "$TARGET" config --bool core.fileMode 2>/dev/null)" = "false" ]; then
   noexec=""
   while IFS= read -r f; do
     [ -x "$SDK_ROOT/$f" ] || continue
@@ -924,12 +975,10 @@ fi
 if [ -z "$dup" ]; then
   smoke_path="$(printf '%s' "$TARGET/smoke-test.txt" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
   wired_from="$SDK_ROOT/.claude/settings.json"; [ "$ACTIVATE" -eq 0 ] || wired_from="$S"
-  wiring="$(jqx -r '[.hooks.PreToolUse[]?.hooks[]?.command | select(contains("sentinel/hooks/sentinel-guard.sh"))][0] // empty' \
-    "$wired_from" 2>/dev/null)"
+  wiring="$(wiring_of "$wired_from")"
   while IFS='|' read -r what payload; do
-    smoke_err="$(cd "$TARGET" && printf '%s' "$payload" \
-      | env -u SENTINEL_POLICY -u SENTINEL_POLICY_DEFAULT -u SENTINEL_OVERRIDE -u SENTINEL_CONFIRM \
-          CLAUDE_PROJECT_DIR="$TARGET" /bin/sh -c "$wiring" 2>&1 >/dev/null)" && continue
+    guard_try "$wiring" "$payload" && continue
+    smoke_err="$GUARD_ERR"
     case "$smoke_err" in
       sentinel-guard:*)
         todo "el Centinela instalado deniega una acción inocua ($what): ${smoke_err#sentinel-guard: }
@@ -945,6 +994,12 @@ if [ -z "$dup" ]; then
 leer un fichero|{"tool_name":"Read","tool_input":{"file_path":"$smoke_path"}}
 editar un fichero|{"tool_name":"Edit","tool_input":{"file_path":"$smoke_path","old_string":"a","new_string":"b"}}
 EOF
+  # Y una que tiene que bloquear (con --activate se probó antes de activar)
+  if [ "$ACTIVATE" -eq 0 ] && [ ! -e "$TARGET/sentinel/.override" ] && guard_try "$wiring" "$BLOCK_PAYLOAD"; then
+    todo "el cableado del Centinela (.claude/settings.json) deja pasar una acción que tiene que bloquear
+    ($BLOCK_WHAT): descarta su veredicto o no lo ejecuta. Mientras siga así, Claude Code no
+    protege nada en este repo. Ejecuta setup desde una copia íntegra del SDK"
+  fi
 fi
 
 [ "$(checked_snapshot)" = "$CHECKED" ] \
