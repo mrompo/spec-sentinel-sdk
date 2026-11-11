@@ -101,6 +101,15 @@ mergeable sola. A4 = V2 recoge lo que la revisión de CodeRabbit en la #27 dejó
 - [x] R2. 👤 Parche: `setup.sh` → `1e0f411`. Banco completo en verde en un clon (hooks 33,
        githooks 16, install 20), Debian 12 en verde y 11 de 11 mutantes muertos
 - [x] R3. La guía, `sentinel/README.md` y el delta de SC-02, 03 y 04 → `f213fab`
+- [x] R3a. Revisiones de CodeRabbit en la #28. Primera → `400f97f`: SC-05 excluye el
+       `.sdk-version` que es enlace o carpeta; la guía y `sentinel/README.md` dicen que, sin
+       versión registrada, un clon limpio instala; `synthesis.sh` falla ante una severidad
+       desconocida (el veredicto del panel no cambia). Segunda → la guía da los comandos sobre la
+       copia del SDK (`git -C <ruta-al-sdk> pull`), y SC-03 rechaza un enlace (también roto) o
+       una carpeta sin proponer `--downgrade` (`76093a6`); caso en `sc-19` (`4099fd1`, en rojo
+       con el `setup` anterior) y parche 👤 `c4fa9e0`. Banco completo en verde salvo
+       `hooks/sc-21` en un worktree (verde en un clon; no toca `sentinel/`), CI verde en macOS y
+       Linux. La tercera revisión, sobre `c4fa9e0`, sin comentarios
 
 **PR 4 · Activar** (temas 3, 4 y 6 del panel, salvo P4)
 
