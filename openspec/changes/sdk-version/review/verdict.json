@@ -1,0 +1,259 @@
+{
+  "verdict": "CONDITIONAL",
+  "counts": {
+    "major": {
+      "total": 4,
+      "validated": 4
+    },
+    "minor": {
+      "total": 13,
+      "validated": 12
+    },
+    "nit": {
+      "total": 3,
+      "validated": 3
+    }
+  },
+  "findings": [
+    {
+      "id": "A1",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 236,
+      "title": "Una copia del SDK sin git solo se trata como dudosa si ya hay sentinel/.sdk-version: en un repo sin él instala sin --downgrade y deja «dirty=no» aunque no se sepa"
+    },
+    {
+      "id": "P1",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 328,
+      "title": "Instalar desde una copia sin git (ZIP, copia vendorizada o clon de otro usuario con dubious ownership) deja commit=desconocido y desde entonces todo setup se niega diciendo que el fichero «no se puede leer», también para cerrar los pendientes y también desde un clon de git limpio y más nuevo"
+    },
+    {
+      "id": "P2",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 226,
+      "title": "Cualquier fichero sin versionar en la copia del SDK (.idea/, .vscode/, notas) cuenta como «cambios sin commitear» y bloquea la primera instalación y cada actualización, con un mensaje que habla de copia vieja y aconseja git pull"
+    },
+    {
+      "id": "P3",
+      "lens": "pragmatist",
+      "severity": "major",
+      "effective": "major",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 296,
+      "title": "En un repo instalado antes de sdk-version (todos los existentes), --activate falla por falta de .sdk-version y manda a «instálalo con setup», que instala sin comprobar desde la copia que tenga el compañero y le deja el enforcement modificado en su clon"
+    },
+    {
+      "id": "A2",
+      "lens": "auditor",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 226,
+      "title": "La limpieza de la copia se mide con un `git status --porcelain` que no ve todo lo que se distribuye: con status.showUntrackedFiles=no o con ficheros ignorados en sentinel/, instala «limpia» contenido que no está en el commit"
+    },
+    {
+      "id": "A3",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 863,
+      "title": "--activate mide la instalación del clon con la lista de ficheros de la copia del SDK: con otra versión y core.fileMode=false pide marcar como ejecutable un fichero que el clon no tiene"
+    },
+    {
+      "id": "A4",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 496,
+      "title": "--activate da por cableado el Centinela con cualquier matcher: con «Read» en su grupo de PreToolUse dice «Clon listo» aunque Claude Code no lo llame antes de Bash, Edit ni Write"
+    },
+    {
+      "id": "A5",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "fixture/install/cases/sc-20-activate.sh",
+      "line": 1,
+      "title": "sc-20 no falsifica dos piezas de --activate: que no toque .gitattributes y que exija post-edit.sh y session-start.sh en su evento"
+    },
+    {
+      "id": "A6",
+      "lens": "auditor",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 236,
+      "title": "Un sentinel/.sdk-version que existe pero no es un fichero regular cuenta como «no constaba»: setup sustituye el enforcement sin --downgrade y luego muere al escribir la versión"
+    },
+    {
+      "id": "P4",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 242,
+      "title": "Con un clon superficial del SDK más nuevo, el rechazo dice «más vieja o de otra rama» y aconseja git pull, que no lo resuelve"
+    },
+    {
+      "id": "P5",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 286,
+      "title": "Si los git hooks se commitearon sin el bit de ejecución, --activate en el clon de un compañero dice solo «sin permiso de ejecución» y propone git checkout o reinstalar; la pista correcta (git add --chmod=+x y commit) no se alcanza"
+    },
+    {
+      "id": "P7",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/SKILL.md",
+      "line": 17,
+      "title": "La skill que ejecuta el agente no conoce --activate ni el rechazo por versión: en el clon de un compañero haría una instalación completa"
+    },
+    {
+      "id": "V1",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 242,
+      "title": "«Igual o más nueva» se decide por ascendencia, no por contenido: un commit local en la copia del SDK que deshace enforcement (git revert) se instala sin --downgrade ni aviso, y el Centinela deja al agente hacer ese commit"
+    },
+    {
+      "id": "V2",
+      "lens": "adversary",
+      "severity": "major",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 496,
+      "title": "--activate da por buen un cableado que no ejecuta el Centinela o no lo pone delante de las acciones: solo busca el nombre del script en el comando, sin matcher, y la prueba de humo solo comprueba que deja pasar"
+    },
+    {
+      "id": "V5",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 236,
+      "title": "Sin sentinel/.sdk-version, setup lo trata como primera instalación aunque la historia del repo ya lo tuvo: borrarlo (el Centinela no ve git rm ':(glob)sentinel/.sdk-v*') abre la bajada silenciosa"
+    },
+    {
+      "id": "V6",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 331,
+      "title": "setup escribe sentinel/.sdk-version siguiendo un enlace simbólico: crea o pisa un fichero fuera del repo (--activate rechaza enlaces; setup normal no)"
+    },
+    {
+      "id": "V4",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "minor",
+      "validated": false,
+      "support": 1,
+      "against": 2,
+      "file": "sentinel/policy.default.yaml",
+      "line": 73,
+      "title": "--activate activa sentinel/githooks entero sin mirar qué hooks hay: uno añadido por el agente (post-checkout, que el Centinela no protege) se ejecuta en el clon de cada compañero, fuera de cualquier Centinela"
+    },
+    {
+      "id": "P6",
+      "lens": "pragmatist",
+      "severity": "minor",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "sentinel/hooks/session-start.sh",
+      "line": 43,
+      "title": "El aviso de arranque y la guía proponen setup --activate «aunque su copia del SDK sea de otra versión», pero una copia anterior a sdk-version responde «no existe el directorio --activate»"
+    },
+    {
+      "id": "V3",
+      "lens": "adversary",
+      "severity": "minor",
+      "effective": "nit",
+      "validated": true,
+      "support": 2,
+      "against": 1,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 268,
+      "title": "--activate comprueba que el enforcement versionado existe, no que sea el de la versión registrada: un Centinela reducido a «exit 0» pasa como instalación completa"
+    },
+    {
+      "id": "V7",
+      "lens": "adversary",
+      "severity": "nit",
+      "effective": "nit",
+      "validated": true,
+      "support": 3,
+      "against": 0,
+      "file": "ai-specs/skills/setup/setup.sh",
+      "line": 328,
+      "title": "setup registra commit=desconocido, que él mismo no sabe leer: tras un --downgrade desde una copia sin git, toda instalación posterior, también desde un clon limpio y más nuevo, exige --downgrade"
+    }
+  ]
+}

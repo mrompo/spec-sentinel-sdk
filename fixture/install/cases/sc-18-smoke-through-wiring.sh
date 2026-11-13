@@ -15,6 +15,9 @@ jq '(.hooks.PreToolUse[].hooks[] | select(.command | contains("sentinel/hooks/se
       |= sub("PATH=/usr/bin:/bin:[^ ]*"; "PATH=/nonexistent")' \
   "$REPO_ROOT/.claude/settings.json" >"$SDK/.claude/settings.json"
 grep -q 'PATH=/nonexistent' "$SDK/.claude/settings.json" || fail_case "no se pudo cambiar el cableado de la copia"
+# Un clon de git limpio: setup no instala sin --downgrade desde una copia sin git (SC-sdk-version-03)
+git -C "$SDK" init -q && git -C "$SDK" add -A && git -C "$SDK" -c user.name=t -c user.email=t@t commit -qm sdk \
+  || fail_case "no se pudo versionar la copia"
 
 mk_git_workspace
 _capture env "$(gl_ok)" bash "$SDK/ai-specs/skills/setup/setup.sh" "$WS"

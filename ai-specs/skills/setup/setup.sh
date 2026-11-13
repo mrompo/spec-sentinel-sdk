@@ -48,8 +48,10 @@ todo() { echo "⚠ PENDIENTE: $1"; pending=1; }
 
 # dist_files → lo que el SDK distribuye (rutas relativas): lo que se copia y lo que tiene que
 # poder versionarse
+DIST_PATHS="sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters"
 dist_files() {
-  (cd "$SDK_ROOT" && find sentinel/README.md sentinel/policy.default.yaml sentinel/hooks sentinel/githooks sentinel/adapters \
+  # shellcheck disable=SC2086 # DIST_PATHS son rutas sin espacios, una por palabra
+  (cd "$SDK_ROOT" && find $DIST_PATHS \
      -type f ! -name '.*' ! -name stack.yaml ! -name stack.proposed.yaml | LC_ALL=C sort)
 }
 
@@ -219,12 +221,24 @@ jqx -e '(.hooks | type == "object" and length > 0) and all(.hooks[]; type == "ar
 # cambios sin commitear no instalan nada sin --downgrade: así un clon viejo no revierte el
 # enforcement en silencio
 VFILE="sentinel/.sdk-version"
-SDK_COMMIT=""; SDK_DIRTY=no; DIRTY_WHY="esta copia del SDK tiene cambios sin commitear"
+SDK_COMMIT=""; SDK_DIRTY=desconocido; DIRTY_WHY=""
 if [ "$(git -C "$SDK_ROOT" rev-parse --show-toplevel 2>/dev/null)" -ef "$SDK_ROOT" ]; then
   SDK_COMMIT="$(git -C "$SDK_ROOT" rev-parse --verify -q HEAD 2>/dev/null)" || SDK_COMMIT=""
-  # Sin el código de salida, un git status que falla (un índice dañado) parecería una copia limpia
-  if st="$(git -C "$SDK_ROOT" status --porcelain 2>/dev/null)"; then
-    [ -z "$st" ] || SDK_DIRTY=yes
+  # Cuenta lo que se instala, no el resto del árbol (un .vscode/ sin versionar no cambia nada): lo
+  # versionado con cambios, y lo que dist_files copiaría sin estar versionado, también si git
+  # status no lo enseña (status.showUntrackedFiles=no) o lo ignora. Sin el código de salida, un git
+  # que falla (un índice dañado) parecería una copia limpia
+  # shellcheck disable=SC2086
+  if st="$(git -C "$SDK_ROOT" status --porcelain --untracked-files=no -- $DIST_PATHS .claude/settings.json 2>/dev/null)" \
+     && tracked="$(git -C "$SDK_ROOT" ls-files -- $DIST_PATHS 2>/dev/null)"; then
+    changed="$( { printf '%s\n' "$st" | sed -n 's/^...//p'
+                  LC_ALL=C comm -23 <(dist_files) <(printf '%s\n' "$tracked" | LC_ALL=C sort); } | awk 'NF && !seen[$0]++')"
+    if [ -z "$changed" ]; then
+      SDK_DIRTY=no
+    else
+      SDK_DIRTY=yes
+      DIRTY_WHY="esta copia del SDK tiene cambios sin commitear en lo que se instala: $(printf '%s\n' "$changed" | head -5 | paste -sd ' ' -)$([ "$(printf '%s\n' "$changed" | wc -l)" -gt 5 ] && printf ' …')"
+    fi
   else
     SDK_DIRTY=yes; DIRTY_WHY="git status falla en esta copia del SDK: no se sabe si tiene cambios sin commitear"
   fi
@@ -232,30 +246,59 @@ fi
 # short <commit> → sus 7 primeros caracteres, o «desconocida» si no hay
 short() { [ -n "$1" ] && printf '%s' "${1:0:7}" || printf 'desconocida'; }
 if [ "$SELF" -eq 0 ] && [ "$ACTIVATE" -eq 0 ]; then
-  INSTALLED=""; why=""
-  if [ -f "$TARGET/$VFILE" ]; then
+  INSTALLED=""; why=""; fix=""; UNKNOWN=0
+  # Un enlace simbólico llevaría la escritura fuera del repo, y una carpeta no es «no constaba»: no
+  # se leen ni se escriben, tampoco con --downgrade
+  if [ -L "$TARGET/$VFILE" ]; then
+    die "no se instala: $VFILE es un enlace simbólico, y setup no lo lee ni lo escribe (la escritura
+    acabaría fuera del repo). Quítalo (rm $VFILE) y vuelve a ejecutar setup. No se ha instalado nada"
+  elif [ -e "$TARGET/$VFILE" ] && [ ! -f "$TARGET/$VFILE" ]; then
+    die "no se instala: $VFILE no es un fichero normal, y setup no lo lee ni lo escribe. Quítalo
+    (rm -r $VFILE) y vuelve a ejecutar setup. No se ha instalado nada"
+  fi
+  # commit=desconocido: se instaló desde una copia sin git. No hay con qué comparar, como sin
+  # versión anterior; desde otra copia sin git, la razón de abajo pide --downgrade
+  if [ -f "$TARGET/$VFILE" ] && grep -qx 'commit=desconocido' "$TARGET/$VFILE" 2>/dev/null; then
+    UNKNOWN=1
+  elif [ -f "$TARGET/$VFILE" ]; then
     INSTALLED="$(sed -n 's/^commit=\([0-9a-f]\{40,64\}\)$/\1/p' "$TARGET/$VFILE" 2>/dev/null | head -1)"
     if [ -z "$INSTALLED" ]; then
       why="no se puede leer la versión instalada en $VFILE"
-    elif [ -z "$SDK_COMMIT" ]; then
-      why="esta copia del SDK no es un clon de git: no se sabe si es más vieja que la instalada"
-    elif ! git -C "$SDK_ROOT" merge-base --is-ancestor "$INSTALLED" "$SDK_COMMIT" 2>/dev/null; then
-      why="la versión instalada no es antecesora de la de esta copia: esta copia es más vieja o de otra rama"
+      fix="Recupéralo (git checkout -- $VFILE) y vuelve a ejecutar setup."
     fi
+  fi
+  if [ -z "$SDK_COMMIT" ]; then
+    why="${why:+$why; y }esta copia del SDK no es un clon de git: no se sabe qué versión es"
+    fix="${fix:+$fix }Clona el SDK con git y ejecuta setup desde ese clon."
+  elif [ -n "$INSTALLED" ] && ! git -C "$SDK_ROOT" cat-file -e "$INSTALLED^{commit}" 2>/dev/null; then
+    if [ "$(git -C "$SDK_ROOT" rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
+      why="esta copia del SDK es un clon superficial y no tiene el commit instalado: no se sabe si es más vieja"
+      fix="Trae su historia (git -C $(printf '%q' "$SDK_ROOT") fetch --unshallow) y vuelve a ejecutar setup."
+    else
+      why="esta copia del SDK no tiene el commit instalado: no está al día o es de otro repo"
+      fix="Actualiza tu copia del SDK (git -C $(printf '%q' "$SDK_ROOT") pull) y vuelve a ejecutar setup."
+    fi
+  elif [ -n "$INSTALLED" ] && ! git -C "$SDK_ROOT" merge-base --is-ancestor "$INSTALLED" "$SDK_COMMIT" 2>/dev/null; then
+    why="la versión instalada no es antecesora de la de esta copia: esta copia es más vieja o de otra rama"
+    fix="Actualiza tu copia del SDK (git -C $(printf '%q' "$SDK_ROOT") pull) y vuelve a ejecutar setup."
   fi
   if [ "$SDK_DIRTY" = yes ]; then
     why="${why:+$why; y }$DIRTY_WHY"
+    fix="${fix:+$fix }Commitea o descarta esos cambios en la copia del SDK."
   fi
   vers="instalada: $(short "$INSTALLED") · esta copia: $(short "$SDK_COMMIT")$([ "$SDK_DIRTY" = yes ] && printf ', con cambios sin commitear')"
   if [ -n "$why" ] && [ "$DOWNGRADE" -eq 0 ]; then
     die "no se instala: $why ($vers).
-    Así una copia vieja del SDK no revierte el enforcement en silencio. Actualiza tu copia del
-    SDK (git pull, sin cambios locales) y vuelve a ejecutar setup. Si de verdad quieres instalar
-    esta, confírmalo con --downgrade: bash $(printf '%q' "$SDK_ROOT/ai-specs/skills/setup/setup.sh") --downgrade $(printf '%q' "$TARGET")
+    Así una copia vieja o dudosa del SDK no revierte el enforcement en silencio. $fix
+    Si de verdad quieres instalar esta copia, confírmalo con --downgrade: bash $(printf '%q' "$SDK_ROOT/ai-specs/skills/setup/setup.sh") --downgrade $(printf '%q' "$TARGET")
     No se ha instalado nada"
   fi
   [ -z "$why" ] || echo "⚠ se instala con --downgrade: $why ($vers)"
-  [ -f "$TARGET/$VFILE" ] || note "no constaba versión del SDK instalada ($VFILE): se registra la de esta copia"
+  if [ "$UNKNOWN" -eq 1 ]; then
+    note "la versión instalada se instaló desde una copia del SDK sin git ($VFILE: commit=desconocido): se registra la de esta copia"
+  elif [ ! -f "$TARGET/$VFILE" ]; then
+    note "no constaba versión del SDK instalada ($VFILE): se registra la de esta copia"
+  fi
 fi
 
 # ── --activate: el clon de un compañero solo activa (SC-sdk-version-06) ─────────────────

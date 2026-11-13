@@ -70,7 +70,65 @@ el banco en verde y es mergeable sola.
 
 ### Cierre
 
-- [ ] 7. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las dos PRs →
-       `disposition` 👤 de los hallazgos
+- [x] 7. `review` (Auditor · Adversary · Pragmatist, contexto limpio) sobre las dos PRs →
+       `disposition` 👤 de los hallazgos. Panel del 2026-11-09 ([`review/`](review/README.md)):
+       `CONDITIONAL`, con 19 de 20 hallazgos validados (4 graves: A1, P1, P2 y P3) y V4 sin
+       validar. Disposición de la persona el mismo día: ronda 2 (abajo) con los graves y los
+       menores baratos; V1, V3, V5 y V4, a deuda; después, un panel corto de confirmación
 - [ ] 8. `archive`: los deltas pasan a `sdk-setup` y `sentinel-guard`; `STATUS.md` y la guía al
        día, y la deuda que quede, registrada
+
+## Ronda 2 · arreglos del panel (disposición del 2026-11-09)
+
+Mismo ritmo: caso en rojo → parche 👤 → verde, con mutantes. Dos PRs desde `main`, cada una
+mergeable sola. A4 = V2 recoge lo que la revisión de CodeRabbit en la #27 dejó fuera (6a).
+
+**PR 3 · La copia del SDK** (temas 1, 2 y 5 del panel, y P4)
+
+- [x] R1. Casos en rojo en `fixture/install/sc-19` → `4461b96`:
+       - una copia sin git en un repo sin `.sdk-version` → se niega; con `--downgrade`, instala
+         y no registra `dirty=no` (A1);
+       - tras instalar desde una copia sin git, `setup` desde un clon limpio y más nuevo →
+         instala con aviso, sin `--downgrade` (P1 = V7);
+       - un `.vscode/` sin versionar en la copia → instala; un fichero sin versionar en
+         `sentinel/hooks` sigue rechazado, y el mensaje lo nombra (P2);
+       - con `status.showUntrackedFiles=no`, o con un fichero ignorado en `sentinel/githooks` →
+         se niega (A2);
+       - `.sdk-version` como carpeta o como enlace simbólico → se niega y no escribe fuera del
+         repo (A6 = V6);
+       - una copia superficial más nueva → el mensaje propone `git fetch --unshallow` (P4).
+       `sc-18`, que instala desde una copia sin git, se ajusta
+- [x] R2. 👤 Parche: `setup.sh` → `1e0f411`. Banco completo en verde en un clon (hooks 33,
+       githooks 16, install 20), Debian 12 en verde y 11 de 11 mutantes muertos
+- [x] R3. La guía, `sentinel/README.md` y el delta de SC-02, 03 y 04 → `f213fab`
+- [x] R3a. Revisiones de CodeRabbit en la #28. Primera → `400f97f`: SC-05 excluye el
+       `.sdk-version` que es enlace o carpeta; la guía y `sentinel/README.md` dicen que, sin
+       versión registrada, un clon limpio instala; `synthesis.sh` falla ante una severidad
+       desconocida (el veredicto del panel no cambia). Segunda → la guía da los comandos sobre la
+       copia del SDK (`git -C <ruta-al-sdk> pull`), y SC-03 rechaza un enlace (también roto) o
+       una carpeta sin proponer `--downgrade` (`76093a6`); caso en `sc-19` (`4099fd1`, en rojo
+       con el `setup` anterior) y parche 👤 `c4fa9e0`. Banco completo en verde salvo
+       `hooks/sc-21` en un worktree (verde en un clon; no toca `sentinel/`), CI verde en macOS y
+       Linux. La tercera revisión, sobre `c4fa9e0`, sin comentarios
+
+**PR 4 · Activar** (temas 3, 4 y 6 del panel, salvo P4)
+
+- [ ] R4. Casos en rojo en `fixture/install/sc-20` y `fixture/hooks/sc-33`:
+       - un clon instalado antes de `sdk-version` → `--activate` propone `git config
+         core.hooksPath sentinel/githooks`, no «instálalo con setup» (P3);
+       - el Centinela con el matcher `Read`, o con un comando que no lo ejecuta (`… || true`)
+         → no activa; la prueba de humo comprueba también una acción que tiene que bloquearse,
+         en `setup` y en `--activate` (A4 = V2);
+       - el `.gitattributes` del clon sin su línea, y `post-edit.sh` y `session-start.sh`
+         fuera de su evento (A5);
+       - git hooks commiteados sin bit de ejecución → el mensaje da `git add --chmod=+x` (P5);
+       - `core.fileMode=false` y una copia del SDK de otra versión → no pide marcar un fichero
+         que el clon no tiene (A3);
+       - el aviso de arranque dice qué hacer si la copia no conoce `--activate` (P6)
+- [ ] R5. 👤 Parche: `setup.sh` y `session-start.sh`
+- [ ] R6. `SKILL.md` (`--activate`, y que `--downgrade` lo decide la persona: P7) y la guía
+
+**Cierre de la ronda**
+
+- [ ] R7. Panel corto de confirmación (tres lentes nuevas, contexto limpio) sobre las PRs 3 y
+       4 → `disposition` 👤
