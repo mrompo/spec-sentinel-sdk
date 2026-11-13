@@ -276,11 +276,11 @@ if [ "$SELF" -eq 0 ] && [ "$ACTIVATE" -eq 0 ]; then
       fix="Trae su historia (git -C $(printf '%q' "$SDK_ROOT") fetch --unshallow) y vuelve a ejecutar setup."
     else
       why="esta copia del SDK no tiene el commit instalado: no está al día o es de otro repo"
-      fix="Actualiza tu copia del SDK (git pull) y vuelve a ejecutar setup."
+      fix="Actualiza tu copia del SDK (git -C $(printf '%q' "$SDK_ROOT") pull) y vuelve a ejecutar setup."
     fi
   elif [ -n "$INSTALLED" ] && ! git -C "$SDK_ROOT" merge-base --is-ancestor "$INSTALLED" "$SDK_COMMIT" 2>/dev/null; then
     why="la versión instalada no es antecesora de la de esta copia: esta copia es más vieja o de otra rama"
-    fix="Actualiza tu copia del SDK (git pull) y vuelve a ejecutar setup."
+    fix="Actualiza tu copia del SDK (git -C $(printf '%q' "$SDK_ROOT") pull) y vuelve a ejecutar setup."
   fi
   if [ "$SDK_DIRTY" = yes ]; then
     why="${why:+$why; y }$DIRTY_WHY"

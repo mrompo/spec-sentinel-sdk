@@ -29,12 +29,13 @@ tenga cambios sin commitear, salvo que la persona lo confirme con `--downgrade` 
 
 - **WHEN** se ejecuta `setup` desde una copia cuyo commit no desciende del instalado (más
   vieja o de otra rama), que no tiene el commit instalado (un clon superficial), que no es un
-  clon de git (también sin versión instalada), o con un `sentinel/.sdk-version` que no se
-  puede leer
+  clon de git (también sin versión instalada), o con un `sentinel/.sdk-version` que es un
+  fichero y no se puede leer
 - **THEN** `setup` no escribe nada, dice qué versión hay instalada y cuál instalaría, cómo
   resolverlo, explica que se confirma con `--downgrade` y sale con error
-- **AND** un `sentinel/.sdk-version` que es un enlace simbólico o una carpeta no se lee ni se
-  escribe, tampoco con `--downgrade`
+- **AND** un `sentinel/.sdk-version` que es un enlace simbólico (también uno roto) o una carpeta
+  no se lee ni se escribe, tampoco con `--downgrade`: `setup` sale con error y dice cómo
+  quitarlo, sin proponer `--downgrade`
 
 #### Scenario: Una copia con cambios sin commitear pide confirmación (SC-sdk-version-04)
 

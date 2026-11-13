@@ -285,8 +285,9 @@ más nueva (el commit instalado está en su historial) y no tiene cambios sin co
 instala (`sentinel/` y su cableado; una carpeta del editor no cuenta). Si es más vieja, de otra
 rama, no es un clon de git (un ZIP, también en la primera instalación) o tiene cambios, no toca
 nada: te dice qué versión hay, cuál instalaría, qué ficheros tienen cambios y cómo resolverlo, y
-sale con `1`. Lo normal es actualizar tu copia del SDK (`git pull`; si es un clon superficial,
-`git fetch --unshallow`) y volver a ejecutarlo. Si de verdad quieres instalar esa versión,
+sale con `1`. Lo normal es actualizar tu copia del SDK (`git -C <ruta-al-sdk> pull`; si es un
+clon superficial, `git -C <ruta-al-sdk> fetch --unshallow`) y volver a ejecutarlo. Si de verdad
+quieres instalar esa versión,
 confírmalo con `--downgrade`:
 
 ```bash
