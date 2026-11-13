@@ -252,12 +252,18 @@ versionado. Desde la raíz del clon, con su copia del SDK:
 bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --activate
 ```
 
-`--activate` no copia ni escribe nada, aunque su copia del SDK sea de otra versión. Comprueba
-que la instalación versionada está completa: los hooks y los git hooks, versionados y con su
-permiso de ejecución, y el cableado en `.claude/settings.json`. Después activa la Esclusa o, si
-el clon ya usa otros git hooks, da las líneas para encadenarla, como `setup`. Si falta algo, lo
-dice, sale con `1` y no activa nada. Sin otros git hooks, también basta con `git config
-core.hooksPath sentinel/githooks`. El Centinela sí llega con el repo y, al arrancar la sesión,
+`--activate` no copia ni escribe nada, aunque su copia del SDK sea de otra versión. Eso sí,
+tiene que ser una que lo conozca: si responde «no existe el directorio --activate», su copia es
+anterior, y lo resuelve actualizándola (`git pull`) o con el `git config` de abajo. Comprueba que
+la instalación versionada está completa: los hooks y los git hooks, versionados y con su permiso
+de ejecución, también en git. Y comprueba el cableado en `.claude/settings.json`: cada script en
+su evento, el Centinela con un matcher que cubra las acciones que escriben (Bash, Edit, Write,
+MultiEdit y NotebookEdit) y una prueba de que bloquea lo que tiene que bloquear. Después activa
+la Esclusa o, si el clon ya usa otros git hooks, da las líneas para encadenarla, como `setup`.
+Si falta algo, lo dice, sale con `1` y no activa nada. Una instalación anterior a `sdk-version`
+(sin `sentinel/.sdk-version`) la comprueba y la activa igual, y avisa: que la actualice quien la
+mantiene, con `setup` y en su propio cambio, no desde un clon. Sin otros git hooks, también
+basta con `git config core.hooksPath sentinel/githooks`. El Centinela sí llega con el repo y, al arrancar la sesión,
 avisa si la Esclusa no está activa en ese clon y propone estas dos formas.
 
 **Límite conocido: otros gestores de git hooks.** Con husky, lefthook, el framework pre-commit

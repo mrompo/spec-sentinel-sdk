@@ -1,6 +1,6 @@
 ---
 name: spec-sentinel-setup
-description: Instala o actualiza el nivel Guardia de Spec Sentinel (Centinela + Esclusa) en un repo con un solo comando. Úsala cuando pidan "instala spec sentinel", "instala el SDK", "setup", "pon los guardarraíles en este repo", "actualiza el Centinela/la Esclusa" o al incorporar el SDK a un proyecto nuevo.
+description: Instala o actualiza el nivel Guardia de Spec Sentinel (Centinela + Esclusa) en un repo con un solo comando. Úsala cuando pidan "instala spec sentinel", "instala el SDK", "setup", "pon los guardarraíles en este repo", "actualiza el Centinela/la Esclusa", "activa el SDK en mi clon" o al incorporar el SDK a un proyecto nuevo.
 ---
 
 # spec-sentinel-setup — el nivel Guardia en un comando
@@ -14,8 +14,13 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
 
 ## When to Use
 
-- Incorporar el SDK a un repo, o actualizarlo a una versión nueva del SDK (reinstalar es seguro).
+- Incorporar el SDK a un repo, o actualizarlo a una versión igual o más nueva del SDK.
 - Tras resolver un paso pendiente de una instalación anterior (exit 3), para cerrarla.
+- **El clon de un compañero**, con la instalación ya versionada: no se reinstala. Ejecuta
+  `bash <sdk>/ai-specs/skills/setup/setup.sh --activate <raíz-del-repo>`, que comprueba la
+  instalación versionada y activa la Esclusa sin copiar nada (el aviso de arranque lo propone).
+  Si responde «no existe el directorio --activate», la copia del SDK es anterior: que la persona
+  la actualice (`git pull`).
 - **No** la uses para cambiar reglas de la política ni para desactivar un gate: eso va en un
   cambio OpenSpec revisado por una persona.
 
@@ -33,7 +38,11 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
    - `0` → instalado. Sigue en el paso 5.
    - `3` → instalado **con pasos pendientes** (líneas `⚠ PENDIENTE`). Paso 4.
    - `1` → error. Si falló una comprobación previa no se escribió nada; si falló a mitad, lo
-     hecho se queda y volver a ejecutar es seguro. Muestra el motivo y para.
+     hecho se queda y volver a ejecutar es seguro. Muestra el motivo y para. Si se niega por la
+     versión (la copia del SDK es más vieja que la instalada, de otra rama, no es un clon de git
+     o tiene cambios sin commitear), explícale a la persona que lo normal es resolverlo como dice
+     el mensaje (actualizar su copia con `git pull`) y volver a ejecutarlo. `--downgrade` instala
+     esa copia de todos modos: lo decide ella y lo escribe ella, nunca el agente por su cuenta.
 4. **Pasos pendientes**: preséntalos a la persona uno a uno, con la instrucción literal del
    script. Los que tocan su máquina o su configuración (instalar gitleaks, poner las líneas que
    encadenan la Esclusa en sus git hooks, corregir un `.claude/settings.json` que no es JSON
@@ -62,6 +71,8 @@ solo lo ejecuta, interpreta la salida y acompaña a la persona en los pasos pend
 | «Pongo `core.hooksPath` aunque ya haya hooks» | Dejaría mudos los hooks del consumidor (husky, un escáner corporativo). Se encadenan, no se sustituyen |
 | «gitleaks ya lo instalarán» | Sin gitleaks la Esclusa rechaza **todos** los commits. Se resuelve ahora, no en el primer commit |
 | «Activo el stack propuesto, se ve bien» | La detección adivina por nombres de scripts. La persona decide qué corre en cada commit |
+| «Se niega por la versión: le añado `--downgrade`» | Es la puerta que evita que una copia vieja del SDK revierta el enforcement en silencio. Lo normal es actualizar la copia; saltarla lo decide la persona |
+| «En el clon de un compañero, reinstalo y listo» | La instalación ya viaja con el repo y pasó revisión. Reinstalar la sustituye por la de su copia del SDK; `--activate` solo la comprueba y la activa |
 | «Exit 3 casi es éxito» | Es una instalación incompleta. Hasta que sale con `0`, el nivel Guardia no está garantizado |
 | «No hay jq: pego el fragmento a mano» | `setup` ya no lo admite: comprobar sin jq un JSON pegado a mano era justo donde daba por bueno un fichero que Claude Code descarta. Instalar jq es un comando |
 

@@ -24,4 +24,15 @@ _capture env "$(gl_ok)" bash "$SDK/ai-specs/skills/setup/setup.sh" "$WS"
 assert_exit 3 || fail_case "con un cableado que no deja pasar nada, setup debería terminar con 3 (exit $RH_EXIT): $RH_ERR"
 assert_out_contains "no deja pasar una acción inocua" || fail_case "setup debería decir que lo que falla es el cableado: $RH_ERR"
 assert_out_lacks "deniega una acción inocua" || fail_case "setup no debería achacárselo al Centinela: $RH_ERR"
+cleanup_git_workspace
+
+# Y una acción que tiene que bloquearse: un cableado que descarta el veredicto del Centinela
+# (… || true) deja pasar lo inocuo, pero no protege nada (revisión de sdk-version, V2)
+jq '(.hooks.PreToolUse[].hooks[] | select(.command | contains("sentinel/hooks/sentinel-guard.sh")) | .command) += " || true"' \
+  "$REPO_ROOT/.claude/settings.json" >"$SDK/.claude/settings.json"
+git -C "$SDK" -c user.name=t -c user.email=t@t commit -qam "sdk sin veredicto" || fail_case "no se pudo versionar la copia"
+mk_git_workspace
+_capture env "$(gl_ok)" bash "$SDK/ai-specs/skills/setup/setup.sh" "$WS"
+assert_exit 3 || fail_case "con un cableado que no deja decidir al Centinela, setup debería terminar con 3 (exit $RH_EXIT): $RH_ERR"
+assert_out_contains "tiene que bloquear" || fail_case "setup debería decir que el cableado deja pasar lo que hay que bloquear: $RH_ERR"
 rm -rf "$SDK"; cleanup_git_workspace

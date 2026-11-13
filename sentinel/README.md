@@ -46,8 +46,10 @@ completo: [`docs/05-semantica.md`](../docs/05-semantica.md).)
   resto del enforcement (`sdk-version`).
 - **El clon de un compañero solo activa** (`setup --activate`): con la instalación ya versionada,
   no copia ni escribe nada. Comprueba que lo que ejecutan el cableado y la Esclusa está,
-  versionado y con su permiso de ejecución, y que `.claude/settings.json` cablea el Centinela.
-  Después activa la Esclusa o da las líneas para encadenarla; si falta algo, no activa nada. El
+  versionado y con su permiso de ejecución, y que `.claude/settings.json` cablea el Centinela
+  antes de cada acción que escribe y que bloquea lo que tiene que bloquear (una prueba con su
+  cableado). Después activa la Esclusa o da las líneas para encadenarla; si falta algo, no activa
+  nada. Una instalación anterior a `sdk-version` (sin `.sdk-version`) se activa con aviso. El
   aviso de `session-start` lo propone cuando `sentinel/.sdk-version` está versionado
   (`sdk-version`).
 - **Skip-vs-fail** (Esclusa): "aún no instalado" = skip con aviso; "mal configurado" = fallo

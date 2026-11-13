@@ -113,9 +113,9 @@ mergeable sola. A4 = V2 recoge lo que la revisión de CodeRabbit en la #27 dejó
 
 **PR 4 · Activar** (temas 3, 4 y 6 del panel, salvo P4)
 
-- [ ] R4. Casos en rojo en `fixture/install/sc-20` y `fixture/hooks/sc-33`:
-       - un clon instalado antes de `sdk-version` → `--activate` propone `git config
-         core.hooksPath sentinel/githooks`, no «instálalo con setup» (P3);
+- [x] R4. Casos en rojo en `fixture/install/sc-20` y `fixture/hooks/sc-33` → `c269d58`:
+       - un clon instalado antes de `sdk-version` → `--activate` activa con aviso, no
+         «instálalo con setup»; solo un repo sin el SDK versionado manda a `setup` (P3);
        - el Centinela con el matcher `Read`, o con un comando que no lo ejecuta (`… || true`)
          → no activa; la prueba de humo comprueba también una acción que tiene que bloquearse,
          en `setup` y en `--activate` (A4 = V2);
@@ -124,9 +124,13 @@ mergeable sola. A4 = V2 recoge lo que la revisión de CodeRabbit en la #27 dejó
        - git hooks commiteados sin bit de ejecución → el mensaje da `git add --chmod=+x` (P5);
        - `core.fileMode=false` y una copia del SDK de otra versión → no pide marcar un fichero
          que el clon no tiene (A3);
-       - el aviso de arranque dice qué hacer si la copia no conoce `--activate` (P6)
-- [ ] R5. 👤 Parche: `setup.sh` y `session-start.sh`
-- [ ] R6. `SKILL.md` (`--activate`, y que `--downgrade` lo decide la persona: P7) y la guía
+       - el aviso de arranque dice qué hacer si la copia no conoce `--activate` (P6);
+       - con una llave sin usar en el clon, la prueba de bloqueo no se hace y no la gasta
+       `sc-18` comprueba que `setup` avisa de un cableado que deja pasar lo que tiene que bloquear
+- [x] R5. 👤 Parche: `setup.sh` y `session-start.sh` → `ce4871b`. Banco completo en verde en un
+       clon (hooks 33, githooks 16, install 20), Debian 12 en verde y 11 de 11 mutantes muertos
+- [x] R6. `SKILL.md` (`--activate`, y que `--downgrade` lo decide la persona: P7), la guía,
+       `sentinel/README.md` y el delta de SC-06 y 07 → `e5e3d40`
 
 **Cierre de la ronda**
 

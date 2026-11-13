@@ -40,7 +40,7 @@ if [ -d "$ROOT/sentinel/githooks" ]; then
   fi
   if [ "$esclusa" -eq 0 ]; then
     if git -C "$ROOT" ls-files --error-unmatch -- sentinel/.sdk-version >/dev/null 2>&1; then
-      echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon y el SDK ya viene versionado, así que no hay que reinstalarlo: actívala con «git config core.hooksPath sentinel/githooks» o, en la raíz del repo y desde una copia del SDK, con «bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --activate», que comprueba la instalación y, si el repo usa otros git hooks, da las líneas para encadenarla"
+      echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon y el SDK ya viene versionado, así que no hay que reinstalarlo: actívala con «git config core.hooksPath sentinel/githooks» o, en la raíz del repo y desde una copia del SDK, con «bash <ruta-al-sdk>/ai-specs/skills/setup/setup.sh --activate», que comprueba la instalación y, si el repo usa otros git hooks, da las líneas para encadenarla (si responde «no existe el directorio --activate», tu copia del SDK es anterior: actualízala con git pull o usa el git config)"
     else
       echo "[sentinel] ⚠ La Esclusa (git hooks) no está activa en este clon: actívala con «git config core.hooksPath sentinel/githooks» o ejecuta setup"
     fi
